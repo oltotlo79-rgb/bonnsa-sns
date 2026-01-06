@@ -27,6 +27,7 @@ Supabase Authを使用したユーザー認証機能を実装する。
 - [x] `components/auth/RegisterForm.tsx` - 新規登録フォーム
 - [x] `components/auth/PasswordResetForm.tsx` - パスワードリセットフォーム
 - [x] `components/auth/PasswordResetConfirmForm.tsx` - 新パスワード設定フォーム
+- [x] `components/auth/LogoutButton.tsx` - ログアウトボタン
 
 ### 認証ロジック
 - [x] ログイン処理 (`signInWithPassword`)
@@ -38,9 +39,10 @@ Supabase Authを使用したユーザー認証機能を実装する。
 - [x] 新パスワード設定 (`updateUser`)
 
 ### Supabase設定
-- [ ] パスワードリセットメールテンプレート設定
-- [ ] リダイレクトURL設定
+- [x] パスワードリセットメールテンプレート設定（デフォルト使用）
+- [x] リダイレクトURL設定（localhost用に設定済み）
 - [x] auth.usersからpublic.usersへのトリガー作成
+- [x] メール確認を無効化（Confirm email: OFF）
 
 ### OAuthコールバック
 - [x] `app/auth/callback/route.ts` - 認証コールバックルート
@@ -58,7 +60,7 @@ Supabase Authを使用したユーザー認証機能を実装する。
 
 ### バリデーション
 - [x] メールアドレス形式チェック
-- [x] パスワード強度チェック（最低8文字）
+- [x] パスワード強度チェック（最低8文字、英字・数字必須）
 - [x] ニックネーム必須チェック
 - [x] エラーメッセージ日本語化
 
@@ -92,11 +94,13 @@ CREATE TRIGGER on_auth_user_created
 - [x] フォームのアクセシビリティ対応
 
 ### テスト
-- [ ] ログイン成功テスト
-- [ ] ログイン失敗テスト（間違ったパスワード）
-- [ ] 新規登録成功テスト
-- [ ] 重複メールアドレスエラーテスト
-- [ ] パスワードリセットフローテスト
+- [x] ログイン成功テスト
+- [x] ログイン失敗テスト（間違ったパスワード）
+- [x] 新規登録成功テスト
+- [x] 重複メールアドレスエラーテスト
+- [x] パスワードリセットフローテスト
+- [x] 未認証ユーザーの保護ルートアクセス制限テスト
+- [x] 認証済みユーザーのログインページリダイレクトテスト
 
 ---
 

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 
 export default async function MainLayout({
   children,
@@ -22,6 +23,7 @@ export default async function MainLayout({
             <span className="text-sm text-muted-foreground">
               {user.email}
             </span>
+            <LogoutButton />
           </nav>
         </div>
       </header>
