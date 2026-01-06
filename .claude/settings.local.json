@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "ViewFile",
+      "ListFiles",
+      "EditFile",
+      "WebFetch",
+      "Bash(mkdir:*)",
+      "mcp__filesystem__list_directory",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx shadcn@latest add:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(shutdown:*)",
+      "Bash(reboot:*)",
+      "Bash(chmod:*)",
+      "ViewFile(.env*)",
+      "ViewFile(~/.ssh/*)",
+      "ViewFile(.git/*)"
+    ]
+  }
+}
