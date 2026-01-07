@@ -137,7 +137,7 @@ app/
 ```typescript
 // 静的
 export const metadata: Metadata = {
-  title: '盆栽SNS',
+  title: 'BON-LOG',
   description: '盆栽愛好家のためのSNS',
 }
 

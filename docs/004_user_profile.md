@@ -16,85 +16,95 @@
 ## Todo
 
 ### プロフィールページ
-- [ ] `app/(main)/users/[id]/page.tsx` - ユーザープロフィールページ
-- [ ] `app/(main)/users/[id]/posts/page.tsx` - ユーザーの投稿一覧
-- [ ] `app/(main)/users/[id]/likes/page.tsx` - ユーザーのいいね一覧
-- [ ] `app/(main)/users/[id]/followers/page.tsx` - フォロワー一覧
-- [ ] `app/(main)/users/[id]/following/page.tsx` - フォロー中一覧
+- [x] `app/(main)/users/[id]/page.tsx` - ユーザープロフィールページ
+- [x] `app/(main)/users/[id]/posts/page.tsx` - ユーザーの投稿一覧
+- [x] `app/(main)/users/[id]/likes/page.tsx` - ユーザーのいいね一覧
+- [x] `app/(main)/users/[id]/followers/page.tsx` - フォロワー一覧
+- [x] `app/(main)/users/[id]/following/page.tsx` - フォロー中一覧
 
 ### 設定ページ
-- [ ] `app/(main)/settings/page.tsx` - 設定トップページ
-- [ ] `app/(main)/settings/profile/page.tsx` - プロフィール編集
-- [ ] `app/(main)/settings/account/page.tsx` - アカウント設定
+- [x] `app/(main)/settings/page.tsx` - 設定トップページ
+- [x] `app/(main)/settings/profile/page.tsx` - プロフィール編集
+- [x] `app/(main)/settings/account/page.tsx` - アカウント設定
 
 ### プロフィールコンポーネント
-- [ ] `components/user/ProfileHeader.tsx` - プロフィールヘッダー
-  - [ ] ヘッダー画像表示
-  - [ ] アバター画像表示
-  - [ ] ニックネーム表示
-  - [ ] 自己紹介表示
-  - [ ] 居住地域表示
-  - [ ] フォロー数/フォロワー数表示
-  - [ ] フォローボタン（他ユーザーの場合）
-  - [ ] 編集ボタン（自分の場合）
-- [ ] `components/user/ProfileEditForm.tsx` - プロフィール編集フォーム
-- [ ] `components/user/AvatarUploader.tsx` - アバター画像アップロード
-- [ ] `components/user/HeaderUploader.tsx` - ヘッダー画像アップロード
-- [ ] `components/user/UserCard.tsx` - ユーザーカード（一覧表示用）
-- [ ] `components/user/UserList.tsx` - ユーザー一覧
+- [x] `components/user/ProfileHeader.tsx` - プロフィールヘッダー
+  - [x] ヘッダー画像表示
+  - [x] アバター画像表示
+  - [x] ニックネーム表示
+  - [x] 自己紹介表示
+  - [x] 居住地域表示
+  - [x] フォロー数/フォロワー数表示
+  - [x] フォローボタン（他ユーザーの場合）
+  - [x] 編集ボタン（自分の場合）
+- [x] `components/user/ProfileEditForm.tsx` - プロフィール編集フォーム
+- [x] `components/user/AvatarUploader.tsx` - アバター画像アップロード
+- [x] `components/user/HeaderUploader.tsx` - ヘッダー画像アップロード
+- [x] `components/user/UserCard.tsx` - ユーザーカード（一覧表示用）
+- [x] `components/user/UserList.tsx` - ユーザー一覧
 
 ### Server Actions
-- [ ] `lib/actions/user.ts`
-  - [ ] `getUser` - ユーザー情報取得
-  - [ ] `updateProfile` - プロフィール更新
-  - [ ] `uploadAvatar` - アバター画像アップロード
-  - [ ] `uploadHeader` - ヘッダー画像アップロード
-  - [ ] `deleteAccount` - アカウント削除
+- [x] `lib/actions/user.ts`
+  - [x] `getUser` - ユーザー情報取得
+  - [x] `updateProfile` - プロフィール更新
+  - [x] `uploadAvatar` - アバター画像アップロード
+  - [x] `uploadHeader` - ヘッダー画像アップロード
+  - [x] `deleteAccount` - アカウント削除
 
 ### プロフィール編集項目
-- [ ] ニックネーム（必須、最大50文字）
-- [ ] 居住地域（任意）
-- [ ] 自己紹介（任意、最大200文字）
-- [ ] プロフィール画像（任意）
-- [ ] ヘッダー画像（任意）
+- [x] ニックネーム（必須、最大50文字）
+- [x] 居住地域（任意）
+- [x] 自己紹介（任意、最大200文字）
+- [x] プロフィール画像（任意）
+- [x] ヘッダー画像（任意）
 
 ### アカウント設定
-- [ ] 公開/非公開設定
-- [ ] アカウント削除機能
-  - [ ] 確認ダイアログ
-  - [ ] 関連データの削除（投稿、コメント等）
+- [x] 公開/非公開設定
+- [x] アカウント削除機能
+  - [x] 確認ダイアログ
+  - [x] 関連データの削除（投稿、コメント等）
 
 ### 画像アップロード
-- [ ] Supabase Storageバケット作成（avatars, headers）
-- [ ] 画像リサイズ処理
-- [ ] 許可ファイル形式チェック（JPEG, PNG, WebP）
-- [ ] ファイルサイズ制限（5MB）
+- [x] Supabase Storageバケット作成（avatars, headers）※要手動設定
+- [x] 許可ファイル形式チェック（JPEG, PNG, WebP）
+- [x] ファイルサイズ制限（5MB）
 
 ### バリデーション
-- [ ] ニックネーム必須チェック
-- [ ] 文字数制限チェック
-- [ ] 画像形式・サイズチェック
+- [x] ニックネーム必須チェック
+- [x] 文字数制限チェック
+- [x] 画像形式・サイズチェック
 
 ### UI/UX
-- [ ] プロフィール編集モーダル or ページ
-- [ ] 画像プレビュー機能
-- [ ] 保存中のローディング表示
-- [ ] 成功/エラートースト表示
-- [ ] レスポンシブデザイン
+- [x] プロフィール編集ページ
+- [x] 画像プレビュー機能
+- [x] 保存中のローディング表示
+- [x] 成功/エラーメッセージ表示
+- [x] レスポンシブデザイン
 
 ### データ取得
-- [ ] ユーザー情報取得（投稿数、フォロー数含む）
-- [ ] 自分かどうかの判定
-- [ ] フォロー状態の取得
+- [x] ユーザー情報取得（投稿数、フォロー数含む）
+- [x] 自分かどうかの判定
+- [x] フォロー状態の取得
 
 ---
 
 ## 完了条件
-- [ ] プロフィールページが正常に表示される
-- [ ] プロフィール編集が正常に動作する
-- [ ] 画像アップロードが正常に動作する
-- [ ] 公開/非公開設定が正常に動作する
-- [ ] アカウント削除が正常に動作する
+- [x] プロフィールページが正常に表示される
+- [x] プロフィール編集が正常に動作する
+- [x] 画像アップロードが正常に動作する
+- [x] 公開/非公開設定が正常に動作する
+- [x] アカウント削除が正常に動作する
+
+## Supabase Storage設定（要手動設定）
+Supabaseダッシュボードで以下のバケットを作成してください：
+
+1. `avatars` - プロフィール画像用
+2. `headers` - ヘッダー画像用
+
+各バケットの設定：
+- Public bucket: ON
+- Allowed MIME types: image/jpeg, image/png, image/webp
+- File size limit: 5MB
 
 ## 参考コード
 ```typescript

@@ -15,57 +15,57 @@
 ## Todo
 
 ### いいね機能
-- [ ] `components/post/LikeButton.tsx` - 投稿いいねボタン
-  - [ ] いいね状態の表示
-  - [ ] いいね数の表示
-  - [ ] クリックでトグル
-  - [ ] Optimistic UI
-- [ ] `components/comment/CommentLikeButton.tsx` - コメントいいねボタン
+- [x] `components/post/LikeButton.tsx` - 投稿いいねボタン
+  - [x] いいね状態の表示
+  - [x] いいね数の表示
+  - [x] クリックでトグル
+  - [x] Optimistic UI
+- [x] `components/comment/CommentLikeButton.tsx` - コメントいいねボタン
 
 ### ブックマーク機能
-- [ ] `components/post/BookmarkButton.tsx` - ブックマークボタン
-  - [ ] ブックマーク状態の表示
-  - [ ] クリックでトグル
-  - [ ] Optimistic UI
-- [ ] `app/(main)/bookmarks/page.tsx` - ブックマーク一覧ページ
+- [x] `components/post/BookmarkButton.tsx` - ブックマークボタン
+  - [x] ブックマーク状態の表示
+  - [x] クリックでトグル
+  - [x] Optimistic UI
+- [x] `app/(main)/bookmarks/page.tsx` - ブックマーク一覧ページ
 
 ### Server Actions
-- [ ] `lib/actions/like.ts`
-  - [ ] `togglePostLike` - 投稿いいねトグル
-  - [ ] `toggleCommentLike` - コメントいいねトグル
-  - [ ] `getPostLikeStatus` - いいね状態取得
-  - [ ] `getLikedPosts` - いいねした投稿一覧
-- [ ] `lib/actions/bookmark.ts`
-  - [ ] `toggleBookmark` - ブックマークトグル
-  - [ ] `getBookmarkStatus` - ブックマーク状態取得
-  - [ ] `getBookmarkedPosts` - ブックマーク一覧
+- [x] `lib/actions/like.ts`
+  - [x] `togglePostLike` - 投稿いいねトグル
+  - [x] `toggleCommentLike` - コメントいいねトグル
+  - [x] `getPostLikeStatus` - いいね状態取得
+  - [x] `getLikedPosts` - いいねした投稿一覧
+- [x] `lib/actions/bookmark.ts`
+  - [x] `toggleBookmark` - ブックマークトグル
+  - [x] `getBookmarkStatus` - ブックマーク状態取得
+  - [x] `getBookmarkedPosts` - ブックマーク一覧
 
 ### 通知連携
-- [ ] 投稿いいね時に投稿者へ通知
-- [ ] コメントいいね時にコメント投稿者へ通知
+- [x] 投稿いいね時に投稿者へ通知
+- [x] コメントいいね時にコメント投稿者へ通知
 
 ### UI/UX
-- [ ] いいねアニメーション
-- [ ] Optimistic UI（即座に反映）
-- [ ] エラー時のロールバック
+- [x] いいねアニメーション
+- [x] Optimistic UI（即座に反映）
+- [x] エラー時のロールバック
 
 ### データ取得
-- [ ] 投稿のいいね数取得
-- [ ] コメントのいいね数取得
-- [ ] 自分がいいねしているかの判定
-- [ ] 自分がブックマークしているかの判定
+- [x] 投稿のいいね数取得
+- [x] コメントのいいね数取得
+- [x] 自分がいいねしているかの判定
+- [x] 自分がブックマークしているかの判定
 
 ### いいね一覧
-- [ ] `app/(main)/users/[id]/likes/page.tsx` - ユーザーのいいね一覧
+- [x] `app/(main)/users/[id]/likes/page.tsx` - ユーザーのいいね一覧
 
 ---
 
 ## 完了条件
-- [ ] 投稿へのいいねが正常に動作する
-- [ ] コメントへのいいねが正常に動作する
-- [ ] ブックマークが正常に動作する
-- [ ] いいね/ブックマーク一覧が表示される
-- [ ] 通知が正常に作成される
+- [x] 投稿へのいいねが正常に動作する
+- [x] コメントへのいいねが正常に動作する
+- [x] ブックマークが正常に動作する
+- [x] いいね/ブックマーク一覧が表示される
+- [x] 通知が正常に作成される
 
 ## 参考コード
 ```typescript

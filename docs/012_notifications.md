@@ -114,7 +114,7 @@ export function NotificationListener({ userId }: { userId: string }) {
 
           // ブラウザ通知
           if (Notification.permission === 'granted') {
-            new Notification('盆栽SNS', {
+            new Notification('BON-LOG', {
               body: getNotificationMessage(payload.new),
               icon: '/icon.png',
             })

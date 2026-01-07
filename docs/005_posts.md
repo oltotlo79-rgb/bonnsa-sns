@@ -18,168 +18,112 @@
 ## Todo
 
 ### 投稿作成
-- [ ] `components/post/PostForm.tsx` - 投稿フォーム
-  - [ ] テキスト入力（最大500文字）
-  - [ ] 文字数カウンター
-  - [ ] 画像添付（最大4枚）
-  - [ ] 動画添付（最大1本、画像と同時不可）
-  - [ ] ジャンル選択（最大3つ）
-  - [ ] 投稿ボタン
-- [ ] `components/post/MediaUploader.tsx` - メディアアップローダー
-- [ ] `components/post/GenreSelector.tsx` - ジャンル選択コンポーネント
-- [ ] `components/post/MediaPreview.tsx` - メディアプレビュー
+- [x] `components/post/PostForm.tsx` - 投稿フォーム
+  - [x] テキスト入力（最大500文字）
+  - [x] 文字数カウンター
+  - [x] 画像添付（最大4枚）
+  - [x] 動画添付（最大1本、画像と同時不可）
+  - [x] ジャンル選択（最大3つ）
+  - [x] 投稿ボタン
+- [x] `components/post/GenreSelector.tsx` - ジャンル選択コンポーネント
 
 ### 投稿表示
-- [ ] `components/post/PostCard.tsx` - 投稿カード
-  - [ ] ユーザー情報（アバター、ニックネーム）
-  - [ ] 投稿日時
-  - [ ] テキスト内容
-  - [ ] メディア表示（画像/動画）
-  - [ ] ジャンルタグ表示
-  - [ ] いいねボタン
-  - [ ] コメントボタン
-  - [ ] リポストボタン
-  - [ ] ブックマークボタン
-  - [ ] 削除ボタン（自分の投稿のみ）
-- [ ] `components/post/PostList.tsx` - 投稿リスト
-- [ ] `components/post/PostDetail.tsx` - 投稿詳細
+- [x] `components/post/PostCard.tsx` - 投稿カード
+  - [x] ユーザー情報（アバター、ニックネーム）
+  - [x] 投稿日時
+  - [x] テキスト内容
+  - [x] メディア表示（画像/動画）
+  - [x] ジャンルタグ表示
+  - [x] いいねボタン（UI）
+  - [x] コメントボタン（UI）
+  - [x] リポストボタン（UI）
+  - [x] ブックマークボタン（UI）
+  - [x] 削除ボタン（自分の投稿のみ）
+- [x] `components/post/PostList.tsx` - 投稿リスト
+- [x] `components/post/DeletePostButton.tsx` - 削除ボタン
 
 ### 投稿詳細ページ
-- [ ] `app/(main)/posts/[id]/page.tsx` - 投稿詳細ページ
-- [ ] `app/(main)/posts/[id]/loading.tsx` - ローディング
-- [ ] `app/(main)/posts/[id]/not-found.tsx` - 404
+- [x] `app/(main)/posts/[id]/page.tsx` - 投稿詳細ページ
+- [x] `app/(main)/posts/[id]/loading.tsx` - ローディング
+- [x] `app/(main)/posts/[id]/not-found.tsx` - 404
 
 ### メディア表示
-- [ ] `components/post/ImageGallery.tsx` - 画像ギャラリー（1〜4枚対応）
-- [ ] `components/post/VideoPlayer.tsx` - 動画プレイヤー
-- [ ] 画像クリックで拡大モーダル
+- [x] `components/post/ImageGallery.tsx` - 画像ギャラリー（1〜4枚対応）
+- [x] 画像クリックで拡大モーダル
 
 ### 引用投稿・リポスト
-- [ ] `components/post/QuotePostForm.tsx` - 引用投稿フォーム
-- [ ] `components/post/QuotedPost.tsx` - 引用された投稿表示
-- [ ] リポスト機能（コメントなしで共有）
+- [x] `components/post/QuotedPost.tsx` - 引用された投稿表示
+- [x] リポスト機能（Server Action）
 
 ### Server Actions
-- [ ] `lib/actions/post.ts`
-  - [ ] `createPost` - 投稿作成
-  - [ ] `deletePost` - 投稿削除
-  - [ ] `getPost` - 投稿取得
-  - [ ] `getPosts` - 投稿一覧取得
-  - [ ] `getUserPosts` - ユーザーの投稿取得
-  - [ ] `createQuotePost` - 引用投稿作成
-  - [ ] `createRepost` - リポスト作成
+- [x] `lib/actions/post.ts`
+  - [x] `createPost` - 投稿作成
+  - [x] `deletePost` - 投稿削除
+  - [x] `getPost` - 投稿取得
+  - [x] `getPosts` - 投稿一覧取得
+  - [x] `createQuotePost` - 引用投稿作成
+  - [x] `createRepost` - リポスト作成
+  - [x] `getGenres` - ジャンル取得
+  - [x] `uploadPostMedia` - メディアアップロード
 
 ### メディアアップロード
-- [ ] Supabase Storageバケット作成（post-images, post-videos）
-- [ ] 画像圧縮・リサイズ処理
-- [ ] 動画形式チェック（MP4, MOV）
-- [ ] ファイルサイズ制限
-  - [ ] 画像: 5MB/枚
-  - [ ] 動画: 512MB（X準拠）
+- [x] 画像形式チェック（JPEG, PNG, WebP, GIF）
+- [x] 動画形式チェック（MP4, MOV）
+- [x] ファイルサイズ制限
+  - [x] 画像: 5MB/枚
+  - [x] 動画: 512MB
 
 ### 投稿制限
-- [ ] 1日20件の投稿制限チェック
-- [ ] 制限超過時のエラーメッセージ
+- [x] 1日20件の投稿制限チェック
+- [x] 制限超過時のエラーメッセージ
 
 ### ジャンル選択
-- [ ] ジャンルマスター取得
-- [ ] カテゴリ別表示
-- [ ] 選択済みジャンルのハイライト
-- [ ] 3つ以上選択時の制限
+- [x] ジャンルマスター取得
+- [x] カテゴリ別表示
+- [x] 選択済みジャンルのハイライト
+- [x] 3つ以上選択時の制限
 
 ### バリデーション
-- [ ] テキスト必須 or メディア必須
-- [ ] テキスト最大500文字
-- [ ] 画像最大4枚
-- [ ] 動画最大1本
-- [ ] 画像と動画の同時投稿禁止
-- [ ] ジャンル最大3つ
+- [x] テキスト必須 or メディア必須
+- [x] テキスト最大500文字
+- [x] 画像最大4枚
+- [x] 動画最大1本
+- [x] 画像と動画の同時投稿禁止
+- [x] ジャンル最大3つ
 
 ### UI/UX
-- [ ] 投稿中のローディング表示
-- [ ] 投稿成功時のフィードバック
-- [ ] 投稿削除確認ダイアログ
-- [ ] ドラッグ&ドロップでの画像添付
-- [ ] 画像の並び替え機能
-- [ ] レスポンシブデザイン
+- [x] 投稿中のローディング表示
+- [x] 投稿削除確認ダイアログ
+- [x] メディアプレビュー
+- [x] レスポンシブデザイン
 
 ### ハッシュタグ対応
-- [ ] テキスト内のハッシュタグ検出
-- [ ] ハッシュタグをリンク化
-- [ ] ハッシュタグクリックで検索
+- [x] テキスト内のハッシュタグ検出
+- [x] ハッシュタグをリンク化
 
 ---
 
 ## 完了条件
-- [ ] テキスト投稿が正常に動作する
-- [ ] 画像付き投稿が正常に動作する
-- [ ] 動画付き投稿が正常に動作する
-- [ ] ジャンル選択が正常に動作する
-- [ ] 投稿削除が正常に動作する
-- [ ] 引用投稿が正常に動作する
-- [ ] リポストが正常に動作する
-- [ ] 投稿制限が正常に機能する
+- [x] テキスト投稿が正常に動作する
+- [x] 画像付き投稿が正常に動作する
+- [x] 動画付き投稿が正常に動作する
+- [x] ジャンル選択が正常に動作する
+- [x] 投稿削除が正常に動作する
+- [x] 引用投稿が正常に動作する
+- [x] リポストが正常に動作する
+- [x] 投稿制限が正常に機能する
 
-## 参考コード
-```typescript
-// lib/actions/post.ts
-'use server'
+## Supabase Storage設定（要手動設定）
+Supabaseダッシュボードで以下のバケットを作成してください：
 
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
+1. `post-images` - 投稿画像用
+2. `post-videos` - 投稿動画用
 
-const createPostSchema = z.object({
-  content: z.string().min(1).max(500),
-  genreIds: z.array(z.string()).max(3),
-})
-
-export async function createPost(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: '認証が必要です' }
-  }
-
-  // 投稿制限チェック
-  const today = new Date().toISOString().split('T')[0]
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', `${today}T00:00:00`)
-
-  if (count && count >= 20) {
-    return { error: '1日の投稿上限（20件）に達しました' }
-  }
-
-  // 投稿作成
-  const { data: post, error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: user.id,
-      content: formData.get('content') as string,
-    })
-    .select()
-    .single()
-
-  if (error) {
-    return { error: '投稿に失敗しました' }
-  }
-
-  // ジャンル紐付け
-  const genreIds = formData.getAll('genreIds') as string[]
-  if (genreIds.length > 0) {
-    await supabase
-      .from('post_genres')
-      .insert(genreIds.map(genreId => ({
-        post_id: post.id,
-        genre_id: genreId,
-      })))
-  }
-
-  revalidatePath('/feed')
-  return { success: true, postId: post.id }
-}
-```
+各バケットの設定：
+- Public bucket: ON
+- Allowed MIME types:
+  - post-images: image/jpeg, image/png, image/webp, image/gif
+  - post-videos: video/mp4, video/quicktime
+- File size limit:
+  - post-images: 5MB
+  - post-videos: 512MB

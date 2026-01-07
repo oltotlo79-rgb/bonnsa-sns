@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 
 export default async function MainLayout({
@@ -18,11 +19,28 @@ export default async function MainLayout({
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-bonsai-green">盆栽SNS</h1>
+          <Link href="/feed" className="text-xl font-bold text-bonsai-green hover:opacity-80">
+            BON-LOG
+          </Link>
           <nav className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {user.email}
-            </span>
+            <Link
+              href="/feed"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              タイムライン
+            </Link>
+            <Link
+              href={`/users/${user.id}`}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              プロフィール
+            </Link>
+            <Link
+              href="/settings"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              設定
+            </Link>
             <LogoutButton />
           </nav>
         </div>

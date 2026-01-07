@@ -1,18 +1,32 @@
 import { createClient } from '@/lib/supabase/server'
+import { PostForm } from '@/components/post/PostForm'
+import { PostList } from '@/components/post/PostList'
+import { getGenres, getPosts } from '@/lib/actions/post'
+
+export const metadata = {
+  title: 'タイムライン - BON-LOG',
+}
 
 export default async function FeedPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const [genresResult, postsResult] = await Promise.all([
+    getGenres(),
+    getPosts()
+  ])
+
+  const genres = genresResult.genres || {}
+  const posts = postsResult.posts || []
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">タイムライン</h2>
-      <p className="text-muted-foreground">
-        ようこそ、{user?.email} さん！
-      </p>
-      <p className="text-muted-foreground mt-4">
-        投稿機能は次のチケットで実装されます。
-      </p>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <PostForm genres={genres} />
+
+      <div className="bg-card rounded-lg border overflow-hidden">
+        <h2 className="px-4 py-3 font-bold border-b">タイムライン</h2>
+        <PostList posts={posts} currentUserId={user?.id} />
+      </div>
     </div>
   )
 }
