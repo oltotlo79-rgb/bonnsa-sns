@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Docker用のstandalone出力を有効化
+  output: 'standalone',
+
   images: {
     remotePatterns: [
+      // Azure Blob Storage
       {
         protocol: 'https',
-        hostname: '*.supabase.co',
+        hostname: '*.blob.core.windows.net',
       },
     ],
     dangerouslyAllowSVG: true,

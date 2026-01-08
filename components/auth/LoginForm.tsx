@@ -1,6 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,6 @@ function EyeOffIcon({ className }: { className?: string }) {
 }
 
 export function LoginForm() {
-  const supabase = createClient()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -62,12 +61,13 @@ export function LoginForm() {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const result = await signIn('credentials', {
       email,
       password,
+      redirect: false,
     })
 
-    if (error) {
+    if (result?.error) {
       setError('メールアドレスまたはパスワードが間違っています')
       setLoading(false)
       return

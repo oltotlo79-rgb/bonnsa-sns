@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LogoutButton } from '@/components/auth/LogoutButton'
@@ -8,10 +8,9 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 
@@ -30,7 +29,7 @@ export default async function MainLayout({
               タイムライン
             </Link>
             <Link
-              href={`/users/${user.id}`}
+              href={`/users/${session.user.id}`}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               プロフィール

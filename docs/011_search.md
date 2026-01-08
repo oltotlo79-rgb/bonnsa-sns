@@ -97,67 +97,140 @@
 // lib/actions/search.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
 
-export async function searchPosts(query: string, genreIds?: string[]) {
-  const supabase = await createClient()
+export async function searchPosts(query: string, genreIds?: string[], cursor?: string, limit = 20) {
+  // 投稿を検索（部分一致）
+  const posts = await prisma.post.findMany({
+    where: {
+      AND: [
+        {
+          content: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        genreIds && genreIds.length > 0
+          ? {
+              genres: {
+                some: {
+                  genreId: { in: genreIds },
+                },
+              },
+            }
+          : {},
+      ],
+    },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: { genre: true },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
 
-  let queryBuilder = supabase
-    .from('posts')
-    .select(`
-      *,
-      user:users(id, nickname, avatar_url),
-      likes(count),
-      comments(count),
-      post_genres(genre:genres(*))
-    `)
-    .textSearch('content', query, {
-      type: 'websearch',
-      config: 'japanese',
-    })
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const formattedPosts = posts.map((post) => ({
+    ...post,
+    likeCount: post._count.likes,
+    commentCount: post._count.comments,
+    genres: post.genres.map((pg) => pg.genre),
+  }))
 
-  // ジャンルフィルター
-  if (genreIds && genreIds.length > 0) {
-    queryBuilder = queryBuilder.in(
-      'id',
-      supabase
-        .from('post_genres')
-        .select('post_id')
-        .in('genre_id', genreIds)
-    )
+  return {
+    posts: formattedPosts,
+    nextCursor: posts.length === limit ? posts[posts.length - 1]?.id : undefined,
   }
-
-  const { data: posts, error } = await queryBuilder
-
-  if (error) {
-    return { error: '検索に失敗しました' }
-  }
-
-  return { posts }
 }
 
-export async function searchUsers(query: string) {
-  const supabase = await createClient()
+export async function searchUsers(query: string, cursor?: string, limit = 20) {
+  const users = await prisma.user.findMany({
+    where: {
+      nickname: {
+        contains: query,
+        mode: 'insensitive',
+      },
+    },
+    select: {
+      id: true,
+      nickname: true,
+      avatarUrl: true,
+      bio: true,
+      _count: {
+        select: { followers: true, following: true },
+      },
+    },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
 
-  const { data: users, error } = await supabase
-    .from('users')
-    .select('id, nickname, avatar_url, bio')
-    .ilike('nickname', `%${query}%`)
-    .limit(20)
-
-  if (error) {
-    return { error: '検索に失敗しました' }
+  return {
+    users: users.map((user) => ({
+      ...user,
+      followersCount: user._count.followers,
+      followingCount: user._count.following,
+    })),
+    nextCursor: users.length === limit ? users[users.length - 1]?.id : undefined,
   }
+}
 
-  return { users }
+export async function searchByTag(tag: string, cursor?: string, limit = 20) {
+  // ハッシュタグを含む投稿を検索
+  const posts = await prisma.post.findMany({
+    where: {
+      content: {
+        contains: `#${tag}`,
+      },
+    },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
+
+  return {
+    posts: posts.map((post) => ({
+      ...post,
+      likeCount: post._count.likes,
+      commentCount: post._count.comments,
+    })),
+    nextCursor: posts.length === limit ? posts[posts.length - 1]?.id : undefined,
+  }
 }
 ```
 
 ```sql
--- PostgreSQL 全文検索設定（Supabase SQL Editor）
--- 日本語対応のための設定
+-- PostgreSQL 全文検索設定
+-- 日本語対応のための設定（pg_bigm拡張が必要）
 CREATE EXTENSION IF NOT EXISTS pg_bigm;
 
 -- 投稿テキストにインデックス作成

@@ -6,28 +6,45 @@ import { PostCard } from '@/components/post/PostCard'
 import { getBookmarkedPosts } from '@/lib/actions/bookmark'
 import { Bookmark } from 'lucide-react'
 
+type PostUser = {
+  id: string
+  nickname: string
+  avatarUrl: string | null
+}
+
+type PostMedia = {
+  id: string
+  url: string
+  type: string
+  sortOrder: number
+}
+
+type PostGenre = {
+  id: string
+  name: string
+  category: string
+}
+
+type QuotePost = {
+  id: string
+  content: string | null
+  createdAt: string | Date
+  user: PostUser
+}
+
 type Post = {
   id: string
   content: string | null
-  created_at: string
-  user: {
-    id: string
-    nickname: string
-    avatar_url: string | null
-  }
-  media?: Array<{
-    id: string
-    url: string
-    type: string
-    order: number
-  }>
-  genres?: Array<{
-    id: string
-    name: string
-  }>
+  createdAt: string | Date
+  user: PostUser
+  media: PostMedia[]
+  genres: PostGenre[]
   likeCount: number
   commentCount: number
-  repostCount: number
+  quotePost?: QuotePost | null
+  repostPost?: (QuotePost & { media: PostMedia[] }) | null
+  isLiked?: boolean
+  isBookmarked?: boolean
 }
 
 type BookmarkPostListProps = {

@@ -1,0 +1,22 @@
+# 開発環境用Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# パッケージファイルをコピー
+COPY package.json package-lock.json* ./
+
+# 依存関係をインストール
+RUN npm ci
+
+# Prismaスキーマをコピー
+COPY prisma ./prisma
+
+# アプリケーションコードは docker-compose でマウント
+
+EXPOSE 3000
+
+ENV HOSTNAME="0.0.0.0"
+
+# 開発サーバー起動（docker-composeのcommandで上書き）
+CMD ["npm", "run", "dev"]

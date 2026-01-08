@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { ProfileEditForm } from '@/components/user/ProfileEditForm'
 
 export const metadata = {
@@ -8,21 +9,36 @@ export const metadata = {
 }
 
 export default async function ProfileEditPage() {
-  const supabase = await createClient()
+  const session = await auth()
 
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-  if (!authUser) {
+  if (!session?.user?.id) {
     redirect('/login')
   }
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, nickname, bio, location, avatar_url, header_url')
-    .eq('id', authUser.id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      nickname: true,
+      bio: true,
+      location: true,
+      avatarUrl: true,
+      headerUrl: true,
+    },
+  })
 
   if (!user) {
     redirect('/login')
+  }
+
+  // ProfileEditFormが期待する形式に変換
+  const userData = {
+    id: user.id,
+    nickname: user.nickname,
+    bio: user.bio,
+    location: user.location,
+    avatar_url: user.avatarUrl,
+    header_url: user.headerUrl,
   }
 
   return (
@@ -36,7 +52,7 @@ export default async function ProfileEditPage() {
         </div>
 
         <div className="p-4">
-          <ProfileEditForm user={user} />
+          <ProfileEditForm user={userData} />
         </div>
       </div>
     </div>

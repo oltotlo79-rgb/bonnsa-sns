@@ -1,8 +1,8 @@
 # 003: 認証システム
 
 ## 概要
-Supabase Authを使用したユーザー認証機能を実装する。
-メールアドレス + パスワードによる認証。メール認証は不要。
+NextAuth.js (Auth.js v5) を使用したユーザー認証機能を実装する。
+メールアドレス + パスワードによる認証（Credentials Provider）。メール認証は不要。
 
 ## 優先度
 **最高** - Phase 1
@@ -14,6 +14,21 @@ Supabase Authを使用したユーザー認証機能を実装する。
 ---
 
 ## Todo
+
+### NextAuth.jsセットアップ
+- [x] `next-auth@beta` インストール
+- [x] `@auth/prisma-adapter` インストール
+- [x] `bcryptjs` インストール（パスワードハッシュ用）
+- [x] `@types/bcryptjs` インストール
+
+### 認証設定ファイル
+- [x] `lib/auth.ts` - NextAuth.js設定
+  - [x] PrismaAdapterの設定
+  - [x] JWT セッション戦略
+  - [x] Credentials Providerの設定
+  - [x] コールバック設定（jwt, session）
+- [x] `app/api/auth/[...nextauth]/route.ts` - APIルート
+- [x] `types/next-auth.d.ts` - 型拡張（session.user.id追加）
 
 ### 認証ページUI
 - [x] `app/(auth)/layout.tsx` - 認証ページ用レイアウト
@@ -30,62 +45,32 @@ Supabase Authを使用したユーザー認証機能を実装する。
 - [x] `components/auth/LogoutButton.tsx` - ログアウトボタン
 
 ### 認証ロジック
-- [x] ログイン処理 (`signInWithPassword`)
-- [x] 新規登録処理 (`signUp`)
-  - [x] auth.users作成
-  - [x] publicテーブルへユーザー情報作成（トリガー）
+- [x] ログイン処理 (`signIn('credentials', ...)`)
+- [x] 新規登録処理 (`registerUser` Server Action)
+  - [x] メール重複チェック
+  - [x] パスワードハッシュ化（bcrypt）
+  - [x] ユーザー作成
 - [x] ログアウト処理 (`signOut`)
-- [x] パスワードリセットメール送信 (`resetPasswordForEmail`)
-- [x] 新パスワード設定 (`updateUser`)
-
-### Supabase設定
-- [x] パスワードリセットメールテンプレート設定（デフォルト使用）
-- [x] リダイレクトURL設定（localhost用に設定済み）
-- [x] auth.usersからpublic.usersへのトリガー作成
-- [x] メール確認を無効化（Confirm email: OFF）
-
-### OAuthコールバック
-- [x] `app/auth/callback/route.ts` - 認証コールバックルート
+- [ ] パスワードリセットメール送信（TODO: メール送信実装が必要）
+- [ ] 新パスワード設定（TODO: トークン検証が必要）
 
 ### Middleware認証
-- [x] `middleware.ts` - セッション更新・ルート保護
+- [x] `middleware.ts` - NextAuth.js auth() ラッパー
 - [x] 保護ルート定義 (`/feed`, `/posts`, `/settings`等)
 - [x] 未認証時のリダイレクト処理
 - [x] 認証済みユーザーのログインページリダイレクト
 
 ### セッション管理
-- [x] Server Componentでのユーザー取得 (`getUser`)
-- [x] Client Componentでのユーザー取得
-- [x] セッション自動更新
+- [x] Server Componentでのユーザー取得 (`auth()`)
+- [x] Client Componentでのユーザー取得 (`useSession`)
+- [x] SessionProviderの設定
+- [x] JWTベースのセッション（サーバーサイドDBセッション不要）
 
 ### バリデーション
 - [x] メールアドレス形式チェック
-- [x] パスワード強度チェック（最低8文字、英字・数字必須）
+- [x] パスワード強度チェック（最低8文字）
 - [x] ニックネーム必須チェック
 - [x] エラーメッセージ日本語化
-
-### ユーザー作成トリガー
-- [x] auth.usersにレコード作成時、public.usersにも作成するトリガー
-
-```sql
--- auth.usersへの新規登録時にpublic.usersへレコード作成
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.users (id, email, nickname)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'nickname', 'ユーザー')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-```
 
 ### UI/UX
 - [x] ローディング状態の表示
@@ -98,7 +83,7 @@ CREATE TRIGGER on_auth_user_created
 - [x] ログイン失敗テスト（間違ったパスワード）
 - [x] 新規登録成功テスト
 - [x] 重複メールアドレスエラーテスト
-- [x] パスワードリセットフローテスト
+- [ ] パスワードリセットフローテスト（TODO）
 - [x] 未認証ユーザーの保護ルートアクセス制限テスト
 - [x] 認証済みユーザーのログインページリダイレクトテスト
 
@@ -107,35 +92,166 @@ CREATE TRIGGER on_auth_user_created
 ## 完了条件
 - [x] 新規登録が正常に動作する
 - [x] ログイン/ログアウトが正常に動作する
-- [x] パスワードリセットが正常に動作する
+- [ ] パスワードリセットが正常に動作する（TODO）
 - [x] 未認証ユーザーが保護ルートにアクセスできない
 - [x] 認証済みユーザーがログインページにアクセスするとリダイレクトされる
 
 ## 参考コード
+
+### lib/auth.ts
 ```typescript
-// components/auth/LoginForm.tsx
+import NextAuth from 'next-auth'
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
+import { prisma } from '@/lib/db'
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: 'jwt' },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        })
+
+        if (!user || !user.password) {
+          return null
+        }
+
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        )
+
+        if (!isValid) {
+          return null
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.nickname,
+          image: user.avatarUrl,
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
+})
+
+// ユーザー登録関数
+export async function registerUser(data: {
+  email: string
+  password: string
+  nickname: string
+}) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  })
+
+  if (existingUser) {
+    return { error: 'このメールアドレスは既に登録されています' }
+  }
+
+  const hashedPassword = await bcrypt.hash(data.password, 10)
+
+  const user = await prisma.user.create({
+    data: {
+      email: data.email,
+      password: hashedPassword,
+      nickname: data.nickname,
+    },
+  })
+
+  return { success: true, userId: user.id }
+}
+```
+
+### middleware.ts
+```typescript
+import { auth } from '@/lib/auth'
+
+export default auth((req) => {
+  const isLoggedIn = !!req.auth
+
+  const protectedPaths = ['/feed', '/posts', '/settings', '/notifications', '/bookmarks', '/users']
+  const authPaths = ['/login', '/register']
+
+  const isProtected = protectedPaths.some((path) =>
+    req.nextUrl.pathname.startsWith(path)
+  )
+  const isAuthPage = authPaths.some((path) =>
+    req.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isProtected && !isLoggedIn) {
+    const redirectUrl = new URL('/login', req.nextUrl)
+    redirectUrl.searchParams.set('callbackUrl', req.nextUrl.pathname)
+    return Response.redirect(redirectUrl)
+  }
+
+  if (isAuthPage && isLoggedIn) {
+    return Response.redirect(new URL('/feed', req.nextUrl))
+  }
+})
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+}
+```
+
+### components/auth/LoginForm.tsx
+```typescript
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export function LoginForm() {
-  const supabase = createClient()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleLogin(formData: FormData) {
+  async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
+    const result = await signIn('credentials', {
+      email: formData.get('email'),
+      password: formData.get('password'),
+      redirect: false,
     })
 
-    if (error) {
+    if (result?.error) {
       setError('メールアドレスまたはパスワードが間違っています')
       setLoading(false)
       return
@@ -146,9 +262,40 @@ export function LoginForm() {
   }
 
   return (
-    <form action={handleLogin}>
-      {/* フォーム内容 */}
+    <form action={handleSubmit}>
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      {error && <p className="text-red-500">{error}</p>}
+      <button type="submit" disabled={loading}>
+        {loading ? 'ログイン中...' : 'ログイン'}
+      </button>
     </form>
   )
+}
+```
+
+### Server Actionsでの認証チェック
+```typescript
+// lib/actions/user.ts
+'use server'
+
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+
+export async function updateProfile(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const nickname = formData.get('nickname') as string
+  const bio = formData.get('bio') as string
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { nickname, bio },
+  })
+
+  return { success: true }
 }
 ```

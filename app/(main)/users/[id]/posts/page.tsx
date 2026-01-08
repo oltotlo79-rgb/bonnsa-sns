@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
 import Link from 'next/link'
 
 type Props = {
@@ -8,13 +8,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { nickname: true },
+  })
 
   return {
     title: user ? `${user.nickname}の投稿 - BON-LOG` : 'ユーザーが見つかりません',
@@ -23,27 +21,20 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function UserPostsPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, nickname: true },
+  })
 
   if (!user) {
     notFound()
   }
 
-  const { data: posts } = await supabase
-    .from('posts')
-    .select(`
-      id,
-      content,
-      created_at
-    `)
-    .eq('user_id', id)
-    .order('created_at', { ascending: false })
+  const posts = await prisma.post.findMany({
+    where: { userId: id },
+    orderBy: { createdAt: 'desc' },
+  })
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -61,7 +52,7 @@ export default async function UserPostsPage({ params }: Props) {
               <div key={post.id} className="p-4">
                 <p className="whitespace-pre-wrap">{post.content}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                  {new Date(post.createdAt).toLocaleDateString('ja-JP')}
                 </p>
               </div>
             ))}

@@ -84,7 +84,7 @@
 ### 終了イベント処理
 - [ ] 終了日が過去のイベントを自動非表示
 - [ ] 終了イベント表示切り替えオプション
-- [ ] Supabaseスケジュール関数での自動アーカイブ（将来）
+- [ ] cronジョブでの自動アーカイブ（将来）
 
 ### 表示切り替え
 - [ ] カレンダー表示
@@ -211,31 +211,71 @@ export function EventCalendar({ events }: { events: Event[] }) {
 // lib/actions/event.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function getUpcomingEvents(region?: string) {
-  const supabase = await createClient()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
-  let query = supabase
-    .from('events')
-    .select('*')
-    .gte('start_date', new Date().toISOString().split('T')[0])
-    .order('start_date', { ascending: true })
+  const prefectures = region ? getPrefecturesByRegion(region) : undefined
 
-  if (region) {
-    // 地方ブロックから都道府県リストを取得
-    const prefectures = getPrefecturesByRegion(region)
-    query = query.in('prefecture', prefectures)
-  }
-
-  const { data: events, error } = await query
-
-  if (error) {
-    return { error: 'イベントの取得に失敗しました' }
-  }
+  const events = await prisma.event.findMany({
+    where: {
+      startDate: { gte: today },
+      ...(prefectures && { prefecture: { in: prefectures } }),
+    },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { startDate: 'asc' },
+  })
 
   return { events }
+}
+
+export async function createEvent(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const title = formData.get('title') as string
+  const startDate = new Date(formData.get('startDate') as string)
+  const endDate = formData.get('endDate')
+    ? new Date(formData.get('endDate') as string)
+    : null
+  const prefecture = formData.get('prefecture') as string
+  const city = formData.get('city') as string | null
+  const venue = formData.get('venue') as string | null
+  const organizer = formData.get('organizer') as string | null
+  const fee = formData.get('fee') as string | null
+  const hasSales = formData.get('hasSales') === 'true'
+  const description = formData.get('description') as string | null
+  const externalUrl = formData.get('externalUrl') as string | null
+
+  const event = await prisma.event.create({
+    data: {
+      userId: session.user.id,
+      title,
+      startDate,
+      endDate,
+      prefecture,
+      city,
+      venue,
+      organizer,
+      fee,
+      hasSales,
+      description,
+      externalUrl,
+    },
+  })
+
+  revalidatePath('/events')
+  return { success: true, eventId: event.id }
 }
 
 function getPrefecturesByRegion(region: string): string[] {

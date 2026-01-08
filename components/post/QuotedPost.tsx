@@ -7,17 +7,17 @@ type QuotedPostProps = {
   post: {
     id: string
     content: string | null
-    created_at: string
+    createdAt: string | Date
     user: {
       id: string
       nickname: string
-      avatar_url: string | null
+      avatarUrl: string | null
     }
   }
 }
 
 export function QuotedPost({ post }: QuotedPostProps) {
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
+  const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
     locale: ja,
   })
@@ -29,9 +29,9 @@ export function QuotedPost({ post }: QuotedPostProps) {
     >
       <div className="flex items-center gap-2">
         <div className="w-5 h-5 rounded-full bg-muted overflow-hidden flex-shrink-0">
-          {post.user.avatar_url ? (
+          {post.user.avatarUrl ? (
             <Image
-              src={post.user.avatar_url}
+              src={post.user.avatarUrl}
               alt={post.user.nickname}
               width={20}
               height={20}

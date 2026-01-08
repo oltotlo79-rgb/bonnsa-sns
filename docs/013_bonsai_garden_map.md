@@ -121,7 +121,7 @@ Leaflet + OpenStreetMapを使用した盆栽園マップ機能を実装する。
 - [ ] モバイルでのタッチ操作
 
 ### 画像アップロード
-- [ ] Supabase Storageバケット作成（shop-images, review-images）
+- [ ] Azure Blob Storageへのアップロード（shop-images, review-images）
 - [ ] 画像リサイズ・圧縮
 - [ ] ファイルサイズ制限（5MB）
 
@@ -191,9 +191,116 @@ export function Map({ shops }: { shops: Shop[] }) {
 ```
 
 ```typescript
+// lib/actions/shop.ts
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
+
+export async function getShops() {
+  const shops = await prisma.bonsaiShop.findMany({
+    include: {
+      genres: {
+        include: { genre: true },
+      },
+      reviews: {
+        select: { rating: true },
+      },
+    },
+  })
+
+  return {
+    shops: shops.map((shop) => ({
+      ...shop,
+      averageRating: shop.reviews.length > 0
+        ? shop.reviews.reduce((sum, r) => sum + r.rating, 0) / shop.reviews.length
+        : null,
+      reviewCount: shop.reviews.length,
+    })),
+  }
+}
+
+export async function createShop(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const name = formData.get('name') as string
+  const address = formData.get('address') as string
+  const latitude = parseFloat(formData.get('latitude') as string)
+  const longitude = parseFloat(formData.get('longitude') as string)
+  const phone = formData.get('phone') as string | null
+  const website = formData.get('website') as string | null
+  const businessHours = formData.get('businessHours') as string | null
+  const closedDays = formData.get('closedDays') as string | null
+  const genreIds = formData.getAll('genreIds') as string[]
+
+  // 重複チェック（住所ベース）
+  const existing = await prisma.bonsaiShop.findFirst({
+    where: { address },
+  })
+
+  if (existing) {
+    return { error: 'この住所の盆栽園は既に登録されています', existingId: existing.id }
+  }
+
+  const shop = await prisma.bonsaiShop.create({
+    data: {
+      name,
+      address,
+      latitude,
+      longitude,
+      phone,
+      website,
+      businessHours,
+      closedDays,
+      createdBy: session.user.id,
+      genres: genreIds.length > 0
+        ? {
+            create: genreIds.map((genreId) => ({ genreId })),
+          }
+        : undefined,
+    },
+  })
+
+  revalidatePath('/shops')
+  return { success: true, shopId: shop.id }
+}
+
+export async function createReview(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const shopId = formData.get('shopId') as string
+  const rating = parseInt(formData.get('rating') as string, 10)
+  const content = formData.get('content') as string | null
+
+  if (rating < 1 || rating > 5) {
+    return { error: '評価は1〜5の間で選択してください' }
+  }
+
+  const review = await prisma.shopReview.create({
+    data: {
+      shopId,
+      userId: session.user.id,
+      rating,
+      content,
+    },
+  })
+
+  revalidatePath(`/shops/${shopId}`)
+  return { success: true, reviewId: review.id }
+}
+```
+
+```typescript
 // app/(main)/shops/page.tsx
 import dynamic from 'next/dynamic'
-import { createClient } from '@/lib/supabase/server'
+import { getShops } from '@/lib/actions/shop'
 
 // SSR無効化
 const Map = dynamic(
@@ -202,20 +309,12 @@ const Map = dynamic(
 )
 
 export default async function ShopsPage() {
-  const supabase = await createClient()
-
-  const { data: shops } = await supabase
-    .from('bonsai_shops')
-    .select(`
-      *,
-      shop_genres(genre),
-      shop_reviews(rating)
-    `)
+  const { shops } = await getShops()
 
   return (
     <div>
       <h1>盆栽園マップ</h1>
-      <Map shops={shops ?? []} />
+      <Map shops={shops} />
     </div>
   )
 }

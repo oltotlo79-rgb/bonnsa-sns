@@ -66,54 +66,126 @@
 // lib/actions/follow.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function toggleFollow(targetUserId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
-  if (user.id === targetUserId) {
+  if (session.user.id === targetUserId) {
     return { error: '自分自身をフォローできません' }
   }
 
   // 現在のフォロー状態を確認
-  const { data: existing } = await supabase
-    .from('follows')
-    .select()
-    .eq('follower_id', user.id)
-    .eq('following_id', targetUserId)
-    .single()
+  const existing = await prisma.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: session.user.id,
+        followingId: targetUserId,
+      },
+    },
+  })
 
   if (existing) {
     // フォロー解除
-    await supabase
-      .from('follows')
-      .delete()
-      .eq('follower_id', user.id)
-      .eq('following_id', targetUserId)
+    await prisma.follow.delete({
+      where: {
+        followerId_followingId: {
+          followerId: session.user.id,
+          followingId: targetUserId,
+        },
+      },
+    })
   } else {
     // フォロー
-    await supabase
-      .from('follows')
-      .insert({
-        follower_id: user.id,
-        following_id: targetUserId,
-      })
-
-    // 通知作成
-    await supabase.from('notifications').insert({
-      user_id: targetUserId,
-      actor_id: user.id,
-      type: 'follow',
-    })
+    await prisma.$transaction([
+      prisma.follow.create({
+        data: {
+          followerId: session.user.id,
+          followingId: targetUserId,
+        },
+      }),
+      // 通知作成
+      prisma.notification.create({
+        data: {
+          userId: targetUserId,
+          actorId: session.user.id,
+          type: 'follow',
+        },
+      }),
+    ])
   }
 
   revalidatePath(`/users/${targetUserId}`)
   return { success: true, isFollowing: !existing }
+}
+
+// フォロー状態取得
+export async function getFollowStatus(targetUserId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { isFollowing: false }
+  }
+
+  const existing = await prisma.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: session.user.id,
+        followingId: targetUserId,
+      },
+    },
+  })
+
+  return { isFollowing: !!existing }
+}
+
+// フォロワー一覧取得
+export async function getFollowers(userId: string, cursor?: string, limit = 20) {
+  const followers = await prisma.follow.findMany({
+    where: { followingId: userId },
+    include: {
+      follower: {
+        select: { id: true, nickname: true, avatarUrl: true, bio: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { followerId_followingId: { followerId: cursor, followingId: userId } },
+      skip: 1,
+    }),
+  })
+
+  return {
+    users: followers.map((f) => f.follower),
+    nextCursor: followers.length === limit ? followers[followers.length - 1]?.followerId : undefined,
+  }
+}
+
+// フォロー中一覧取得
+export async function getFollowing(userId: string, cursor?: string, limit = 20) {
+  const following = await prisma.follow.findMany({
+    where: { followerId: userId },
+    include: {
+      following: {
+        select: { id: true, nickname: true, avatarUrl: true, bio: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { followerId_followingId: { followerId: userId, followingId: cursor } },
+      skip: 1,
+    }),
+  })
+
+  return {
+    users: following.map((f) => f.following),
+    nextCursor: following.length === limit ? following[following.length - 1]?.followingId : undefined,
+  }
 }
 ```

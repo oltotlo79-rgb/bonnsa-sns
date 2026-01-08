@@ -48,7 +48,7 @@
 - [ ] 新着順ソート
 
 ### リアルタイム更新
-- [ ] Supabase Realtime でタイムライン更新
+- [ ] WebSocket（Socket.io）でタイムライン更新
 - [ ] 新しい投稿の通知バナー
 - [ ] 「新しい投稿があります」クリックで最新表示
 
@@ -97,43 +97,108 @@
 
 ## 参考コード
 ```typescript
+// lib/actions/feed.ts
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+
+export async function getTimeline(cursor?: string, limit = 20) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です', posts: [] }
+  }
+
+  // フォロー中のユーザーIDを取得
+  const following = await prisma.follow.findMany({
+    where: { followerId: session.user.id },
+    select: { followingId: true },
+  })
+  const followingIds = following.map((f) => f.followingId)
+
+  // 自分の投稿も含める
+  followingIds.push(session.user.id)
+
+  // ブロック/ミュートしているユーザーを取得
+  const [blocks, mutes] = await Promise.all([
+    prisma.block.findMany({
+      where: { blockerId: session.user.id },
+      select: { blockedId: true },
+    }),
+    prisma.mute.findMany({
+      where: { muterId: session.user.id },
+      select: { mutedId: true },
+    }),
+  ])
+  const excludeIds = [
+    ...blocks.map((b) => b.blockedId),
+    ...mutes.map((m) => m.mutedId),
+  ]
+
+  // タイムライン取得
+  const posts = await prisma.post.findMany({
+    where: {
+      userId: {
+        in: followingIds,
+        notIn: excludeIds.length > 0 ? excludeIds : undefined,
+      },
+    },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: { genre: true },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
+
+  const formattedPosts = posts.map((post) => ({
+    ...post,
+    likeCount: post._count.likes,
+    commentCount: post._count.comments,
+    genres: post.genres.map((pg) => pg.genre),
+  }))
+
+  return {
+    posts: formattedPosts,
+    nextCursor: posts.length === limit ? posts[posts.length - 1]?.id : undefined,
+  }
+}
+```
+
+```typescript
 // app/(main)/feed/page.tsx
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { getTimeline } from '@/lib/actions/feed'
 import { Timeline } from '@/components/feed/Timeline'
 import { PostForm } from '@/components/post/PostForm'
 
 export default async function FeedPage() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     redirect('/login')
   }
 
-  // フォロー中ユーザーの投稿を取得
-  const { data: posts } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      user:users(id, nickname, avatar_url),
-      likes(count),
-      comments(count),
-      post_media(*),
-      post_genres(genre:genres(*))
-    `)
-    .in('user_id', supabase
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', user.id)
-    )
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const { posts } = await getTimeline()
 
   return (
     <div>
       <PostForm />
-      <Timeline initialPosts={posts ?? []} />
+      <Timeline initialPosts={posts} />
     </div>
   )
 }
@@ -147,6 +212,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useInView } from 'react-intersection-observer'
 import { useEffect } from 'react'
 import { PostCard } from '@/components/post/PostCard'
+import { getTimeline } from '@/lib/actions/feed'
 
 export function Timeline({ initialPosts }) {
   const { ref, inView } = useInView()
@@ -159,12 +225,11 @@ export function Timeline({ initialPosts }) {
   } = useInfiniteQuery({
     queryKey: ['timeline'],
     queryFn: async ({ pageParam }) => {
-      const res = await fetch(`/api/feed?cursor=${pageParam}`)
-      return res.json()
+      return await getTimeline(pageParam)
     },
     initialData: {
-      pages: [{ posts: initialPosts, nextCursor: null }],
-      pageParams: [null],
+      pages: [{ posts: initialPosts, nextCursor: initialPosts[initialPosts.length - 1]?.id }],
+      pageParams: [undefined],
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
   })
@@ -177,13 +242,14 @@ export function Timeline({ initialPosts }) {
 
   return (
     <div>
-      {data.pages.map((page) =>
+      {data.pages.map((page, i) =>
         page.posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))
       )}
       <div ref={ref}>
         {isFetchingNextPage && <p>読み込み中...</p>}
+        {!hasNextPage && <p>これ以上投稿はありません</p>}
       </div>
     </div>
   )

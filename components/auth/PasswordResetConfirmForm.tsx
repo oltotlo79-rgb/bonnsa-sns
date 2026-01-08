@@ -1,11 +1,10 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Link from 'next/link'
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -46,8 +45,6 @@ function EyeOffIcon({ className }: { className?: string }) {
 }
 
 export function PasswordResetConfirmForm() {
-  const supabase = createClient()
-  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -82,18 +79,9 @@ export function PasswordResetConfirmForm() {
       return
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password,
-    })
-
-    if (error) {
-      setError('パスワードの更新に失敗しました')
-      setLoading(false)
-      return
-    }
-
-    router.push('/login')
-    router.refresh()
+    // TODO: トークン検証とパスワード更新の実装が必要
+    setError('パスワードリセット機能は現在準備中です。管理者にお問い合わせください。')
+    setLoading(false)
   }
 
   return (
@@ -165,6 +153,12 @@ export function PasswordResetConfirmForm() {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? '更新中...' : 'パスワードを更新'}
       </Button>
+
+      <p className="text-center text-sm text-muted-foreground">
+        <Link href="/login" className="text-primary hover:underline">
+          ログインページへ戻る
+        </Link>
+      </p>
     </form>
   )
 }

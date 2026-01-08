@@ -1,6 +1,5 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,9 +7,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 
 export function PasswordResetForm() {
-  const supabase = createClient()
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -18,35 +15,10 @@ export function PasswordResetForm() {
     setLoading(true)
     setError(null)
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/password-reset/confirm`,
-    })
-
-    if (error) {
-      setError('パスワードリセットメールの送信に失敗しました')
-      setLoading(false)
-      return
-    }
-
-    setSuccess(true)
+    // TODO: メール送信機能の実装が必要
+    // 現在は未実装のため、エラーメッセージを表示
+    setError('パスワードリセット機能は現在準備中です。管理者にお問い合わせください。')
     setLoading(false)
-  }
-
-  if (success) {
-    return (
-      <div className="text-center space-y-4">
-        <p className="text-green-600">
-          パスワードリセット用のメールを送信しました。
-          メールに記載されたリンクからパスワードを再設定してください。
-        </p>
-        <Link href="/login" className="text-primary hover:underline">
-          ログインページへ戻る
-        </Link>
-      </div>
-    )
   }
 
   return (

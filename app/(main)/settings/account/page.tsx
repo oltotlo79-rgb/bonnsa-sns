@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { PrivacyToggle } from '@/components/user/PrivacyToggle'
 import { DeleteAccountButton } from '@/components/user/DeleteAccountButton'
 
@@ -9,18 +10,16 @@ export const metadata = {
 }
 
 export default async function AccountSettingsPage() {
-  const supabase = await createClient()
+  const session = await auth()
 
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-  if (!authUser) {
+  if (!session?.user?.id) {
     redirect('/login')
   }
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, is_public')
-    .eq('id', authUser.id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, isPublic: true },
+  })
 
   if (!user) {
     redirect('/login')
@@ -40,7 +39,7 @@ export default async function AccountSettingsPage() {
           {/* 公開設定 */}
           <div className="p-4">
             <h2 className="font-medium mb-2">プライバシー設定</h2>
-            <PrivacyToggle initialIsPublic={user.is_public} />
+            <PrivacyToggle initialIsPublic={user.isPublic} />
           </div>
 
           {/* アカウント削除 */}

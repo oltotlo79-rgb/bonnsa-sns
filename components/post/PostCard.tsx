@@ -14,42 +14,40 @@ import { BookmarkButton } from './BookmarkButton'
 type PostUser = {
   id: string
   nickname: string
-  avatar_url: string | null
+  avatarUrl: string | null
 }
 
 type PostMedia = {
   id: string
   url: string
   type: string
-  sort_order: number
+  sortOrder: number
 }
 
 type PostGenre = {
-  genre: {
-    id: string
-    name: string
-    category: string
-  }
+  id: string
+  name: string
+  category: string
 }
 
 type QuotePost = {
   id: string
   content: string | null
-  created_at: string
+  createdAt: string | Date
   user: PostUser
 }
 
 type Post = {
   id: string
   content: string | null
-  created_at: string
+  createdAt: string | Date
   user: PostUser
   media: PostMedia[]
   genres: PostGenre[]
-  likes: { count: number }[]
-  comments: { count: number }[]
-  quote_post: QuotePost | null
-  repost_post: (QuotePost & { media: PostMedia[] }) | null
+  likeCount: number
+  commentCount: number
+  quotePost?: QuotePost | null
+  repostPost?: (QuotePost & { media: PostMedia[] }) | null
   isLiked?: boolean
   isBookmarked?: boolean
 }
@@ -96,16 +94,16 @@ function BookmarkIcon({ className, filled }: { className?: string; filled?: bool
 
 export function PostCard({ post, currentUserId, initialLiked, initialBookmarked }: PostCardProps) {
   const isOwner = currentUserId === post.user.id
-  const likesCount = post.likes?.[0]?.count ?? 0
-  const commentsCount = post.comments?.[0]?.count ?? 0
+  const likesCount = post.likeCount ?? 0
+  const commentsCount = post.commentCount ?? 0
   const isLiked = initialLiked ?? post.isLiked ?? false
   const isBookmarked = initialBookmarked ?? post.isBookmarked ?? false
 
   // リポストの場合は元の投稿を表示
-  const displayPost = post.repost_post || post
-  const isRepost = !!post.repost_post
+  const displayPost = post.repostPost || post
+  const isRepost = !!post.repostPost
 
-  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
+  const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
     locale: ja,
   })
@@ -146,9 +144,9 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
         {/* アバター */}
         <Link href={`/users/${displayPost.user.id}`} className="flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
-            {displayPost.user.avatar_url ? (
+            {displayPost.user.avatarUrl ? (
               <Image
-                src={displayPost.user.avatar_url}
+                src={displayPost.user.avatarUrl}
                 alt={displayPost.user.nickname}
                 width={40}
                 height={40}
@@ -201,16 +199,16 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
           )}
 
           {/* 引用投稿 */}
-          {post.quote_post && (
+          {post.quotePost && (
             <div className="mt-3">
-              <QuotedPost post={post.quote_post} />
+              <QuotedPost post={post.quotePost} />
             </div>
           )}
 
           {/* ジャンルタグ */}
           {post.genres && post.genres.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-3">
-              {post.genres.map(({ genre }) => (
+              {post.genres.map((genre) => (
                 <Link
                   key={genre.id}
                   href={`/search?genre=${genre.id}`}

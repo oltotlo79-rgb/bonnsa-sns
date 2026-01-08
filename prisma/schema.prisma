@@ -1,0 +1,393 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js用モデル
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ユーザー関連
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  password      String?   // パスワードハッシュ
+  nickname      String
+  avatarUrl     String?   @map("avatar_url")
+  headerUrl     String?   @map("header_url")
+  bio           String?
+  location      String?
+  isPublic      Boolean   @default(true) @map("is_public")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // NextAuth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  posts        Post[]
+  comments     Comment[]
+  likes        Like[]
+  bookmarks    Bookmark[]
+  followers    Follow[]       @relation("FollowingToUser")
+  following    Follow[]       @relation("FollowerToUser")
+  blockedBy    Block[]        @relation("BlockedUser")
+  blocking     Block[]        @relation("BlockingUser")
+  mutedBy      Mute[]         @relation("MutedUser")
+  muting       Mute[]         @relation("MutingUser")
+  notifications    Notification[] @relation("NotificationUser")
+  actorNotifications Notification[] @relation("NotificationActor")
+  shopReviews  ShopReview[]
+  bonsaiShops  BonsaiShop[]
+  events       Event[]
+  reports      Report[]
+
+  // Admin
+  adminUser    AdminUser?
+
+  @@map("users")
+}
+
+// 投稿関連
+model Post {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  content      String?  @db.Text
+  quotePostId  String?  @map("quote_post_id")
+  repostPostId String?  @map("repost_post_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quotePost   Post?      @relation("QuotePost", fields: [quotePostId], references: [id], onDelete: SetNull)
+  quotedBy    Post[]     @relation("QuotePost")
+  repostPost  Post?      @relation("RepostPost", fields: [repostPostId], references: [id], onDelete: SetNull)
+  repostedBy  Post[]     @relation("RepostPost")
+  media       PostMedia[]
+  genres      PostGenre[]
+  comments    Comment[]
+  likes       Like[]
+  bookmarks   Bookmark[]
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostMedia {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  url       String
+  type      String   // 'image' or 'video'
+  sortOrder Int      @default(0) @map("sort_order")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_media")
+}
+
+model Genre {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  sortOrder Int      @default(0) @map("sort_order")
+
+  postGenres PostGenre[]
+  shopGenres ShopGenre[]
+
+  @@map("genres")
+}
+
+model PostGenre {
+  postId  String @map("post_id")
+  genreId String @map("genre_id")
+
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([postId, genreId])
+  @@map("post_genres")
+}
+
+// コメント
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  parentId  String?  @map("parent_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+  likes   Like[]
+  notifications Notification[]
+
+  @@index([postId])
+  @@index([userId])
+  @@map("comments")
+}
+
+// いいね
+model Like {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  postId    String?  @map("post_id")
+  commentId String?  @map("comment_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@map("likes")
+}
+
+// ブックマーク
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("bookmarks")
+}
+
+// フォロー
+model Follow {
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("FollowerToUser", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("FollowingToUser", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// ブロック
+model Block {
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("BlockingUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@map("blocks")
+}
+
+// ミュート
+model Mute {
+  muterId String   @map("muter_id")
+  mutedId String   @map("muted_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  muter User @relation("MutingUser", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("MutedUser", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@map("mutes")
+}
+
+// 通知
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  actorId   String   @map("actor_id")
+  type      String   // 'like', 'comment', 'follow', 'quote', 'reply', 'comment_like'
+  postId    String?  @map("post_id")
+  commentId String?  @map("comment_id")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+  actor   User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+// 盆栽園
+model BonsaiShop {
+  id           String   @id @default(cuid())
+  name         String
+  address      String
+  latitude     Decimal? @db.Decimal(10, 7)
+  longitude    Decimal? @db.Decimal(10, 7)
+  phone        String?
+  website      String?
+  businessHours String? @map("business_hours")
+  closedDays   String?  @map("closed_days")
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  creator User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  genres  ShopGenre[]
+  reviews ShopReview[]
+
+  @@map("bonsai_shops")
+}
+
+model ShopGenre {
+  shopId  String @map("shop_id")
+  genreId String @map("genre_id")
+
+  shop  BonsaiShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  genre Genre      @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([shopId, genreId])
+  @@map("shop_genres")
+}
+
+model ShopReview {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  userId    String   @map("user_id")
+  rating    Int      // 1-5
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  shop   BonsaiShop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images ShopReviewImage[]
+
+  @@map("shop_reviews")
+}
+
+model ShopReviewImage {
+  id       String @id @default(cuid())
+  reviewId String @map("review_id")
+  url      String
+
+  review ShopReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("shop_review_images")
+}
+
+// イベント
+model Event {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?  @db.Text
+  startDate    DateTime @map("start_date")
+  endDate      DateTime? @map("end_date")
+  prefecture   String?
+  city         String?
+  venue        String?
+  organizer    String?
+  admissionFee String?  @map("admission_fee")
+  hasSales     Boolean  @default(false) @map("has_sales")
+  externalUrl  String?  @map("external_url")
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([startDate])
+  @@index([prefecture])
+  @@map("events")
+}
+
+// 通報
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String   @map("reporter_id")
+  targetType  String   @map("target_type") // 'post', 'comment', 'event', 'shop', 'user'
+  targetId    String   @map("target_id")
+  reason      String   // 'spam', 'inappropriate', 'harassment', 'copyright', 'other'
+  description String?  @db.Text
+  status      String   @default("pending") // 'pending', 'reviewed', 'resolved'
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+// 管理者
+model AdminUser {
+  userId    String   @id @map("user_id")
+  role      String   // 'admin', 'moderator'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs AdminLog[]
+
+  @@map("admin_users")
+}
+
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String   @map("admin_id")
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [userId], onDelete: Cascade)
+
+  @@map("admin_logs")
+}

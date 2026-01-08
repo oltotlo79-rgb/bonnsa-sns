@@ -1,12 +1,13 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { registerUser } from '@/lib/actions/auth'
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -47,7 +48,6 @@ function EyeOffIcon({ className }: { className?: string }) {
 }
 
 export function RegisterForm() {
-  const supabase = createClient()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -85,22 +85,24 @@ export function RegisterForm() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    // Server Actionでユーザー登録
+    const result = await registerUser({ email, password, nickname })
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      return
+    }
+
+    // 登録成功後、自動ログイン
+    const signInResult = await signIn('credentials', {
       email,
       password,
-      options: {
-        data: {
-          nickname,
-        },
-      },
+      redirect: false,
     })
 
-    if (error) {
-      if (error.message.includes('already registered')) {
-        setError('このメールアドレスは既に登録されています')
-      } else {
-        setError('登録に失敗しました。もう一度お試しください')
-      }
+    if (signInResult?.error) {
+      setError('登録は完了しましたが、ログインに失敗しました。ログインページからお試しください。')
       setLoading(false)
       return
     }

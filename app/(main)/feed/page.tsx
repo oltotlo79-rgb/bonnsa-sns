@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 import { PostForm } from '@/components/post/PostForm'
 import { PostList } from '@/components/post/PostList'
 import { getGenres, getPosts } from '@/lib/actions/post'
@@ -8,8 +8,7 @@ export const metadata = {
 }
 
 export default async function FeedPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await auth()
 
   const [genresResult, postsResult] = await Promise.all([
     getGenres(),
@@ -25,7 +24,7 @@ export default async function FeedPage() {
 
       <div className="bg-card rounded-lg border overflow-hidden">
         <h2 className="px-4 py-3 font-bold border-b">タイムライン</h2>
-        <PostList posts={posts} currentUserId={user?.id} />
+        <PostList posts={posts} currentUserId={session?.user?.id} />
       </div>
     </div>
   )

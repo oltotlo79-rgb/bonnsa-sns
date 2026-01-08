@@ -8,12 +8,12 @@ import { getComments } from '@/lib/actions/comment'
 type Comment = {
   id: string
   content: string
-  created_at: string
-  parent_id: string | null
+  createdAt: string | Date
+  parentId: string | null
   user: {
     id: string
     nickname: string
-    avatar_url: string | null
+    avatarUrl: string | null
   }
   likeCount: number
   replyCount?: number

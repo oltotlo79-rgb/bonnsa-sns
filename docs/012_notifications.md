@@ -2,7 +2,7 @@
 
 ## 概要
 いいね・コメント・フォロー等のアクションに対するリアルタイム通知機能を実装する。
-WebSocket（Supabase Realtime）とブラウザ通知を使用。
+WebSocket（Socket.io）とブラウザ通知を使用。
 
 ## 優先度
 **中** - Phase 6
@@ -47,8 +47,8 @@ WebSocket（Supabase Realtime）とブラウザ通知を使用。
   - [ ] `createNotification` - 通知作成
 
 ### リアルタイム通知
-- [ ] Supabase Realtime設定
-- [ ] 通知テーブルのサブスクリプション
+- [ ] Socket.io サーバー設定
+- [ ] 通知イベントのサブスクリプション
 - [ ] 新着通知の即座反映
 
 ### ブラウザ通知
@@ -83,55 +83,135 @@ WebSocket（Supabase Realtime）とブラウザ通知を使用。
 
 ## 参考コード
 ```typescript
+// lib/actions/notification.ts
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+
+export async function getNotifications(cursor?: string, limit = 20) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です', notifications: [] }
+  }
+
+  const notifications = await prisma.notification.findMany({
+    where: { userId: session.user.id },
+    include: {
+      actor: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      post: {
+        select: { id: true, content: true },
+      },
+      comment: {
+        select: { id: true, content: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
+
+  return {
+    notifications,
+    nextCursor: notifications.length === limit ? notifications[notifications.length - 1]?.id : undefined,
+  }
+}
+
+export async function markAsRead(notificationId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.notification.update({
+    where: {
+      id: notificationId,
+      userId: session.user.id,
+    },
+    data: { isRead: true },
+  })
+
+  return { success: true }
+}
+
+export async function markAllAsRead() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.notification.updateMany({
+    where: {
+      userId: session.user.id,
+      isRead: false,
+    },
+    data: { isRead: true },
+  })
+
+  return { success: true }
+}
+
+export async function getUnreadCount() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { count: 0 }
+  }
+
+  const count = await prisma.notification.count({
+    where: {
+      userId: session.user.id,
+      isRead: false,
+    },
+  })
+
+  return { count }
+}
+```
+
+```typescript
 // components/notification/NotificationListener.tsx
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { io } from 'socket.io-client'
 
 export function NotificationListener({ userId }: { userId: string }) {
-  const supabase = createClient()
-  const router = useRouter()
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          // React Queryのキャッシュを更新
-          queryClient.invalidateQueries({ queryKey: ['notifications'] })
-          queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', {
+      query: { userId },
+    })
 
-          // ブラウザ通知
-          if (Notification.permission === 'granted') {
-            new Notification('BON-LOG', {
-              body: getNotificationMessage(payload.new),
-              icon: '/icon.png',
-            })
-          }
-        }
-      )
-      .subscribe()
+    socket.on('notification', (notification) => {
+      // React Queryのキャッシュを更新
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
+
+      // ブラウザ通知
+      if (Notification.permission === 'granted') {
+        new Notification('BON-LOG', {
+          body: getNotificationMessage(notification),
+          icon: '/icon.png',
+        })
+      }
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      socket.disconnect()
     }
-  }, [userId, supabase, queryClient])
+  }, [userId, queryClient])
 
   return null
 }
 
-function getNotificationMessage(notification: any) {
+function getNotificationMessage(notification: { type: string }) {
   switch (notification.type) {
     case 'like':
       return 'あなたの投稿がいいねされました'
@@ -146,55 +226,5 @@ function getNotificationMessage(notification: any) {
     default:
       return '新しい通知があります'
   }
-}
-```
-
-```typescript
-// lib/actions/notification.ts
-'use server'
-
-import { createClient } from '@/lib/supabase/server'
-
-export async function getNotifications(cursor?: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: '認証が必要です' }
-  }
-
-  let query = supabase
-    .from('notifications')
-    .select(`
-      *,
-      actor:users!actor_id(id, nickname, avatar_url),
-      post:posts(id, content)
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  if (cursor) {
-    query = query.lt('created_at', cursor)
-  }
-
-  const { data: notifications, error } = await query
-
-  if (error) {
-    return { error: '通知の取得に失敗しました' }
-  }
-
-  return { notifications }
-}
-
-export async function markAsRead(notificationId: string) {
-  const supabase = await createClient()
-
-  await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('id', notificationId)
-
-  return { success: true }
 }
 ```

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { ProfileHeader } from '@/components/user/ProfileHeader'
 
 type Props = {
@@ -8,13 +9,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { nickname: true },
+  })
 
   return {
     title: user ? `${user.nickname} - BON-LOG` : 'ユーザーが見つかりません',
@@ -23,63 +22,60 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function UserProfilePage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
+  const session = await auth()
 
-  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  // ユーザー情報とカウントを取得
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          posts: true,
+          followers: true,
+          following: true,
+        },
+      },
+    },
+  })
 
-  // ユーザー基本情報を取得
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error || !user) {
+  if (!user) {
     notFound()
   }
 
-  // カウントを別々に取得
-  const [postsCount, followersCount, followingCount] = await Promise.all([
-    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id),
-    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', id),
-    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', id),
-  ])
-
-  // ユーザーオブジェクトにカウントを追加
   const userWithCounts = {
     ...user,
-    postsCount: postsCount.count || 0,
-    followersCount: followersCount.count || 0,
-    followingCount: followingCount.count || 0,
+    postsCount: user._count.posts,
+    followersCount: user._count.followers,
+    followingCount: user._count.following,
   }
 
-  const isOwner = currentUser?.id === user.id
+  const isOwner = session?.user?.id === user.id
 
   // フォロー状態を取得
   let isFollowing = false
-  if (currentUser && !isOwner) {
-    const { data: follow } = await supabase
-      .from('follows')
-      .select('follower_id')
-      .eq('follower_id', currentUser.id)
-      .eq('following_id', id)
-      .single()
-
+  if (session?.user?.id && !isOwner) {
+    const follow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: session.user.id,
+          followingId: id,
+        },
+      },
+    })
     isFollowing = !!follow
   }
 
   // 最近の投稿を取得
-  const { data: posts } = await supabase
-    .from('posts')
-    .select(`
-      id,
-      content,
-      created_at,
-      user:users(id, nickname, avatar_url)
-    `)
-    .eq('user_id', id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  const posts = await prisma.post.findMany({
+    where: { userId: id },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  })
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -99,7 +95,7 @@ export default async function UserProfilePage({ params }: Props) {
               <div key={post.id} className="p-4">
                 <p className="whitespace-pre-wrap">{post.content}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                  {new Date(post.createdAt).toLocaleDateString('ja-JP')}
                 </p>
               </div>
             ))}

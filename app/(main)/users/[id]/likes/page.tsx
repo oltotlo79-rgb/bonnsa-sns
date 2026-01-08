@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
 import Link from 'next/link'
 
 type Props = {
@@ -8,13 +8,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { nickname: true },
+  })
 
   return {
     title: user ? `${user.nickname}のいいね - BON-LOG` : 'ユーザーが見つかりません',
@@ -23,33 +21,34 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function UserLikesPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, nickname: true },
+  })
 
   if (!user) {
     notFound()
   }
 
-  const { data: likes } = await supabase
-    .from('likes')
-    .select(`
-      post:posts(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url)
-      )
-    `)
-    .eq('user_id', id)
-    .not('post_id', 'is', null)
-    .order('created_at', { ascending: false })
+  const likes = await prisma.like.findMany({
+    where: {
+      userId: id,
+      postId: { not: null },
+    },
+    include: {
+      post: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 
-  const posts = likes?.map(l => l.post).filter(Boolean) || []
+  const posts = likes.map((l) => l.post).filter(Boolean)
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -63,14 +62,14 @@ export default async function UserLikesPage({ params }: Props) {
 
         {posts.length > 0 ? (
           <div className="divide-y">
-            {posts.map((post: { id: string; content: string; created_at: string; user: { id: string; nickname: string; avatar_url: string | null } }) => (
-              <div key={post.id} className="p-4">
+            {posts.map((post) => (
+              <div key={post!.id} className="p-4">
                 <p className="text-sm text-muted-foreground mb-1">
-                  {post.user.nickname}
+                  {post!.user.nickname}
                 </p>
-                <p className="whitespace-pre-wrap">{post.content}</p>
+                <p className="whitespace-pre-wrap">{post!.content}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {new Date(post.created_at).toLocaleDateString('ja-JP')}
+                  {new Date(post!.createdAt).toLocaleDateString('ja-JP')}
                 </p>
               </div>
             ))}

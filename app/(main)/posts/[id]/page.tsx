@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 import { getPost } from '@/lib/actions/post'
 import { getComments, getCommentCount } from '@/lib/actions/comment'
 import { PostCard } from '@/components/post/PostCard'
@@ -28,8 +28,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PostDetailPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await auth()
 
   const [postResult, commentsResult, countResult] = await Promise.all([
     getPost(id),
@@ -52,7 +51,7 @@ export default async function PostDetailPage({ params }: Props) {
           </Link>
         </div>
 
-        <PostCard post={post} currentUserId={user?.id} />
+        <PostCard post={post} currentUserId={session?.user?.id} />
 
         {/* コメントセクション */}
         <div className="border-t p-4">
@@ -60,7 +59,7 @@ export default async function PostDetailPage({ params }: Props) {
             postId={id}
             comments={commentsResult.comments || []}
             nextCursor={commentsResult.nextCursor}
-            currentUserId={user?.id}
+            currentUserId={session?.user?.id}
             commentCount={countResult.count}
           />
         </div>

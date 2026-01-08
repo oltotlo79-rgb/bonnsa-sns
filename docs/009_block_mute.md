@@ -79,37 +79,179 @@
 // lib/actions/block.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function blockUser(targetUserId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
-  // 相互フォロー解除
-  await supabase
-    .from('follows')
-    .delete()
-    .or(`and(follower_id.eq.${user.id},following_id.eq.${targetUserId}),and(follower_id.eq.${targetUserId},following_id.eq.${user.id})`)
-
-  // ブロック作成
-  const { error } = await supabase
-    .from('blocks')
-    .insert({
-      blocker_id: user.id,
-      blocked_id: targetUserId,
-    })
-
-  if (error) {
-    return { error: 'ブロックに失敗しました' }
+  if (session.user.id === targetUserId) {
+    return { error: '自分自身をブロックできません' }
   }
+
+  // トランザクションで相互フォロー解除とブロック作成を実行
+  await prisma.$transaction([
+    // 相互フォロー解除
+    prisma.follow.deleteMany({
+      where: {
+        OR: [
+          { followerId: session.user.id, followingId: targetUserId },
+          { followerId: targetUserId, followingId: session.user.id },
+        ],
+      },
+    }),
+    // ブロック作成
+    prisma.block.create({
+      data: {
+        blockerId: session.user.id,
+        blockedId: targetUserId,
+      },
+    }),
+  ])
 
   revalidatePath('/feed')
   revalidatePath(`/users/${targetUserId}`)
   return { success: true }
+}
+
+export async function unblockUser(targetUserId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.block.delete({
+    where: {
+      blockerId_blockedId: {
+        blockerId: session.user.id,
+        blockedId: targetUserId,
+      },
+    },
+  })
+
+  revalidatePath('/feed')
+  revalidatePath(`/users/${targetUserId}`)
+  return { success: true }
+}
+
+export async function getBlockedUsers(cursor?: string, limit = 20) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です', users: [] }
+  }
+
+  const blocks = await prisma.block.findMany({
+    where: { blockerId: session.user.id },
+    include: {
+      blocked: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { blockerId_blockedId: { blockerId: session.user.id, blockedId: cursor } },
+      skip: 1,
+    }),
+  })
+
+  return {
+    users: blocks.map((b) => b.blocked),
+    nextCursor: blocks.length === limit ? blocks[blocks.length - 1]?.blockedId : undefined,
+  }
+}
+
+export async function isBlocked(targetUserId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { blocked: false }
+  }
+
+  const block = await prisma.block.findUnique({
+    where: {
+      blockerId_blockedId: {
+        blockerId: session.user.id,
+        blockedId: targetUserId,
+      },
+    },
+  })
+
+  return { blocked: !!block }
+}
+```
+
+```typescript
+// lib/actions/mute.ts
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
+
+export async function muteUser(targetUserId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.mute.create({
+    data: {
+      muterId: session.user.id,
+      mutedId: targetUserId,
+    },
+  })
+
+  revalidatePath('/feed')
+  return { success: true }
+}
+
+export async function unmuteUser(targetUserId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.mute.delete({
+    where: {
+      muterId_mutedId: {
+        muterId: session.user.id,
+        mutedId: targetUserId,
+      },
+    },
+  })
+
+  revalidatePath('/feed')
+  return { success: true }
+}
+
+export async function getMutedUsers(cursor?: string, limit = 20) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です', users: [] }
+  }
+
+  const mutes = await prisma.mute.findMany({
+    where: { muterId: session.user.id },
+    include: {
+      muted: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { muterId_mutedId: { muterId: session.user.id, mutedId: cursor } },
+      skip: 1,
+    }),
+  })
+
+  return {
+    users: mutes.map((m) => m.muted),
+    nextCursor: mutes.length === limit ? mutes[mutes.length - 1]?.mutedId : undefined,
+  }
 }
 ```

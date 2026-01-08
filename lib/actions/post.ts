@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -10,10 +11,8 @@ const createPostSchema = z.object({
 })
 
 export async function createPost(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
@@ -29,67 +28,50 @@ export async function createPost(formData: FormData) {
 
   const result = createPostSchema.safeParse({ content, genreIds })
   if (!result.success) {
-    return { error: result.error.errors[0].message }
+    return { error: result.error.issues[0].message }
   }
 
   // 投稿制限チェック（1日20件）
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', today.toISOString())
+  const count = await prisma.post.count({
+    where: {
+      userId: session.user.id,
+      createdAt: { gte: today },
+    },
+  })
 
-  if (count && count >= 20) {
+  if (count >= 20) {
     return { error: '1日の投稿上限（20件）に達しました' }
   }
 
   // 投稿作成
-  const { data: post, error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: user.id,
+  const post = await prisma.post.create({
+    data: {
+      userId: session.user.id,
       content: content || null,
-    })
-    .select()
-    .single()
-
-  if (error || !post) {
-    return { error: '投稿に失敗しました' }
-  }
-
-  // メディア追加
-  if (mediaUrls.length > 0) {
-    const mediaInserts = mediaUrls.map((url, index) => ({
-      post_id: post.id,
-      url,
-      type: mediaType || 'image',
-      sort_order: index,
-    }))
-
-    await supabase.from('post_media').insert(mediaInserts)
-  }
-
-  // ジャンル紐付け
-  if (genreIds.length > 0) {
-    const genreInserts = genreIds.map(genreId => ({
-      post_id: post.id,
-      genre_id: genreId,
-    }))
-
-    await supabase.from('post_genres').insert(genreInserts)
-  }
+      media: mediaUrls.length > 0 ? {
+        create: mediaUrls.map((url, index) => ({
+          url,
+          type: mediaType || 'image',
+          sortOrder: index,
+        })),
+      } : undefined,
+      genres: genreIds.length > 0 ? {
+        create: genreIds.map((genreId) => ({
+          genreId,
+        })),
+      } : undefined,
+    },
+  })
 
   revalidatePath('/feed')
   return { success: true, postId: post.id }
 }
 
 export async function createQuotePost(formData: FormData, quotePostId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
@@ -106,53 +88,46 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
   // 投稿制限チェック
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', today.toISOString())
+  const count = await prisma.post.count({
+    where: {
+      userId: session.user.id,
+      createdAt: { gte: today },
+    },
+  })
 
-  if (count && count >= 20) {
+  if (count >= 20) {
     return { error: '1日の投稿上限（20件）に達しました' }
   }
 
-  const { data: post, error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: user.id,
+  const post = await prisma.post.create({
+    data: {
+      userId: session.user.id,
       content,
-      quote_post_id: quotePostId,
-    })
-    .select()
-    .single()
-
-  if (error || !post) {
-    return { error: '引用投稿に失敗しました' }
-  }
+      quotePostId,
+    },
+  })
 
   revalidatePath('/feed')
   return { success: true, postId: post.id }
 }
 
 export async function createRepost(postId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
   // 既にリポスト済みかチェック
-  const { data: existing } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('repost_post_id', postId)
-    .single()
+  const existing = await prisma.post.findFirst({
+    where: {
+      userId: session.user.id,
+      repostPostId: postId,
+    },
+  })
 
   if (existing) {
     // リポスト解除
-    await supabase.from('posts').delete().eq('id', existing.id)
+    await prisma.post.delete({ where: { id: existing.id } })
     revalidatePath('/feed')
     return { success: true, reposted: false }
   }
@@ -160,156 +135,162 @@ export async function createRepost(postId: string) {
   // 投稿制限チェック
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', today.toISOString())
+  const count = await prisma.post.count({
+    where: {
+      userId: session.user.id,
+      createdAt: { gte: today },
+    },
+  })
 
-  if (count && count >= 20) {
+  if (count >= 20) {
     return { error: '1日の投稿上限（20件）に達しました' }
   }
 
-  const { error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: user.id,
-      repost_post_id: postId,
-    })
-
-  if (error) {
-    return { error: 'リポストに失敗しました' }
-  }
+  await prisma.post.create({
+    data: {
+      userId: session.user.id,
+      repostPostId: postId,
+    },
+  })
 
   revalidatePath('/feed')
   return { success: true, reposted: true }
 }
 
 export async function deletePost(postId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
   // 投稿の所有者確認
-  const { data: post } = await supabase
-    .from('posts')
-    .select('user_id')
-    .eq('id', postId)
-    .single()
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { userId: true },
+  })
 
-  if (!post || post.user_id !== user.id) {
+  if (!post || post.userId !== session.user.id) {
     return { error: '削除権限がありません' }
   }
 
-  const { error } = await supabase
-    .from('posts')
-    .delete()
-    .eq('id', postId)
-
-  if (error) {
-    return { error: '削除に失敗しました' }
-  }
+  await prisma.post.delete({ where: { id: postId } })
 
   revalidatePath('/feed')
   return { success: true }
 }
 
 export async function getPost(postId: string) {
-  const supabase = await createClient()
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: {
+          genre: true,
+        },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+      quotePost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+        },
+      },
+      repostPost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+      },
+    },
+  })
 
-  const { data: post, error } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      user:users(id, nickname, avatar_url),
-      media:post_media(id, url, type, sort_order),
-      genres:post_genres(genre:genres(id, name, category)),
-      likes(count),
-      comments(count),
-      quote_post:posts!posts_quote_post_id_fkey(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url)
-      ),
-      repost_post:posts!posts_repost_post_id_fkey(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url),
-        media:post_media(id, url, type, sort_order)
-      )
-    `)
-    .eq('id', postId)
-    .single()
-
-  if (error || !post) {
+  if (!post) {
     return { error: '投稿が見つかりません' }
   }
 
-  return { post }
+  return {
+    post: {
+      ...post,
+      likeCount: post._count.likes,
+      commentCount: post._count.comments,
+      genres: post.genres.map((pg) => pg.genre),
+    },
+  }
 }
 
 export async function getPosts(cursor?: string, limit = 20) {
-  const supabase = await createClient()
+  const posts = await prisma.post.findMany({
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: {
+          genre: true,
+        },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+      quotePost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+        },
+      },
+      repostPost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
 
-  let query = supabase
-    .from('posts')
-    .select(`
-      *,
-      user:users(id, nickname, avatar_url),
-      media:post_media(id, url, type, sort_order),
-      genres:post_genres(genre:genres(id, name, category)),
-      likes(count),
-      comments(count),
-      quote_post:posts!posts_quote_post_id_fkey(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url)
-      ),
-      repost_post:posts!posts_repost_post_id_fkey(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url),
-        media:post_media(id, url, type, sort_order)
-      )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (cursor) {
-    query = query.lt('created_at', cursor)
+  return {
+    posts: posts.map((post) => ({
+      ...post,
+      likeCount: post._count.likes,
+      commentCount: post._count.comments,
+      genres: post.genres.map((pg) => pg.genre),
+    })),
   }
-
-  const { data: posts, error } = await query
-
-  if (error) {
-    return { error: '投稿の取得に失敗しました' }
-  }
-
-  return { posts: posts || [] }
 }
 
 export async function getGenres() {
-  const supabase = await createClient()
-
-  const { data: genres, error } = await supabase
-    .from('genres')
-    .select('*')
-    .order('category')
-    .order('sort_order')
-
-  if (error) {
-    return { error: 'ジャンルの取得に失敗しました' }
-  }
+  const genres = await prisma.genre.findMany({
+    orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
+  })
 
   // カテゴリごとにグループ化
-  const grouped = genres?.reduce((acc, genre) => {
+  const grouped = genres.reduce((acc, genre) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }
@@ -317,14 +298,12 @@ export async function getGenres() {
     return acc
   }, {} as Record<string, typeof genres>)
 
-  return { genres: grouped || {} }
+  return { genres: grouped }
 }
 
 export async function uploadPostMedia(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
@@ -346,28 +325,14 @@ export async function uploadPostMedia(formData: FormData) {
     return { error: isVideo ? '動画は512MB以下にしてください' : '画像は5MB以下にしてください' }
   }
 
-  const bucket = isVideo ? 'post-videos' : 'post-images'
+  // TODO: Azure Blob Storageへのアップロード実装
   const ext = file.name.split('.').pop()
-  const fileName = `${user.id}/${crypto.randomUUID()}.${ext}`
-
-  const { error: uploadError } = await supabase.storage
-    .from(bucket)
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
-    })
-
-  if (uploadError) {
-    return { error: 'アップロードに失敗しました' }
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(fileName)
+  const folder = isVideo ? 'post-videos' : 'post-images'
+  const publicUrl = `/uploads/${folder}/${session.user.id}-${Date.now()}.${ext}`
 
   return {
     success: true,
     url: publicUrl,
-    type: isVideo ? 'video' : 'image'
+    type: isVideo ? 'video' : 'image',
   }
 }

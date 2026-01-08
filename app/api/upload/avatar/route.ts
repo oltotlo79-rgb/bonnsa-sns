@@ -1,21 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Avatar upload started')
-    const supabase = await createClient()
+    const session = await auth()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) {
-      console.error('Auth error:', authError)
-      return NextResponse.json({ error: '認証エラー: ' + authError.message }, { status: 401 })
-    }
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
-    console.log('User authenticated:', user.id)
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -23,7 +17,6 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json({ error: 'ファイルが選択されていません' }, { status: 400 })
     }
-    console.log('File received:', file.name, file.size, file.type)
 
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: 'ファイルサイズは5MB以下にしてください' }, { status: 400 })
@@ -34,60 +27,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'JPEG、PNG、WebP形式のみ対応しています' }, { status: 400 })
     }
 
-    const ext = file.name.split('.').pop()
-    const fileName = user.id + '/avatar.' + ext
-    console.log('Uploading to:', fileName)
+    // TODO: Azure Blob Storageへのアップロード実装
+    // 現在は仮のURLを返す
+    const placeholderUrl = `/placeholder-avatar.png?userId=${session.user.id}&t=${Date.now()}`
 
-    await supabase.storage.from('avatars').remove([
-      user.id + '/avatar.jpeg',
-      user.id + '/avatar.png',
-      user.id + '/avatar.webp'
-    ])
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        avatarUrl: placeholderUrl,
+      },
+    })
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
-
-    console.log('Starting upload to Supabase Storage...')
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        cacheControl: '3600',
-        upsert: true,
-      })
-
-    if (uploadError) {
-      console.error('Avatar upload error:', uploadError)
-      return NextResponse.json({
-        error: 'Upload failed: ' + uploadError.message
-      }, { status: 500 })
-    }
-    console.log('Upload successful')
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName)
-    console.log('Public URL:', publicUrl)
-
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        avatar_url: publicUrl + '?t=' + Date.now(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('Profile update error:', updateError)
-      return NextResponse.json({ error: 'Profile update failed' }, { status: 500 })
-    }
-
-    revalidatePath('/users/' + user.id)
+    revalidatePath('/users/' + session.user.id)
     revalidatePath('/settings/profile')
 
-    return NextResponse.json({ success: true, url: publicUrl })
+    return NextResponse.json({
+      success: true,
+      url: placeholderUrl,
+      message: '画像アップロード機能は現在準備中です'
+    })
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Avatar upload error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: 'Error: ' + message }, { status: 500 })
   }

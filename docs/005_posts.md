@@ -72,6 +72,7 @@
 - [x] ファイルサイズ制限
   - [x] 画像: 5MB/枚
   - [x] 動画: 512MB
+- [ ] Azure Blob Storageへのアップロード実装（TODO）
 
 ### 投稿制限
 - [x] 1日20件の投稿制限チェック
@@ -105,25 +106,161 @@
 
 ## 完了条件
 - [x] テキスト投稿が正常に動作する
-- [x] 画像付き投稿が正常に動作する
-- [x] 動画付き投稿が正常に動作する
+- [ ] 画像付き投稿が正常に動作する（TODO: Azure Blob Storage実装）
+- [ ] 動画付き投稿が正常に動作する（TODO: Azure Blob Storage実装）
 - [x] ジャンル選択が正常に動作する
 - [x] 投稿削除が正常に動作する
 - [x] 引用投稿が正常に動作する
 - [x] リポストが正常に動作する
 - [x] 投稿制限が正常に機能する
 
-## Supabase Storage設定（要手動設定）
-Supabaseダッシュボードで以下のバケットを作成してください：
+## Azure Blob Storage設定（TODO）
+本番環境では Azure Blob Storage を使用してメディアファイルをアップロードします。
+現在は仮のローカルパスを返しています。
 
-1. `post-images` - 投稿画像用
-2. `post-videos` - 投稿動画用
+## 参考コード
+```typescript
+// lib/actions/post.ts
+'use server'
 
-各バケットの設定：
-- Public bucket: ON
-- Allowed MIME types:
-  - post-images: image/jpeg, image/png, image/webp, image/gif
-  - post-videos: video/mp4, video/quicktime
-- File size limit:
-  - post-images: 5MB
-  - post-videos: 512MB
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+
+const createPostSchema = z.object({
+  content: z.string().max(500, '投稿は500文字以内で入力してください').optional(),
+  genreIds: z.array(z.string()).max(3, 'ジャンルは3つまで選択できます'),
+})
+
+export async function createPost(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const content = formData.get('content') as string
+  const genreIds = formData.getAll('genreIds') as string[]
+  const mediaUrls = formData.getAll('mediaUrls') as string[]
+  const mediaType = formData.get('mediaType') as string | null
+
+  // バリデーション
+  if (!content && mediaUrls.length === 0) {
+    return { error: 'テキストまたはメディアを入力してください' }
+  }
+
+  const result = createPostSchema.safeParse({ content, genreIds })
+  if (!result.success) {
+    return { error: result.error.errors[0].message }
+  }
+
+  // 投稿制限チェック（1日20件）
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const count = await prisma.post.count({
+    where: {
+      userId: session.user.id,
+      createdAt: { gte: today },
+    },
+  })
+
+  if (count >= 20) {
+    return { error: '1日の投稿上限（20件）に達しました' }
+  }
+
+  // 投稿作成
+  const post = await prisma.post.create({
+    data: {
+      userId: session.user.id,
+      content: content || null,
+      media: mediaUrls.length > 0 ? {
+        create: mediaUrls.map((url, index) => ({
+          url,
+          type: mediaType || 'image',
+          sortOrder: index,
+        })),
+      } : undefined,
+      genres: genreIds.length > 0 ? {
+        create: genreIds.map((genreId) => ({
+          genreId,
+        })),
+      } : undefined,
+    },
+  })
+
+  revalidatePath('/feed')
+  return { success: true, postId: post.id }
+}
+
+export async function deletePost(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // 投稿の所有者確認
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { userId: true },
+  })
+
+  if (!post || post.userId !== session.user.id) {
+    return { error: '削除権限がありません' }
+  }
+
+  await prisma.post.delete({ where: { id: postId } })
+
+  revalidatePath('/feed')
+  return { success: true }
+}
+
+export async function getPost(postId: string) {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: { genre: true },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+      quotePost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+        },
+      },
+      repostPost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+      },
+    },
+  })
+
+  if (!post) {
+    return { error: '投稿が見つかりません' }
+  }
+
+  return {
+    post: {
+      ...post,
+      likeCount: post._count.likes,
+      commentCount: post._count.comments,
+      genres: post.genres.map((pg) => pg.genre),
+    },
+  }
+}
+```

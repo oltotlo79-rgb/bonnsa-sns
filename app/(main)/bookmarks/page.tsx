@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getBookmarkedPosts } from '@/lib/actions/bookmark'
 import { BookmarkPostList } from './BookmarkPostList'
@@ -8,10 +8,9 @@ export const metadata = {
 }
 
 export default async function BookmarksPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await auth()
 
-  if (!user) {
+  if (!session?.user) {
     redirect('/login')
   }
 
@@ -24,7 +23,7 @@ export default async function BookmarksPage() {
         <BookmarkPostList
           initialPosts={result.posts || []}
           initialNextCursor={result.nextCursor}
-          currentUserId={user.id}
+          currentUserId={session.user.id}
         />
       </div>
     </div>

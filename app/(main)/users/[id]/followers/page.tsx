@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
 import { UserList } from '@/components/user/UserList'
 import Link from 'next/link'
 
@@ -9,13 +9,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { nickname: true },
+  })
 
   return {
     title: user ? `${user.nickname}のフォロワー - BON-LOG` : 'ユーザーが見つかりません',
@@ -24,27 +22,30 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function FollowersPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, nickname')
-    .eq('id', id)
-    .single()
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, nickname: true },
+  })
 
   if (!user) {
     notFound()
   }
 
-  const { data: followers } = await supabase
-    .from('follows')
-    .select(`
-      follower:users!follows_follower_id_fkey(id, nickname, avatar_url, bio)
-    `)
-    .eq('following_id', id)
-    .order('created_at', { ascending: false })
+  const followers = await prisma.follow.findMany({
+    where: { followingId: id },
+    include: {
+      follower: {
+        select: { id: true, nickname: true, avatarUrl: true, bio: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 
-  const users = followers?.map(f => f.follower).filter(Boolean) || []
+  const users = followers.map((f) => ({
+    ...f.follower,
+    avatar_url: f.follower.avatarUrl,
+  }))
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -57,7 +58,7 @@ export default async function FollowersPage({ params }: Props) {
         </div>
 
         <UserList
-          users={users as { id: string; nickname: string; avatar_url: string | null; bio: string | null }[]}
+          users={users}
           emptyMessage="フォロワーはいません"
         />
       </div>

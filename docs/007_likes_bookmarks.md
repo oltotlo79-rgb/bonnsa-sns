@@ -68,12 +68,258 @@
 - [x] 通知が正常に作成される
 
 ## 参考コード
+
+### lib/actions/like.ts
 ```typescript
-// components/post/LikeButton.tsx
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+
+// 投稿いいねトグル
+export async function togglePostLike(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // 現在のいいね状態を確認
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+      commentId: null,
+    },
+  })
+
+  if (existingLike) {
+    // いいね解除
+    await prisma.like.delete({
+      where: { id: existingLike.id },
+    })
+
+    return { success: true, liked: false }
+  } else {
+    // いいね追加
+    await prisma.like.create({
+      data: {
+        postId,
+        userId: session.user.id,
+      },
+    })
+
+    // 通知作成（投稿者へ）
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { userId: true },
+    })
+
+    if (post && post.userId !== session.user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: post.userId,
+          actorId: session.user.id,
+          type: 'like',
+          postId,
+        },
+      })
+    }
+
+    return { success: true, liked: true }
+  }
+}
+
+// コメントいいねトグル
+export async function toggleCommentLike(commentId: string, postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // 現在のいいね状態を確認
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      commentId,
+      userId: session.user.id,
+    },
+  })
+
+  if (existingLike) {
+    // いいね解除
+    await prisma.like.delete({
+      where: { id: existingLike.id },
+    })
+
+    return { success: true, liked: false }
+  } else {
+    // いいね追加
+    await prisma.like.create({
+      data: {
+        commentId,
+        postId,
+        userId: session.user.id,
+      },
+    })
+
+    // 通知作成（コメント投稿者へ）
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { userId: true },
+    })
+
+    if (comment && comment.userId !== session.user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: comment.userId,
+          actorId: session.user.id,
+          type: 'comment_like',
+          postId,
+          commentId,
+        },
+      })
+    }
+
+    return { success: true, liked: true }
+  }
+}
+
+// 投稿いいね状態取得
+export async function getPostLikeStatus(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { liked: false }
+  }
+
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+      commentId: null,
+    },
+  })
+
+  return { liked: !!existingLike }
+}
+```
+
+### lib/actions/bookmark.ts
+```typescript
+'use server'
+
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+
+// ブックマークトグル
+export async function toggleBookmark(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // 現在のブックマーク状態を確認
+  const existingBookmark = await prisma.bookmark.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+    },
+  })
+
+  if (existingBookmark) {
+    // ブックマーク解除
+    await prisma.bookmark.delete({
+      where: { id: existingBookmark.id },
+    })
+
+    return { success: true, bookmarked: false }
+  } else {
+    // ブックマーク追加
+    await prisma.bookmark.create({
+      data: {
+        postId,
+        userId: session.user.id,
+      },
+    })
+
+    return { success: true, bookmarked: true }
+  }
+}
+
+// ブックマーク状態取得
+export async function getBookmarkStatus(postId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { bookmarked: false }
+  }
+
+  const existingBookmark = await prisma.bookmark.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+    },
+  })
+
+  return { bookmarked: !!existingBookmark }
+}
+
+// ブックマーク一覧取得
+export async function getBookmarkedPosts(cursor?: string, limit = 20) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です', posts: [] }
+  }
+
+  const bookmarks = await prisma.bookmark.findMany({
+    where: { userId: session.user.id },
+    include: {
+      post: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          genres: {
+            include: { genre: true },
+          },
+          _count: {
+            select: { likes: true, comments: true },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
+
+  const posts = bookmarks
+    .filter((bookmark) => bookmark.post)
+    .map((bookmark) => ({
+      ...bookmark.post,
+      likeCount: bookmark.post._count.likes,
+      commentCount: bookmark.post._count.comments,
+      genres: bookmark.post.genres.map((pg) => pg.genre),
+    }))
+
+  const hasMore = bookmarks.length === limit
+
+  return {
+    posts,
+    nextCursor: hasMore ? bookmarks[bookmarks.length - 1]?.id : undefined,
+  }
+}
+```
+
+### components/post/LikeButton.tsx (Client Component)
+```typescript
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
+import { togglePostLike } from '@/lib/actions/like'
 import { Heart } from 'lucide-react'
 
 export function LikeButton({
@@ -85,34 +331,25 @@ export function LikeButton({
   initialLiked: boolean
   initialCount: number
 }) {
-  const supabase = createClient()
   const [liked, setLiked] = useState(initialLiked)
   const [count, setCount] = useState(initialCount)
   const [loading, setLoading] = useState(false)
 
   async function handleToggle() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
     setLoading(true)
 
     // Optimistic UI
     setLiked(!liked)
-    setCount(prev => liked ? prev - 1 : prev + 1)
+    setCount((prev) => (liked ? prev - 1 : prev + 1))
 
     try {
-      if (liked) {
-        await supabase
-          .from('likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', user.id)
-      } else {
-        await supabase
-          .from('likes')
-          .insert({ post_id: postId, user_id: user.id })
+      const result = await togglePostLike(postId)
+      if (result.error) {
+        // ロールバック
+        setLiked(liked)
+        setCount(initialCount)
       }
-    } catch (error) {
+    } catch {
       // ロールバック
       setLiked(liked)
       setCount(initialCount)

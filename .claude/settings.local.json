@@ -11,7 +11,8 @@
       "Bash(npx shadcn@latest init -d)",
       "Bash(npm run build:*)",
       "Bash(npm run lint:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run db:seed:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -22,5 +23,12 @@
       "ViewFile(~/.ssh/*)",
       "ViewFile(.git/*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "filesystem",
+    "postgres",
+    "github",
+    "memory"
+  ]
 }

@@ -9,6 +9,21 @@ npm run dev      # 開発サーバー起動 (http://localhost:3000)
 npm run build    # 本番ビルド
 npm run start    # 本番サーバー起動
 npm run lint     # ESLint実行
+
+# Prisma
+npx prisma generate   # Prismaクライアント生成
+npx prisma db push    # スキーマをDBに反映（開発用）
+npx prisma migrate dev # マイグレーション作成・実行（開発用）
+npx prisma studio     # DB管理GUI起動
+
+# Docker（開発環境）
+docker compose up -d       # PostgreSQL + Next.js起動
+docker compose down        # コンテナ停止
+docker compose down -v     # コンテナ停止 + データ削除
+docker compose logs -f     # ログ確認
+
+# Docker（本番ビルド）
+docker build -t bonsai-sns .   # イメージビルド
 ```
 
 ## 技術スタック
@@ -17,8 +32,12 @@ npm run lint     # ESLint実行
 - **言語**: TypeScript (strict mode)
 - **スタイリング**: Tailwind CSS 4 + shadcn/ui
 - **状態管理**: React Query (サーバー状態) + Zustand (クライアント状態)
-- **BaaS**: Supabase (認証・データベース・ストレージ・リアルタイム)
-- **データベース**: PostgreSQL (Supabase)
+- **ORM**: Prisma
+- **データベース**: PostgreSQL (開発: Docker / 本番: Azure Database for PostgreSQL)
+- **認証**: NextAuth.js (Auth.js v5)
+- **ストレージ**: Azure Blob Storage（本番）
+- **コンテナ**: Docker + Docker Compose
+- **デプロイ**: Azure Container Apps
 - **地図**: Leaflet + OpenStreetMap
 - **リアルタイム通知**: WebSocket (Socket.io)
 - **画像処理**: Sharp
@@ -78,9 +97,23 @@ export default async function PostPage({ params }: { params: { id: string } }) {
 // lib/actions/post.ts
 'use server'
 
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
+
 export async function createPost(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
   const content = formData.get('content') as string
-  await db.post.create({ data: { content } })
+  await prisma.post.create({
+    data: {
+      userId: session.user.id,
+      content,
+    },
+  })
   revalidatePath('/feed')
 }
 
@@ -298,22 +331,21 @@ export async function GET(
 
 ```typescript
 // middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get('token')
+export default auth((req) => {
+  const isLoggedIn = !!req.auth
+  const isProtected = ['/feed', '/posts', '/settings'].some(path =>
+    req.nextUrl.pathname.startsWith(path)
+  )
 
-  // 未認証ユーザーをログインページへリダイレクト
-  if (!token && request.nextUrl.pathname.startsWith('/feed')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (isProtected && !isLoggedIn) {
+    return Response.redirect(new URL('/login', req.nextUrl))
   }
-
-  return NextResponse.next()
-}
+})
 
 export const config = {
-  matcher: ['/feed/:path*', '/posts/:path*', '/settings/:path*']
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
 ```
 
@@ -475,6 +507,7 @@ const RichEditor = dynamic(
 
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 const createPostSchema = z.object({
   content: z.string().min(1).max(500),
@@ -484,23 +517,35 @@ const createPostSchema = z.object({
 export async function createPost(formData: FormData) {
   // 認証チェック
   const session = await auth()
-  if (!session?.user) {
-    throw new Error('Unauthorized')
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
   }
 
   // バリデーション
-  const validated = createPostSchema.parse({
+  const result = createPostSchema.safeParse({
     content: formData.get('content'),
     genreIds: formData.getAll('genreIds'),
   })
 
-  // 投稿制限チェック
-  const todayPosts = await countTodayPosts(session.user.id)
-  if (todayPosts >= 20) {
-    throw new Error('1日の投稿上限に達しました')
+  if (!result.success) {
+    return { error: result.error.errors[0].message }
   }
 
-  await db.post.create({ ... })
+  // 投稿制限チェック
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const count = await prisma.post.count({
+    where: {
+      userId: session.user.id,
+      createdAt: { gte: today },
+    },
+  })
+
+  if (count >= 20) {
+    return { error: '1日の投稿上限に達しました' }
+  }
+
+  await prisma.post.create({ ... })
   revalidatePath('/feed')
 }
 ```
@@ -516,14 +561,14 @@ import { unstable_cache } from 'next/cache'
 
 // リクエスト内でメモ化（同じリクエストで複数回呼ばれても1回だけ実行）
 export const getUser = cache(async (id: string) => {
-  return await db.user.findUnique({ where: { id } })
+  return await prisma.user.findUnique({ where: { id } })
 })
 
 // リクエスト間でキャッシュ
 export const getPopularPosts = unstable_cache(
   async () => {
-    return await db.post.findMany({
-      orderBy: { likeCount: 'desc' },
+    return await prisma.post.findMany({
+      orderBy: { likes: { _count: 'desc' } },
       take: 10,
     })
   },
@@ -532,356 +577,468 @@ export const getPopularPosts = unstable_cache(
 )
 ```
 
-## Supabase + Next.js App Router ベストプラクティス
+## Prisma + PostgreSQL ベストプラクティス
 
-### インストール
+### セットアップ
 
 ```bash
-npm install @supabase/supabase-js @supabase/ssr
+# Prismaのインストール
+npm install prisma @prisma/client
+
+# 初期化（既存プロジェクト）
+npx prisma init
 ```
 
-### クライアント設定
-
-環境ごとに異なるSupabaseクライアントを使い分ける:
-
-```
-lib/supabase/
-├── client.ts      # ブラウザ用（Client Component）
-├── server.ts      # Server Component / Route Handler用
-├── middleware.ts  # Middleware用
-└── admin.ts       # 管理者用（Service Role）
-```
+### Prismaクライアント設定
 
 ```typescript
-// lib/supabase/client.ts - ブラウザ用
-import { createBrowserClient } from '@supabase/ssr'
-import { Database } from '@/types/supabase'
+// lib/db.ts
+import { PrismaClient } from '@prisma/client'
 
-export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+### スキーマ定義
+
+```prisma
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  password      String?
+  nickname      String
+  avatarUrl     String?   @map("avatar_url")
+  headerUrl     String?   @map("header_url")
+  bio           String?
+  location      String?
+  isPublic      Boolean   @default(true) @map("is_public")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  bookmarks     Bookmark[]
+  followers     Follow[]   @relation("following")
+  following     Follow[]   @relation("follower")
+  notifications Notification[] @relation("user")
+  actorNotifications Notification[] @relation("actor")
+
+  @@map("users")
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  content      String?
+  quotePostId  String?  @map("quote_post_id")
+  repostPostId String?  @map("repost_post_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quotePost    Post?    @relation("quotes", fields: [quotePostId], references: [id])
+  quotedBy     Post[]   @relation("quotes")
+  repostPost   Post?    @relation("reposts", fields: [repostPostId], references: [id])
+  repostedBy   Post[]   @relation("reposts")
+  media        PostMedia[]
+  genres       PostGenre[]
+  comments     Comment[]
+  likes        Like[]
+  bookmarks    Bookmark[]
+
+  @@map("posts")
 }
 ```
 
+### クエリパターン
+
 ```typescript
-// lib/supabase/server.ts - Server Component / Route Handler用
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { Database } from '@/types/supabase'
+// 基本的なCRUD
+// 作成
+const user = await prisma.user.create({
+  data: {
+    email: 'test@example.com',
+    nickname: 'テストユーザー',
+  },
+})
 
-export async function createClient() {
-  const cookieStore = await cookies()
+// 読み取り（単一）
+const post = await prisma.post.findUnique({
+  where: { id: postId },
+  include: {
+    user: { select: { id: true, nickname: true, avatarUrl: true } },
+    _count: { select: { likes: true, comments: true } },
+  },
+})
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Server Componentからの呼び出し時は無視
-          }
-        },
+// 読み取り（複数）
+const posts = await prisma.post.findMany({
+  where: { userId: session.user.id },
+  orderBy: { createdAt: 'desc' },
+  take: 20,
+  include: {
+    user: true,
+    media: { orderBy: { sortOrder: 'asc' } },
+  },
+})
+
+// 更新
+await prisma.user.update({
+  where: { id: session.user.id },
+  data: { nickname: 'New Name' },
+})
+
+// 削除
+await prisma.post.delete({
+  where: { id: postId },
+})
+```
+
+### リレーション操作
+
+```typescript
+// ネストした作成
+const post = await prisma.post.create({
+  data: {
+    userId: session.user.id,
+    content: 'Hello World',
+    media: {
+      create: [
+        { url: '/image1.jpg', type: 'image', sortOrder: 0 },
+        { url: '/image2.jpg', type: 'image', sortOrder: 1 },
+      ],
+    },
+    genres: {
+      create: [
+        { genreId: 'genre1' },
+        { genreId: 'genre2' },
+      ],
+    },
+  },
+})
+
+// リレーションのカウント
+const postsWithCounts = await prisma.post.findMany({
+  include: {
+    _count: {
+      select: { likes: true, comments: true },
+    },
+  },
+})
+// postsWithCounts[0]._count.likes でアクセス
+```
+
+### トランザクション
+
+```typescript
+// 複数操作をアトミックに実行
+const [post, notification] = await prisma.$transaction([
+  prisma.post.create({
+    data: { userId: session.user.id, content: 'Hello' },
+  }),
+  prisma.notification.create({
+    data: {
+      userId: targetUserId,
+      actorId: session.user.id,
+      type: 'mention',
+    },
+  }),
+])
+
+// インタラクティブトランザクション
+await prisma.$transaction(async (tx) => {
+  const post = await tx.post.findUnique({ where: { id: postId } })
+  if (!post) throw new Error('Post not found')
+
+  await tx.like.create({
+    data: { postId, userId: session.user.id },
+  })
+})
+```
+
+### ページネーション（カーソルベース）
+
+```typescript
+export async function getPosts(cursor?: string, limit = 20) {
+  const posts = await prisma.post.findMany({
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1, // カーソル自体をスキップ
+    }),
+    orderBy: { createdAt: 'desc' },
+    include: {
+      user: { select: { id: true, nickname: true, avatarUrl: true } },
+    },
+  })
+
+  const hasMore = posts.length === limit
+  const nextCursor = hasMore ? posts[posts.length - 1]?.id : undefined
+
+  return { posts, nextCursor }
+}
+```
+
+### マイグレーション
+
+```bash
+# 開発環境: スキーマを直接反映
+npx prisma db push
+
+# 本番環境: マイグレーションファイル作成
+npx prisma migrate dev --name add_user_fields
+
+# 本番デプロイ時
+npx prisma migrate deploy
+```
+
+## NextAuth.js (Auth.js v5) 認証
+
+### セットアップ
+
+```bash
+npm install next-auth@beta @auth/prisma-adapter bcryptjs
+npm install -D @types/bcryptjs
+```
+
+### 認証設定
+
+```typescript
+// lib/auth.ts
+import NextAuth from 'next-auth'
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
+import { prisma } from '@/lib/db'
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: 'jwt' },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
-    }
-  )
-}
-```
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
 
-```typescript
-// lib/supabase/middleware.ts - Middleware用
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        })
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+        if (!user || !user.password) {
+          return null
+        }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        )
+
+        if (!isValid) {
+          return null
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.nickname,
+          image: user.avatarUrl,
+        }
       },
-    }
-  )
-
-  // セッション更新（重要：getUser()を必ず呼ぶ）
-  const { data: { user } } = await supabase.auth.getUser()
-
-  return { supabaseResponse, user }
-}
-```
-
-```typescript
-// lib/supabase/admin.ts - Service Role用（サーバーサイドのみ）
-import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/types/supabase'
-
-export function createAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,  // 公開禁止！
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
       }
-    }
-  )
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
+})
+
+// ユーザー登録関数
+export async function registerUser(data: {
+  email: string
+  password: string
+  nickname: string
+}) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  })
+
+  if (existingUser) {
+    return { error: 'このメールアドレスは既に登録されています' }
+  }
+
+  const hashedPassword = await bcrypt.hash(data.password, 10)
+
+  const user = await prisma.user.create({
+    data: {
+      email: data.email,
+      password: hashedPassword,
+      nickname: data.nickname,
+    },
+  })
+
+  return { success: true, userId: user.id }
 }
 ```
 
-### Middleware認証
+### 型拡張
+
+```typescript
+// types/next-auth.d.ts
+import { DefaultSession } from 'next-auth'
+
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string
+    } & DefaultSession['user']
+  }
+}
+```
+
+### APIルート
+
+```typescript
+// app/api/auth/[...nextauth]/route.ts
+import { handlers } from '@/lib/auth'
+
+export const { GET, POST } = handlers
+```
+
+### Middleware
 
 ```typescript
 // middleware.ts
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { auth } from '@/lib/auth'
 
-export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user } = await updateSession(request)
+export default auth((req) => {
+  const isLoggedIn = !!req.auth
 
-  // 認証が必要なルートの保護
-  const protectedPaths = ['/feed', '/posts', '/settings', '/notifications']
-  const isProtected = protectedPaths.some(path =>
-    request.nextUrl.pathname.startsWith(path)
+  const protectedPaths = ['/feed', '/posts', '/settings', '/notifications', '/bookmarks', '/users']
+  const authPaths = ['/login', '/register']
+
+  const isProtected = protectedPaths.some((path) =>
+    req.nextUrl.pathname.startsWith(path)
+  )
+  const isAuthPage = authPaths.some((path) =>
+    req.nextUrl.pathname.startsWith(path)
   )
 
-  if (isProtected && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+  if (isProtected && !isLoggedIn) {
+    const redirectUrl = new URL('/login', req.nextUrl)
+    redirectUrl.searchParams.set('callbackUrl', req.nextUrl.pathname)
+    return Response.redirect(redirectUrl)
   }
 
-  // 認証済みユーザーのログインページアクセス
-  if (user && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/feed', request.url))
+  if (isAuthPage && isLoggedIn) {
+    return Response.redirect(new URL('/feed', req.nextUrl))
   }
-
-  return supabaseResponse
-}
+})
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
 ```
 
-### Server Component でのデータ取得
-
-```typescript
-// app/(main)/feed/page.tsx
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-
-export default async function FeedPage() {
-  const supabase = await createClient()
-
-  // 認証チェック
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/login')
-  }
-
-  // データ取得
-  const { data: posts, error } = await supabase
-    .from('posts')
-    .select(`
-      *,
-      user:users(id, nickname, avatar_url),
-      likes(count),
-      comments(count)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  if (error) throw error
-
-  return <PostList posts={posts} />
-}
-```
-
-### Server Actions での使用
+### Server Actionsでの認証チェック
 
 ```typescript
 // lib/actions/post.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-
-const createPostSchema = z.object({
-  content: z.string().min(1).max(500),
-  genreIds: z.array(z.string()).max(3),
-})
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 
 export async function createPost(formData: FormData) {
-  const supabase = await createClient()
-
-  // 認証チェック
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: 'ログインが必要です' }
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
   }
 
-  // バリデーション
-  const result = createPostSchema.safeParse({
-    content: formData.get('content'),
-    genreIds: formData.getAll('genreIds'),
+  // session.user.id でユーザーIDにアクセス可能
+  const post = await prisma.post.create({
+    data: {
+      userId: session.user.id,
+      content: formData.get('content') as string,
+    },
   })
 
-  if (!result.success) {
-    return { error: result.error.flatten() }
-  }
-
-  // 投稿制限チェック
-  const today = new Date().toISOString().split('T')[0]
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-    .gte('created_at', today)
-
-  if (count && count >= 20) {
-    return { error: '1日の投稿上限（20件）に達しました' }
-  }
-
-  // 投稿作成
-  const { error } = await supabase
-    .from('posts')
-    .insert({
-      user_id: user.id,
-      content: result.data.content,
-    })
-
-  if (error) {
-    return { error: '投稿に失敗しました' }
-  }
-
-  revalidatePath('/feed')
-  return { success: true }
+  return { success: true, postId: post.id }
 }
 ```
 
-### Client Component での使用
-
-```typescript
-// components/post/LikeButton.tsx
-'use client'
-
-import { createClient } from '@/lib/supabase/client'
-import { useState, useOptimistic } from 'react'
-
-export function LikeButton({
-  postId,
-  initialLiked,
-  initialCount,
-}: {
-  postId: string
-  initialLiked: boolean
-  initialCount: number
-}) {
-  const supabase = createClient()
-  const [liked, setLiked] = useState(initialLiked)
-  const [count, setCount] = useState(initialCount)
-
-  async function toggleLike() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Optimistic update
-    setLiked(!liked)
-    setCount(prev => liked ? prev - 1 : prev + 1)
-
-    if (liked) {
-      await supabase
-        .from('likes')
-        .delete()
-        .eq('post_id', postId)
-        .eq('user_id', user.id)
-    } else {
-      await supabase
-        .from('likes')
-        .insert({ post_id: postId, user_id: user.id })
-    }
-  }
-
-  return (
-    <button onClick={toggleLike}>
-      {liked ? '❤️' : '🤍'} {count}
-    </button>
-  )
-}
-```
-
-### 認証フロー
-
-```typescript
-// app/(auth)/login/page.tsx
-import { LoginForm } from '@/components/auth/LoginForm'
-
-export default function LoginPage() {
-  return <LoginForm />
-}
-```
+### ログイン・ログアウト
 
 ```typescript
 // components/auth/LoginForm.tsx
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export function LoginForm() {
-  const supabase = createClient()
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
 
-  async function handleLogin(formData: FormData) {
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  async function handleSubmit(formData: FormData) {
+    const result = await signIn('credentials', {
+      email: formData.get('email'),
+      password: formData.get('password'),
+      redirect: false,
     })
 
-    if (error) {
-      setError(error.message)
+    if (result?.error) {
+      setError('メールアドレスまたはパスワードが正しくありません')
       return
     }
 
     router.push('/feed')
-    router.refresh()  // Server Componentを再レンダリング
+    router.refresh()
   }
 
   return (
-    <form action={handleLogin}>
+    <form action={handleSubmit}>
       <input name="email" type="email" required />
       <input name="password" type="password" required />
       {error && <p className="text-red-500">{error}</p>}
@@ -892,316 +1049,49 @@ export function LoginForm() {
 ```
 
 ```typescript
-// OAuth認証
-async function handleGoogleLogin() {
-  const supabase = createClient()
-  await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${location.origin}/auth/callback`,
-    },
-  })
-}
-```
-
-```typescript
-// app/auth/callback/route.ts
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
-
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/feed'
-
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
-    }
-  }
-
-  return NextResponse.redirect(`${origin}/login?error=auth_failed`)
-}
-```
-
-### リアルタイムサブスクリプション
-
-```typescript
-// components/notification/NotificationListener.tsx
+// components/auth/LogoutButton.tsx
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 
-export function NotificationListener({ userId }: { userId: string }) {
-  const supabase = createClient()
-  const router = useRouter()
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          // 新しい通知を受信
-          console.log('新しい通知:', payload.new)
-          router.refresh()  // Server Componentを再取得
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [userId, router, supabase])
-
-  return null
-}
-```
-
-```typescript
-// タイムラインのリアルタイム更新
-'use client'
-
-import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
-
-export function RealtimePosts({ initialPosts }: { initialPosts: Post[] }) {
-  const supabase = createClient()
-  const [posts, setPosts] = useState(initialPosts)
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('posts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
-        async (payload) => {
-          // 新しい投稿をフェッチ（リレーション含む）
-          const { data } = await supabase
-            .from('posts')
-            .select('*, user:users(*)')
-            .eq('id', payload.new.id)
-            .single()
-
-          if (data) {
-            setPosts(prev => [data, ...prev])
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [supabase])
-
-  return <PostList posts={posts} />
-}
-```
-
-### Storage（画像・動画アップロード）
-
-```typescript
-// lib/actions/upload.ts
-'use server'
-
-import { createClient } from '@/lib/supabase/server'
-import { v4 as uuidv4 } from 'uuid'
-
-export async function uploadImage(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return { error: '認証が必要です' }
-  }
-
-  const file = formData.get('file') as File
-  if (!file) {
-    return { error: 'ファイルが選択されていません' }
-  }
-
-  // ファイルサイズチェック（5MB）
-  if (file.size > 5 * 1024 * 1024) {
-    return { error: 'ファイルサイズは5MB以下にしてください' }
-  }
-
-  // MIMEタイプチェック
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
-    return { error: '対応していないファイル形式です' }
-  }
-
-  const ext = file.name.split('.').pop()
-  const fileName = `${user.id}/${uuidv4()}.${ext}`
-
-  const { error } = await supabase.storage
-    .from('post-images')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
-    })
-
-  if (error) {
-    return { error: 'アップロードに失敗しました' }
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('post-images')
-    .getPublicUrl(fileName)
-
-  return { url: publicUrl }
-}
-```
-
-```typescript
-// components/post/ImageUploader.tsx
-'use client'
-
-import { createClient } from '@/lib/supabase/client'
-import { useState } from 'react'
-
-export function ImageUploader({
-  onUpload,
-}: {
-  onUpload: (url: string) => void
-}) {
-  const supabase = createClient()
-  const [uploading, setUploading] = useState(false)
-
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploading(true)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const ext = file.name.split('.').pop()
-    const fileName = `${user.id}/${crypto.randomUUID()}.${ext}`
-
-    const { error } = await supabase.storage
-      .from('post-images')
-      .upload(fileName, file)
-
-    if (!error) {
-      const { data: { publicUrl } } = supabase.storage
-        .from('post-images')
-        .getPublicUrl(fileName)
-      onUpload(publicUrl)
-    }
-
-    setUploading(false)
-  }
-
+export function LogoutButton() {
   return (
-    <input
-      type="file"
-      accept="image/*"
-      onChange={handleUpload}
-      disabled={uploading}
-    />
+    <button onClick={() => signOut({ callbackUrl: '/login' })}>
+      ログアウト
+    </button>
   )
 }
 ```
 
-### Row Level Security (RLS)
-
-```sql
--- Supabase SQL Editor で設定
-
--- ユーザーは自分のプロフィールのみ編集可能
-CREATE POLICY "Users can update own profile"
-ON users FOR UPDATE
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
-
--- 公開投稿は誰でも閲覧可能
-CREATE POLICY "Public posts are viewable by everyone"
-ON posts FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM users
-    WHERE users.id = posts.user_id
-    AND users.is_public = true
-  )
-);
-
--- 投稿は本人のみ削除可能
-CREATE POLICY "Users can delete own posts"
-ON posts FOR DELETE
-USING (auth.uid() = user_id);
-
--- フォロワーのみ非公開ユーザーの投稿を閲覧可能
-CREATE POLICY "Followers can view private posts"
-ON posts FOR SELECT
-USING (
-  auth.uid() = user_id
-  OR EXISTS (
-    SELECT 1 FROM follows
-    WHERE follows.follower_id = auth.uid()
-    AND follows.following_id = posts.user_id
-  )
-);
-```
-
-### 型生成
-
-```bash
-# Supabase CLIで型を生成
-npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts
-```
+### セッションプロバイダー
 
 ```typescript
-// types/supabase.ts の使用例
-import { Database } from '@/types/supabase'
+// app/providers.tsx
+'use client'
 
-type Post = Database['public']['Tables']['posts']['Row']
-type PostInsert = Database['public']['Tables']['posts']['Insert']
-type PostUpdate = Database['public']['Tables']['posts']['Update']
-```
+import { SessionProvider } from 'next-auth/react'
 
-### 環境変数
-
-```bash
-# .env.local
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...  # 公開可能
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...      # サーバーのみ、公開禁止！
-```
-
-### next.config.ts 設定
-
-```typescript
-// next.config.ts
-const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '*.supabase.co',
-      },
-    ],
-  },
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>
 }
 
-export default nextConfig
+// app/layout.tsx
+import { Providers } from './providers'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
 ```
 
 ## アーキテクチャ
 
-### ディレクトリ構成（予定）
+### ディレクトリ構成
 ```
 app/
 ├── (auth)/           # 認証関連ページ (login, register)
@@ -1214,51 +1104,53 @@ app/
 │   ├── events/       # イベント
 │   └── notifications/# 通知
 ├── admin/            # 管理者ダッシュボード
-└── api/              # APIルート
-    ├── auth/
-    ├── users/
-    ├── posts/
-    ├── comments/
-    ├── shops/
-    ├── events/
-    ├── notifications/
-    └── admin/
+└── api/
+    └── auth/
+        └── [...nextauth]/  # NextAuth.js APIルート
 components/
 ├── ui/               # shadcn/uiコンポーネント
 ├── post/             # 投稿関連
 ├── user/             # ユーザー関連
 ├── shop/             # 盆栽園関連
 ├── event/            # イベント関連
+├── auth/             # 認証関連
 └── common/           # 共通コンポーネント
 lib/
-├── supabase/         # Supabaseクライアント
-│   ├── client.ts     # ブラウザ用
-│   ├── server.ts     # Server Component用
-│   ├── middleware.ts # Middleware用
-│   └── admin.ts      # Service Role用
+├── db.ts             # Prismaクライアント
+├── auth.ts           # NextAuth.js設定
 ├── actions/          # Server Actions
 └── utils/            # ユーティリティ
+prisma/
+├── schema.prisma     # データベーススキーマ
+└── migrations/       # マイグレーションファイル
 types/
-└── supabase.ts       # Supabase型定義（自動生成）
+└── next-auth.d.ts    # NextAuth.js型拡張
 ```
 
 ### データベース主要テーブル
 - `users` - ユーザー情報
+- `accounts` - OAuth連携（NextAuth.js用）
+- `sessions` - セッション（JWT使用時は不要）
 - `posts` - 投稿（テキスト500文字、画像4枚or動画1本）
-- `post_genres` - 投稿ジャンル（最大3つ、松柏類・雑木類等）
+- `post_media` - 投稿メディア
+- `post_genres` - 投稿ジャンル（最大3つ）
+- `genres` - ジャンルマスタ
 - `comments` - コメント（スレッド形式）
 - `likes` - いいね（投稿・コメント両対応）
+- `bookmarks` - ブックマーク
 - `follows` - フォロー関係
-- `bonsai_shops` - 盆栽園（Googleマップ方式のレビュー）
-- `events` - イベント（カレンダー表示、地域フィルタ）
+- `blocks` - ブロック
+- `mutes` - ミュート
+- `bonsai_shops` - 盆栽園
+- `shop_reviews` - 盆栽園レビュー
+- `events` - イベント
 - `notifications` - 通知
 - `reports` - 通報
 
 ### API設計パターン
-- RESTful API (Next.js API Routes)
-- 認証: `/api/auth/*`
-- リソース操作: `/api/{resource}`, `/api/{resource}/:id`
-- ネスト: `/api/posts/:id/comments`, `/api/shops/:id/reviews`
+- Server Actions優先（フォーム送信、データ変更）
+- Route Handlersは外部連携・Webhook用
+- 認証: NextAuth.js `/api/auth/*`
 
 ## 主要機能
 
@@ -1291,17 +1183,98 @@ types/
 
 ```typescript
 import { Component } from "@/components/ui/Component";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 ```
 
-## 環境変数（設定予定）
+## 環境変数
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...  # 公開可能
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...      # サーバーのみ、公開禁止！
+# データベース
+DATABASE_URL="postgresql://user:password@localhost:5432/bonsai_sns?schema=public"
+
+# NextAuth.js
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-here  # openssl rand -base64 32 で生成
+
+# Azure Blob Storage（本番用）
+AZURE_STORAGE_ACCOUNT_NAME=yourstorageaccount
+AZURE_STORAGE_ACCOUNT_KEY=your-storage-key
+AZURE_STORAGE_CONTAINER_NAME=uploads
 
 # アプリケーション
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+## 開発環境セットアップ
+
+### 方法1: Docker Composeで一括起動（推奨）
+
+```bash
+# 1. Docker Desktopをインストール・起動
+# https://www.docker.com/products/docker-desktop/
+
+# 2. 環境変数ファイルをコピー
+cp .env.local.example .env.local
+
+# 3. PostgreSQL + Next.jsを一括起動
+docker compose up -d
+
+# 4. ブラウザでアクセス
+# http://localhost:3000
+
+# 5. 停止
+docker compose down
+
+# データも削除する場合
+docker compose down -v
+```
+
+### 方法2: PostgreSQLのみDockerで起動
+
+```bash
+# 1. PostgreSQLコンテナのみ起動
+docker compose up -d postgres
+
+# 2. 環境変数設定
+cp .env.local.example .env.local
+
+# 3. 依存関係インストール
+npm install
+
+# 4. Prismaクライアント生成
+npx prisma generate
+
+# 5. データベースにスキーマを反映
+npx prisma db push
+
+# 6. シードデータ投入（任意）
+npx prisma db seed
+
+# 7. 開発サーバー起動
+npm run dev
+```
+
+### 方法3: ローカルPostgreSQLを使用
+
+```bash
+# 1. ローカルPostgreSQLを起動
+
+# 2. 環境変数設定（DATABASE_URLを自分の環境に合わせて変更）
+cp .env.local.example .env.local
+
+# 3. 依存関係インストール
+npm install
+
+# 4. Prismaクライアント生成
+npx prisma generate
+
+# 5. データベースにスキーマを反映
+npx prisma db push
+
+# 6. シードデータ投入（任意）
+npx prisma db seed
+
+# 7. 開発サーバー起動
+npm run dev
 ```

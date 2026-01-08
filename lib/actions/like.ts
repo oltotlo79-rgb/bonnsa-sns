@@ -1,66 +1,54 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 
 // 投稿いいねトグル
 export async function togglePostLike(postId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
   // 現在のいいね状態を確認
-  const { data: existingLike } = await supabase
-    .from('likes')
-    .select('id')
-    .eq('post_id', postId)
-    .eq('user_id', user.id)
-    .is('comment_id', null)
-    .single()
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+      commentId: null,
+    },
+  })
 
   if (existingLike) {
     // いいね解除
-    const { error } = await supabase
-      .from('likes')
-      .delete()
-      .eq('id', existingLike.id)
-
-    if (error) {
-      console.error('Unlike error:', error)
-      return { error: 'いいね解除に失敗しました' }
-    }
+    await prisma.like.delete({
+      where: { id: existingLike.id },
+    })
 
     return { success: true, liked: false }
   } else {
     // いいね追加
-    const { error } = await supabase
-      .from('likes')
-      .insert({
-        post_id: postId,
-        user_id: user.id,
-      })
-
-    if (error) {
-      console.error('Like error:', error)
-      return { error: 'いいねに失敗しました' }
-    }
+    await prisma.like.create({
+      data: {
+        postId,
+        userId: session.user.id,
+      },
+    })
 
     // 通知作成（投稿者へ）
-    const { data: post } = await supabase
-      .from('posts')
-      .select('user_id')
-      .eq('id', postId)
-      .single()
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { userId: true },
+    })
 
-    if (post && post.user_id !== user.id) {
-      await supabase.from('notifications').insert({
-        user_id: post.user_id,
-        actor_id: user.id,
-        type: 'like',
-        post_id: postId,
+    if (post && post.userId !== session.user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: post.userId,
+          actorId: session.user.id,
+          type: 'like',
+          postId,
+        },
       })
     }
 
@@ -70,63 +58,51 @@ export async function togglePostLike(postId: string) {
 
 // コメントいいねトグル
 export async function toggleCommentLike(commentId: string, postId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
   // 現在のいいね状態を確認
-  const { data: existingLike } = await supabase
-    .from('likes')
-    .select('id')
-    .eq('comment_id', commentId)
-    .eq('user_id', user.id)
-    .single()
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      commentId,
+      userId: session.user.id,
+    },
+  })
 
   if (existingLike) {
     // いいね解除
-    const { error } = await supabase
-      .from('likes')
-      .delete()
-      .eq('id', existingLike.id)
-
-    if (error) {
-      console.error('Unlike comment error:', error)
-      return { error: 'いいね解除に失敗しました' }
-    }
+    await prisma.like.delete({
+      where: { id: existingLike.id },
+    })
 
     return { success: true, liked: false }
   } else {
     // いいね追加
-    const { error } = await supabase
-      .from('likes')
-      .insert({
-        comment_id: commentId,
-        post_id: postId,
-        user_id: user.id,
-      })
-
-    if (error) {
-      console.error('Like comment error:', error)
-      return { error: 'いいねに失敗しました' }
-    }
+    await prisma.like.create({
+      data: {
+        commentId,
+        postId,
+        userId: session.user.id,
+      },
+    })
 
     // 通知作成（コメント投稿者へ）
-    const { data: comment } = await supabase
-      .from('comments')
-      .select('user_id')
-      .eq('id', commentId)
-      .single()
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      select: { userId: true },
+    })
 
-    if (comment && comment.user_id !== user.id) {
-      await supabase.from('notifications').insert({
-        user_id: comment.user_id,
-        actor_id: user.id,
-        type: 'comment_like',
-        post_id: postId,
-        comment_id: commentId,
+    if (comment && comment.userId !== session.user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: comment.userId,
+          actorId: session.user.id,
+          type: 'comment_like',
+          postId,
+          commentId,
+        },
       })
     }
 
@@ -136,76 +112,69 @@ export async function toggleCommentLike(commentId: string, postId: string) {
 
 // 投稿いいね状態取得
 export async function getPostLikeStatus(postId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { liked: false }
   }
 
-  const { data: existingLike } = await supabase
-    .from('likes')
-    .select('id')
-    .eq('post_id', postId)
-    .eq('user_id', user.id)
-    .is('comment_id', null)
-    .single()
+  const existingLike = await prisma.like.findFirst({
+    where: {
+      postId,
+      userId: session.user.id,
+      commentId: null,
+    },
+  })
 
   return { liked: !!existingLike }
 }
 
 // いいねした投稿一覧
 export async function getLikedPosts(userId: string, cursor?: string, limit = 20) {
-  const supabase = await createClient()
-
-  let query = supabase
-    .from('likes')
-    .select(`
-      id,
-      created_at,
-      post:posts(
-        id,
-        content,
-        created_at,
-        user:users(id, nickname, avatar_url),
-        media:post_media(id, url, type, order),
-        genres:post_genres(genre:genres(id, name)),
-        likes:likes(count),
-        comments:comments(count),
-        reposts:posts!original_post_id(count)
-      )
-    `)
-    .eq('user_id', userId)
-    .not('post_id', 'is', null)
-    .is('comment_id', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (cursor) {
-    query = query.lt('created_at', cursor)
-  }
-
-  const { data: likes, error } = await query
-
-  if (error) {
-    console.error('Get liked posts error:', error)
-    return { error: 'いいねした投稿の取得に失敗しました', posts: [] }
-  }
+  const likes = await prisma.like.findMany({
+    where: {
+      userId,
+      postId: { not: null },
+      commentId: null,
+    },
+    include: {
+      post: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          genres: {
+            include: { genre: true },
+          },
+          _count: {
+            select: { likes: true, comments: true },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
 
   const posts = likes
-    .filter(like => like.post)
-    .map(like => ({
-      ...like.post,
-      likeCount: like.post?.likes?.[0]?.count || 0,
-      commentCount: like.post?.comments?.[0]?.count || 0,
-      repostCount: like.post?.reposts?.[0]?.count || 0,
-      genres: like.post?.genres?.map(g => g.genre) || [],
+    .filter((like) => like.post)
+    .map((like) => ({
+      ...like.post!,
+      likeCount: like.post!._count.likes,
+      commentCount: like.post!._count.comments,
+      genres: like.post!.genres.map((pg) => pg.genre),
     }))
 
   const hasMore = likes.length === limit
 
   return {
     posts,
-    nextCursor: hasMore ? likes[likes.length - 1]?.created_at : undefined,
+    nextCursor: hasMore ? likes[likes.length - 1]?.id : undefined,
   }
 }

@@ -8,7 +8,7 @@ type ImageGalleryProps = {
     id: string
     url: string
     type: string
-    sort_order: number
+    sortOrder: number
   }[]
 }
 
@@ -22,7 +22,7 @@ function XIcon({ className }: { className?: string }) {
 
 export function ImageGallery({ images }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
-  const sortedImages = [...images].sort((a, b) => a.sort_order - b.sort_order)
+  const sortedImages = [...images].sort((a, b) => a.sortOrder - b.sortOrder)
 
   const gridClass = images.length === 1
     ? ''

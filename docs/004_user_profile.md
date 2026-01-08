@@ -46,10 +46,14 @@
 ### Server Actions
 - [x] `lib/actions/user.ts`
   - [x] `getUser` - ユーザー情報取得
+  - [x] `getCurrentUser` - 現在のユーザー取得
   - [x] `updateProfile` - プロフィール更新
+  - [x] `updatePrivacy` - 公開/非公開設定
   - [x] `uploadAvatar` - アバター画像アップロード
   - [x] `uploadHeader` - ヘッダー画像アップロード
   - [x] `deleteAccount` - アカウント削除
+  - [x] `getFollowers` - フォロワー一覧
+  - [x] `getFollowing` - フォロー中一覧
 
 ### プロフィール編集項目
 - [x] ニックネーム（必須、最大50文字）
@@ -62,12 +66,12 @@
 - [x] 公開/非公開設定
 - [x] アカウント削除機能
   - [x] 確認ダイアログ
-  - [x] 関連データの削除（投稿、コメント等）
+  - [x] 関連データの削除（Prismaカスケード削除）
 
 ### 画像アップロード
-- [x] Supabase Storageバケット作成（avatars, headers）※要手動設定
 - [x] 許可ファイル形式チェック（JPEG, PNG, WebP）
 - [x] ファイルサイズ制限（5MB）
+- [ ] Azure Blob Storageへのアップロード実装（TODO）
 
 ### バリデーション
 - [x] ニックネーム必須チェック
@@ -91,56 +95,99 @@
 ## 完了条件
 - [x] プロフィールページが正常に表示される
 - [x] プロフィール編集が正常に動作する
-- [x] 画像アップロードが正常に動作する
+- [ ] 画像アップロードが正常に動作する（TODO: Azure Blob Storage実装）
 - [x] 公開/非公開設定が正常に動作する
 - [x] アカウント削除が正常に動作する
 
-## Supabase Storage設定（要手動設定）
-Supabaseダッシュボードで以下のバケットを作成してください：
-
-1. `avatars` - プロフィール画像用
-2. `headers` - ヘッダー画像用
-
-各バケットの設定：
-- Public bucket: ON
-- Allowed MIME types: image/jpeg, image/png, image/webp
-- File size limit: 5MB
+## Azure Blob Storage設定（TODO）
+本番環境では Azure Blob Storage を使用してファイルをアップロードします。
+現在は仮のローカルパスを返しています。
 
 ## 参考コード
 ```typescript
 // lib/actions/user.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+
+const profileSchema = z.object({
+  nickname: z.string().min(1, 'ニックネームは必須です').max(50),
+  bio: z.string().max(200).optional(),
+  location: z.string().max(100).optional(),
+})
+
+export async function getUser(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      _count: {
+        select: {
+          posts: true,
+          followers: true,
+          following: true,
+        },
+      },
+    },
+  })
+
+  if (!user) {
+    return { error: 'ユーザーが見つかりません' }
+  }
+
+  return {
+    user: {
+      ...user,
+      postsCount: user._count.posts,
+      followersCount: user._count.followers,
+      followingCount: user._count.following,
+    },
+  }
+}
 
 export async function updateProfile(formData: FormData) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
-  const nickname = formData.get('nickname') as string
-  const bio = formData.get('bio') as string
-  const location = formData.get('location') as string
+  const result = profileSchema.safeParse({
+    nickname: formData.get('nickname'),
+    bio: formData.get('bio') || '',
+    location: formData.get('location') || '',
+  })
 
-  const { error } = await supabase
-    .from('users')
-    .update({
-      nickname,
-      bio,
-      location,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', user.id)
-
-  if (error) {
-    return { error: 'プロフィールの更新に失敗しました' }
+  if (!result.success) {
+    return { error: result.error.errors[0].message }
   }
 
-  revalidatePath(`/users/${user.id}`)
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: {
+      nickname: result.data.nickname,
+      bio: result.data.bio || null,
+      location: result.data.location || null,
+    },
+  })
+
+  revalidatePath(`/users/${session.user.id}`)
+  revalidatePath('/settings/profile')
+  return { success: true }
+}
+
+export async function deleteAccount() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // Prismaのカスケード削除により関連データも削除される
+  await prisma.user.delete({
+    where: { id: session.user.id },
+  })
+
   return { success: true }
 }
 ```

@@ -25,12 +25,12 @@ import { deleteComment, getReplies } from '@/lib/actions/comment'
 type Comment = {
   id: string
   content: string
-  created_at: string
-  parent_id: string | null
+  createdAt: string | Date
+  parentId: string | null
   user: {
     id: string
     nickname: string
-    avatar_url: string | null
+    avatarUrl: string | null
   }
   likeCount: number
   replyCount?: number
@@ -57,7 +57,7 @@ export function CommentCard({
   const [isDeleting, setIsDeleting] = useState(false)
 
   const isOwner = currentUserId === comment.user.id
-  const timeAgo = formatDistanceToNow(new Date(comment.created_at), {
+  const timeAgo = formatDistanceToNow(new Date(comment.createdAt), {
     addSuffix: true,
     locale: ja,
   })
@@ -105,9 +105,9 @@ export function CommentCard({
       <div className="flex gap-3">
         <Link href={`/users/${comment.user.id}`}>
           <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0">
-            {comment.user.avatar_url ? (
+            {comment.user.avatarUrl ? (
               <Image
-                src={comment.user.avatar_url}
+                src={comment.user.avatarUrl}
                 alt={comment.user.nickname}
                 width={32}
                 height={32}

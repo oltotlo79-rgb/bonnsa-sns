@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
+import { toggleFollow } from '@/lib/actions/follow'
 import { useRouter } from 'next/navigation'
 
 type FollowButtonProps = {
@@ -13,40 +13,21 @@ type FollowButtonProps = {
 export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
   const router = useRouter()
 
   async function handleClick() {
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    // Optimistic UI
+    setIsFollowing(!isFollowing)
 
-    if (isFollowing) {
-      // フォロー解除
-      const { error } = await supabase
-        .from('follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', userId)
+    const result = await toggleFollow(userId)
 
-      if (!error) {
-        setIsFollowing(false)
-      }
-    } else {
-      // フォロー
-      const { error } = await supabase
-        .from('follows')
-        .insert({
-          follower_id: user.id,
-          following_id: userId,
-        })
-
-      if (!error) {
-        setIsFollowing(true)
+    if (result.error) {
+      // ロールバック
+      setIsFollowing(isFollowing)
+      if (result.error === '認証が必要です') {
+        router.push('/login')
       }
     }
 

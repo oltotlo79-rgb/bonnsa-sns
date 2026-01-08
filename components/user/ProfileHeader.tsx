@@ -9,12 +9,12 @@ type ProfileHeaderProps = {
   user: {
     id: string
     nickname: string
-    avatar_url: string | null
-    header_url: string | null
+    avatarUrl: string | null
+    headerUrl: string | null
     bio: string | null
     location: string | null
-    is_public: boolean
-    created_at: string
+    isPublic: boolean
+    createdAt: string | Date
     postsCount: number
     followersCount: number
     followingCount: number
@@ -52,16 +52,16 @@ function LockIcon({ className }: { className?: string }) {
 }
 
 export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps) {
-  const joinDate = new Date(user.created_at)
+  const joinDate = new Date(user.createdAt)
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
 
   return (
     <div className="bg-card rounded-lg border overflow-hidden">
       {/* ヘッダー画像 */}
       <div className="h-32 sm:h-48 bg-bonsai-green/20 relative">
-        {user.header_url && (
+        {user.headerUrl && (
           <Image
-            src={user.header_url}
+            src={user.headerUrl}
             alt="ヘッダー画像"
             fill
             className="object-cover"
@@ -75,9 +75,9 @@ export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps
         {/* アバターとボタン */}
         <div className="flex justify-between items-start -mt-12 sm:-mt-16 mb-4">
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-card bg-muted overflow-hidden">
-            {user.avatar_url ? (
+            {user.avatarUrl ? (
               <Image
-                src={user.avatar_url}
+                src={user.avatarUrl}
                 alt={user.nickname}
                 width={128}
                 height={128}
@@ -104,7 +104,7 @@ export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps
         {/* 名前・非公開マーク */}
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-xl sm:text-2xl font-bold">{user.nickname}</h1>
-          {!user.is_public && (
+          {!user.isPublic && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
               <LockIcon className="w-3 h-3" />
               非公開

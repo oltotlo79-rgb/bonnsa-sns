@@ -3,42 +3,40 @@ import { PostCard } from './PostCard'
 type PostUser = {
   id: string
   nickname: string
-  avatar_url: string | null
+  avatarUrl: string | null
 }
 
 type PostMedia = {
   id: string
   url: string
   type: string
-  sort_order: number
+  sortOrder: number
 }
 
 type PostGenre = {
-  genre: {
-    id: string
-    name: string
-    category: string
-  }
+  id: string
+  name: string
+  category: string
 }
 
 type QuotePost = {
   id: string
   content: string | null
-  created_at: string
+  createdAt: string | Date
   user: PostUser
 }
 
 type Post = {
   id: string
   content: string | null
-  created_at: string
+  createdAt: string | Date
   user: PostUser
   media: PostMedia[]
   genres: PostGenre[]
-  likes: { count: number }[]
-  comments: { count: number }[]
-  quote_post: QuotePost | null
-  repost_post: (QuotePost & { media: PostMedia[] }) | null
+  likeCount: number
+  commentCount: number
+  quotePost?: QuotePost | null
+  repostPost?: (QuotePost & { media: PostMedia[] }) | null
 }
 
 type PostListProps = {
