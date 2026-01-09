@@ -29,6 +29,8 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # SLL 設定を無効化（開発環境用）
+      # - NODE_TLS_REJECT_UNAUTHORIZED=0
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bonsai_sns
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=development-secret-change-in-production
@@ -41,7 +43,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma db push && npx prisma db seed && npm run dev"
 
 volumes:
   postgres_data:
