@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { resetPassword, verifyPasswordResetToken } from '@/lib/actions/auth'
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -45,10 +47,36 @@ function EyeOffIcon({ className }: { className?: string }) {
 }
 
 export function PasswordResetConfirmForm() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  const token = searchParams.get('token')
+  const email = searchParams.get('email')
+
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const [verifying, setVerifying] = useState(true)
+
+  // トークンの検証
+  useEffect(() => {
+    async function verify() {
+      if (!token || !email) {
+        setTokenValid(false)
+        setVerifying(false)
+        return
+      }
+
+      const result = await verifyPasswordResetToken(email, token)
+      setTokenValid(result.valid)
+      setVerifying(false)
+    }
+
+    verify()
+  }, [token, email])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -79,9 +107,89 @@ export function PasswordResetConfirmForm() {
       return
     }
 
-    // TODO: トークン検証とパスワード更新の実装が必要
-    setError('パスワードリセット機能は現在準備中です。管理者にお問い合わせください。')
+    if (!token || !email) {
+      setError('無効なリセットリンクです')
+      setLoading(false)
+      return
+    }
+
+    const result = await resetPassword({
+      email,
+      token,
+      newPassword: password,
+    })
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      return
+    }
+
+    setSuccess(true)
     setLoading(false)
+
+    // 3秒後にログインページへリダイレクト
+    setTimeout(() => {
+      router.push('/login')
+    }, 3000)
+  }
+
+  // 検証中
+  if (verifying) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-muted-foreground">リンクを検証中...</p>
+      </div>
+    )
+  }
+
+  // トークンが無効
+  if (!tokenValid) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-red-50 p-4 text-center">
+          <p className="text-red-800 font-medium">リンクが無効です</p>
+          <p className="text-red-700 text-sm mt-2">
+            リセットリンクが無効または期限切れです。
+            もう一度パスワードリセットをお試しください。
+          </p>
+        </div>
+
+        <p className="text-center">
+          <Link href="/password-reset" className="text-primary hover:underline">
+            パスワードリセットを再度リクエスト
+          </Link>
+        </p>
+
+        <p className="text-center text-sm text-muted-foreground">
+          <Link href="/login" className="text-primary hover:underline">
+            ログインページへ戻る
+          </Link>
+        </p>
+      </div>
+    )
+  }
+
+  // 成功
+  if (success) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-green-50 p-4 text-center">
+          <p className="text-green-800 font-medium">パスワードを更新しました</p>
+          <p className="text-green-700 text-sm mt-2">
+            新しいパスワードでログインできます。
+            ログインページへ移動します...
+          </p>
+        </div>
+
+        <p className="text-center">
+          <Link href="/login" className="text-primary hover:underline">
+            今すぐログインする
+          </Link>
+        </p>
+      </div>
+    )
   }
 
   return (

@@ -56,24 +56,23 @@ export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
 
   return (
-    <div className="bg-card rounded-lg border overflow-hidden">
-      {/* ヘッダー画像 */}
-      <div className="h-32 sm:h-48 bg-bonsai-green/20 relative">
-        {user.headerUrl && (
-          <Image
-            src={user.headerUrl}
-            alt="ヘッダー画像"
-            fill
-            className="object-cover"
-            priority
-          />
-        )}
-      </div>
+    <div className="bg-card rounded-lg border">
+      {/* ヘッダー画像とアバター */}
+      <div className="relative">
+        {/* ヘッダー画像 - relative z-0 を追加して背面に固定 */}
+        <div className="h-32 sm:h-48 bg-bonsai-green/20 rounded-t-lg overflow-hidden relative z-0">
+          {user.headerUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.headerUrl}
+              alt="ヘッダー画像"
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
 
-      {/* プロフィール情報 */}
-      <div className="px-4 pb-4">
-        {/* アバターとボタン */}
-        <div className="flex justify-between items-start -mt-12 sm:-mt-16 mb-4">
+        {/* アバター（絶対配置でヘッダーの上に重ねる） - z-20 に引き上げ */}
+        <div className="absolute left-4 -bottom-12 sm:-bottom-16 z-20">
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-card bg-muted overflow-hidden">
             {user.avatarUrl ? (
               <Image
@@ -84,21 +83,25 @@ export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps
                 className="object-cover w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-3xl sm:text-4xl text-muted-foreground">
+              <div className="w-full h-full flex items-center justify-center text-3xl sm:text-4xl text-muted-foreground bg-card">
                 {user.nickname.charAt(0)}
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="mt-14 sm:mt-20">
-            {isOwner ? (
-              <Button variant="outline" asChild>
-                <Link href="/settings/profile">プロフィールを編集</Link>
-              </Button>
-            ) : (
-              <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
-            )}
-          </div>
+      {/* プロフィール情報 */}
+      <div className="px-4 pb-4 pt-14 sm:pt-20">
+        {/* 編集ボタン */}
+        <div className="flex justify-end mb-4">
+          {isOwner ? (
+            <Button variant="outline" asChild>
+              <Link href="/settings/profile">プロフィールを編集</Link>
+            </Button>
+          ) : (
+            <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
+          )}
         </div>
 
         {/* 名前・非公開マーク */}

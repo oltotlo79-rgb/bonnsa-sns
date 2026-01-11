@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 
 export default async function MainLayout({
@@ -18,8 +19,15 @@ export default async function MainLayout({
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/feed" className="text-xl font-bold text-bonsai-green hover:opacity-80">
-            BON-LOG
+          <Link href="/feed" className="hover:opacity-80">
+            <Image
+              src="/logo.png"
+              alt="BON-LOG"
+              width={120}
+              height={48}
+              className="h-10 w-auto"
+              priority
+            />
           </Link>
           <nav className="flex items-center gap-4">
             <Link

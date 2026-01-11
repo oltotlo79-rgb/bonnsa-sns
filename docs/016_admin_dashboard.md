@@ -138,7 +138,7 @@
 ### セキュリティ
 - [ ] 管理者権限チェック
 - [ ] 操作ログの記録
-- [ ] Service Roleキー使用（RLSバイパス）
+- [ ] 管理者専用Middleware
 
 ---
 
@@ -153,116 +153,99 @@
 ## 参考コード
 ```typescript
 // middleware.ts (管理者認証部分)
-import { createClient } from '@/lib/supabase/middleware'
+import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  // ... 既存の認証処理 ...
+export default auth(async (req) => {
+  const isLoggedIn = !!req.auth
 
   // 管理者ページへのアクセスチェック
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url))
+  if (req.nextUrl.pathname.startsWith('/admin')) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL('/login', req.nextUrl))
     }
 
-    // 管理者権限チェック
-    const supabase = createAdminClient()
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser) {
-      return NextResponse.redirect(new URL('/feed', request.url))
-    }
+    // 注: 管理者権限チェックはServer Actionsで行う
+    // Middlewareでは認証のみチェック
   }
-
-  return supabaseResponse
-}
+})
 ```
 
 ```typescript
 // lib/actions/admin.ts
 'use server'
 
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 
 async function checkAdminPermission() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     throw new Error('認証が必要です')
   }
 
-  const adminSupabase = createAdminClient()
-  const { data: adminUser } = await adminSupabase
-    .from('admin_users')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
 
   if (!adminUser) {
     throw new Error('管理者権限が必要です')
   }
 
-  return { user, role: adminUser.role }
+  return { user: session.user, role: adminUser.role }
 }
 
 export async function getAdminStats() {
   await checkAdminPermission()
 
-  const supabase = createAdminClient()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
-  const today = new Date().toISOString().split('T')[0]
-
-  const [
-    { count: totalUsers },
-    { count: todayUsers },
-    { count: totalPosts },
-    { count: todayPosts },
-    { count: pendingReports },
-  ] = await Promise.all([
-    supabase.from('users').select('*', { count: 'exact', head: true }),
-    supabase.from('users').select('*', { count: 'exact', head: true })
-      .gte('created_at', `${today}T00:00:00`),
-    supabase.from('posts').select('*', { count: 'exact', head: true }),
-    supabase.from('posts').select('*', { count: 'exact', head: true })
-      .gte('created_at', `${today}T00:00:00`),
-    supabase.from('reports').select('*', { count: 'exact', head: true })
-      .eq('status', 'pending'),
-  ])
+  const [totalUsers, todayUsers, totalPosts, todayPosts, pendingReports] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({
+        where: { createdAt: { gte: today } },
+      }),
+      prisma.post.count(),
+      prisma.post.count({
+        where: { createdAt: { gte: today } },
+      }),
+      prisma.report.count({
+        where: { status: 'pending' },
+      }),
+    ])
 
   return {
-    totalUsers: totalUsers ?? 0,
-    todayUsers: todayUsers ?? 0,
-    totalPosts: totalPosts ?? 0,
-    todayPosts: todayPosts ?? 0,
-    pendingReports: pendingReports ?? 0,
+    totalUsers,
+    todayUsers,
+    totalPosts,
+    todayPosts,
+    pendingReports,
   }
 }
 
 export async function suspendUser(userId: string, reason: string) {
   const { user: adminUser } = await checkAdminPermission()
 
-  const supabase = createAdminClient()
-
   // ユーザー停止
-  await supabase
-    .from('users')
-    .update({ is_suspended: true, suspended_at: new Date().toISOString() })
-    .eq('id', userId)
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isSuspended: true,
+      suspendedAt: new Date(),
+    },
+  })
 
   // 管理者ログ記録
-  await supabase.from('admin_logs').insert({
-    admin_id: adminUser.id,
-    action: 'suspend_user',
-    target_type: 'user',
-    target_id: userId,
-    details: { reason },
+  await prisma.adminLog.create({
+    data: {
+      adminId: adminUser.id,
+      action: 'suspend_user',
+      targetType: 'user',
+      targetId: userId,
+      details: { reason },
+    },
   })
 
   return { success: true }
@@ -271,18 +254,20 @@ export async function suspendUser(userId: string, reason: string) {
 export async function deletePost(postId: string, reason: string) {
   const { user: adminUser } = await checkAdminPermission()
 
-  const supabase = createAdminClient()
-
   // 投稿削除
-  await supabase.from('posts').delete().eq('id', postId)
+  await prisma.post.delete({
+    where: { id: postId },
+  })
 
   // 管理者ログ記録
-  await supabase.from('admin_logs').insert({
-    admin_id: adminUser.id,
-    action: 'delete_post',
-    target_type: 'post',
-    target_id: postId,
-    details: { reason },
+  await prisma.adminLog.create({
+    data: {
+      adminId: adminUser.id,
+      action: 'delete_post',
+      targetType: 'post',
+      targetId: postId,
+      details: { reason },
+    },
   })
 
   return { success: true }

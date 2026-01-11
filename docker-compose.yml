@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: bonsai_sns
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,9 +28,11 @@ services:
     container_name: bonsai-app
     ports:
       - "3000:3000"
+      - "5555:5555"
+    env_file:
+      - .env.local
     environment:
-      # SLL 設定を無効化（開発環境用）
-      # - NODE_TLS_REJECT_UNAUTHORIZED=0
+      # Docker内部のDB接続設定（.env.localを上書き）
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bonsai_sns
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=development-secret-change-in-production

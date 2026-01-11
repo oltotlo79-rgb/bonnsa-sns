@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { requestPasswordReset } from '@/lib/actions/auth'
 
 export function PasswordResetForm() {
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -15,10 +17,49 @@ export function PasswordResetForm() {
     setLoading(true)
     setError(null)
 
-    // TODO: メール送信機能の実装が必要
-    // 現在は未実装のため、エラーメッセージを表示
-    setError('パスワードリセット機能は現在準備中です。管理者にお問い合わせください。')
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+
+    if (!email) {
+      setError('メールアドレスを入力してください')
+      setLoading(false)
+      return
+    }
+
+    const result = await requestPasswordReset(email)
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      return
+    }
+
+    setSuccess(true)
     setLoading(false)
+  }
+
+  if (success) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-green-50 p-4 text-center">
+          <p className="text-green-800 font-medium">メールを送信しました</p>
+          <p className="text-green-700 text-sm mt-2">
+            入力されたメールアドレスにパスワードリセット用のリンクを送信しました。
+            メールをご確認ください。
+          </p>
+        </div>
+
+        <p className="text-center text-sm text-muted-foreground">
+          メールが届かない場合は、迷惑メールフォルダもご確認ください。
+        </p>
+
+        <p className="text-center text-sm text-muted-foreground">
+          <Link href="/login" className="text-primary hover:underline">
+            ログインページへ戻る
+          </Link>
+        </p>
+      </div>
+    )
   }
 
   return (

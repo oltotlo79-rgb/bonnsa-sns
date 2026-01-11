@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { uploadFile, deleteFile } from '@/lib/storage'
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
@@ -27,24 +28,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'JPEG、PNG、WebP形式のみ対応しています' }, { status: 400 })
     }
 
-    // TODO: Azure Blob Storageへのアップロード実装
-    // 現在は仮のURLを返す
-    const placeholderUrl = `/placeholder-avatar.png?userId=${session.user.id}&t=${Date.now()}`
+    // 現在のユーザー情報を取得（古い画像を削除するため）
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { avatarUrl: true },
+    })
 
+    // ファイルをBufferに変換
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // ストレージにアップロード
+    const result = await uploadFile(buffer, file.name, file.type, 'avatars')
+
+    if (!result.success || !result.url) {
+      return NextResponse.json(
+        { error: result.error || 'アップロードに失敗しました' },
+        { status: 500 }
+      )
+    }
+
+    // DBを更新
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
-        avatarUrl: placeholderUrl,
+        avatarUrl: result.url,
       },
     })
+
+    // 古い画像を削除（ローカルまたはAzureのファイル）
+    if (currentUser?.avatarUrl && !currentUser.avatarUrl.includes('placeholder')) {
+      await deleteFile(currentUser.avatarUrl).catch((err) => {
+        console.warn('Failed to delete old avatar:', err)
+      })
+    }
 
     revalidatePath('/users/' + session.user.id)
     revalidatePath('/settings/profile')
 
     return NextResponse.json({
       success: true,
-      url: placeholderUrl,
-      message: '画像アップロード機能は現在準備中です'
+      url: result.url,
     })
   } catch (error) {
     console.error('Avatar upload error:', error)

@@ -30,9 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env
+# env files
+# .env - 開発環境のデフォルト値（機密情報なし）はコミット可能
+# .env.local - ローカル設定・機密情報は除外
 .env.local
+.env*.local
 
 # vercel
 .vercel
@@ -42,3 +44,7 @@ yarn-error.log*
 next-env.d.ts
 
 /lib/generated/prisma
+
+# uploaded files (keep .gitkeep)
+/public/uploads/*
+!/public/uploads/.gitkeep

@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { authConfig } from '@/lib/auth.config' // インポート
 
 const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
@@ -11,41 +12,25 @@ const loginSchema = z.object({
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig, // configを展開
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
   },
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
   providers: [
     CredentialsProvider({
       name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
       async authorize(credentials) {
         const result = loginSchema.safeParse(credentials)
-        if (!result.success) {
-          return null
-        }
+        if (!result.success) return null
 
         const { email, password } = result.data
+        const user = await prisma.user.findUnique({ where: { email } })
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
-
-        if (!user || !user.password) {
-          return null
-        }
+        if (!user || !user.password) return null
 
         const passwordMatch = await bcrypt.compare(password, user.password)
-        if (!passwordMatch) {
-          return null
-        }
+        if (!passwordMatch) return null
 
         return {
           id: user.id,
@@ -72,7 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 })
 
-// ユーザー登録関数
+// ユーザー登録関数（これは別のファイル lib/user.ts などに分けるのがより綺麗です）
 export async function registerUser(data: {
   email: string
   password: string
@@ -81,20 +66,14 @@ export async function registerUser(data: {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
   })
-
-  if (existingUser) {
-    throw new Error('このメールアドレスは既に使用されています')
-  }
+  if (existingUser) throw new Error('このメールアドレスは既に使用されています')
 
   const hashedPassword = await bcrypt.hash(data.password, 12)
-
-  const user = await prisma.user.create({
+  return await prisma.user.create({
     data: {
       email: data.email,
       password: hashedPassword,
       nickname: data.nickname,
     },
   })
-
-  return user
 }

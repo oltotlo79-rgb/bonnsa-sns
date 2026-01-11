@@ -1,32 +1,36 @@
-import { auth } from '@/lib/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config' // lib/auth ではなく config を読み込む
 import { NextResponse } from 'next/server'
+
+// Edge Runtime でも動作する auth インスタンスを生成
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
+  const { nextUrl } = req
 
   // 保護されたルート
   const protectedPaths = ['/feed', '/posts', '/settings', '/notifications', '/bookmarks', '/users']
   const isProtected = protectedPaths.some((path) =>
-    req.nextUrl.pathname.startsWith(path)
+    nextUrl.pathname.startsWith(path)
   )
 
   // 認証ページ
   const authPaths = ['/login', '/register', '/password-reset']
   const isAuthPage = authPaths.some((path) =>
-    req.nextUrl.pathname.startsWith(path)
+    nextUrl.pathname.startsWith(path)
   )
 
   // 未認証ユーザーが保護ルートにアクセスした場合
   if (isProtected && !isLoggedIn) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirect', req.nextUrl.pathname)
+    const url = new URL('/login', nextUrl)
+    url.searchParams.set('redirect', nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
   // 認証済みユーザーが認証ページにアクセスした場合
   if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/feed', req.url))
+    return NextResponse.redirect(new URL('/feed', nextUrl))
   }
 
   return NextResponse.next()

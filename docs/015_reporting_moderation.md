@@ -200,7 +200,8 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
 // lib/actions/report.ts
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
 
 interface CreateReportParams {
   targetType: 'post' | 'comment' | 'event' | 'shop' | 'user'
@@ -210,40 +211,68 @@ interface CreateReportParams {
 }
 
 export async function createReport(params: CreateReportParams) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const session = await auth()
+  if (!session?.user?.id) {
     return { error: '認証が必要です' }
   }
 
   // 重複チェック
-  const { data: existing } = await supabase
-    .from('reports')
-    .select('id')
-    .eq('reporter_id', user.id)
-    .eq('target_type', params.targetType)
-    .eq('target_id', params.targetId)
-    .single()
+  const existing = await prisma.report.findFirst({
+    where: {
+      reporterId: session.user.id,
+      targetType: params.targetType,
+      targetId: params.targetId,
+    },
+  })
 
   if (existing) {
     return { error: '既に通報済みです' }
   }
 
-  const { error } = await supabase
-    .from('reports')
-    .insert({
-      reporter_id: user.id,
-      target_type: params.targetType,
-      target_id: params.targetId,
+  await prisma.report.create({
+    data: {
+      reporterId: session.user.id,
+      targetType: params.targetType,
+      targetId: params.targetId,
       reason: params.reason,
       description: params.description,
       status: 'pending',
-    })
+    },
+  })
 
-  if (error) {
-    return { error: '通報に失敗しました' }
+  return { success: true }
+}
+
+export async function getReports(status?: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
   }
+
+  // 管理者権限チェック（実際の実装では管理者テーブルを確認）
+  const reports = await prisma.report.findMany({
+    where: status ? { status } : undefined,
+    include: {
+      reporter: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return { reports }
+}
+
+export async function updateReportStatus(reportId: string, status: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  await prisma.report.update({
+    where: { id: reportId },
+    data: { status },
+  })
 
   return { success: true }
 }
