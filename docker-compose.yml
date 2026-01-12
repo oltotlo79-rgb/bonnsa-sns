@@ -32,6 +32,8 @@ services:
     env_file:
       - .env.local
     environment:
+      # SLL 設定を無効化（開発環境用）
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
       # Docker内部のDB接続設定（.env.localを上書き）
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bonsai_sns
       - NEXTAUTH_URL=http://localhost:3000
