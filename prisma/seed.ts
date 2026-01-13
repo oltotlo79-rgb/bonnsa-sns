@@ -82,6 +82,10 @@ const genres = [
   // 施設・イベント
   { name: '盆栽園', category: '施設・イベント', sortOrder: 1 },
   { name: '展示会/イベント', category: '施設・イベント', sortOrder: 2 },
+
+  // その他
+  { name: '管理方法', category: 'その他', sortOrder: 1 },
+  { name: 'その他', category: 'その他', sortOrder: 99 },
 ]
 
 async function main() {
