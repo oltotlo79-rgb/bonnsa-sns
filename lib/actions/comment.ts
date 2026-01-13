@@ -14,14 +14,26 @@ export async function createComment(formData: FormData) {
   const postId = formData.get('postId') as string
   const parentId = formData.get('parentId') as string | null
   const content = formData.get('content') as string
+  const mediaUrls = formData.getAll('mediaUrls') as string[]
+  const mediaTypes = formData.getAll('mediaTypes') as string[]
 
   // バリデーション
-  if (!content || content.trim().length === 0) {
-    return { error: 'コメント内容を入力してください' }
+  if ((!content || content.trim().length === 0) && mediaUrls.length === 0) {
+    return { error: 'コメント内容またはメディアを入力してください' }
   }
 
-  if (content.length > 500) {
+  if (content && content.length > 500) {
     return { error: 'コメントは500文字以内で入力してください' }
+  }
+
+  // メディアバリデーション（画像2枚まで、動画1本まで、混在OK）
+  const imageCount = mediaTypes.filter(t => t === 'image').length
+  const videoCount = mediaTypes.filter(t => t === 'video').length
+  if (imageCount > 2) {
+    return { error: '画像は2枚までです' }
+  }
+  if (videoCount > 1) {
+    return { error: '動画は1本までです' }
   }
 
   // コメント制限チェック（1日100件）
@@ -44,7 +56,14 @@ export async function createComment(formData: FormData) {
       postId,
       userId: session.user.id,
       parentId: parentId || null,
-      content: content.trim(),
+      content: content?.trim() || '',
+      media: mediaUrls.length > 0 ? {
+        create: mediaUrls.map((url, index) => ({
+          url,
+          type: mediaTypes[index] || 'image',
+          sortOrder: index,
+        })),
+      } : undefined,
     },
   })
 
@@ -123,6 +142,9 @@ export async function deleteComment(commentId: string) {
 
 // 投稿のコメント取得
 export async function getComments(postId: string, cursor?: string, limit = 20) {
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
   const comments = await prisma.comment.findMany({
     where: {
       postId,
@@ -131,6 +153,9 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
+      },
+      media: {
+        orderBy: { sortOrder: 'asc' },
       },
       _count: {
         select: { likes: true, replies: true },
@@ -144,6 +169,19 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
     }),
   })
 
+  // 現在のユーザーがいいねしているかチェック
+  let likedCommentIds: Set<string> = new Set()
+  if (currentUserId && comments.length > 0) {
+    const userLikes = await prisma.like.findMany({
+      where: {
+        userId: currentUserId,
+        commentId: { in: comments.map(c => c.id) },
+      },
+      select: { commentId: true },
+    })
+    likedCommentIds = new Set(userLikes.map(l => l.commentId).filter((id): id is string => id !== null))
+  }
+
   const hasMore = comments.length === limit
 
   return {
@@ -151,6 +189,7 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
       ...comment,
       likeCount: comment._count.likes,
       replyCount: comment._count.replies,
+      isLiked: likedCommentIds.has(comment.id),
     })),
     nextCursor: hasMore ? comments[comments.length - 1]?.id : undefined,
   }
@@ -158,14 +197,20 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
 
 // コメントへの返信取得
 export async function getReplies(commentId: string, cursor?: string, limit = 10) {
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
   const replies = await prisma.comment.findMany({
     where: { parentId: commentId },
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
       },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
       _count: {
-        select: { likes: true },
+        select: { likes: true, replies: true },
       },
     },
     orderBy: { createdAt: 'asc' },
@@ -176,12 +221,27 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
     }),
   })
 
+  // 現在のユーザーがいいねしているかチェック
+  let likedReplyIds: Set<string> = new Set()
+  if (currentUserId && replies.length > 0) {
+    const userLikes = await prisma.like.findMany({
+      where: {
+        userId: currentUserId,
+        commentId: { in: replies.map(r => r.id) },
+      },
+      select: { commentId: true },
+    })
+    likedReplyIds = new Set(userLikes.map(l => l.commentId).filter((id): id is string => id !== null))
+  }
+
   const hasMore = replies.length === limit
 
   return {
     replies: replies.map((reply) => ({
       ...reply,
       likeCount: reply._count.likes,
+      replyCount: reply._count.replies,
+      isLiked: likedReplyIds.has(reply.id),
     })),
     nextCursor: hasMore ? replies[replies.length - 1]?.id : undefined,
   }
@@ -194,4 +254,47 @@ export async function getCommentCount(postId: string) {
   })
 
   return { count }
+}
+
+// コメント用メディアアップロード
+export async function uploadCommentMedia(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const file = formData.get('file') as File
+  if (!file) {
+    return { error: 'ファイルが選択されていません' }
+  }
+
+  const isVideo = file.type.startsWith('video/')
+  const isImage = file.type.startsWith('image/')
+
+  if (!isVideo && !isImage) {
+    return { error: '画像または動画ファイルを選択してください' }
+  }
+
+  // ファイルサイズチェック（コメント用は投稿より小さめに）
+  const maxSize = isVideo ? 100 * 1024 * 1024 : 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    return { error: isVideo ? '動画は100MB以下にしてください' : '画像は5MB以下にしてください' }
+  }
+
+  // ストレージにアップロード
+  const { uploadFile } = await import('@/lib/storage')
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const folder = isVideo ? 'comment-videos' : 'comment-images'
+
+  const result = await uploadFile(buffer, file.name, file.type, folder)
+
+  if (!result.success || !result.url) {
+    return { error: result.error || 'アップロードに失敗しました' }
+  }
+
+  return {
+    success: true,
+    url: result.url,
+    type: isVideo ? 'video' : 'image',
+  }
 }

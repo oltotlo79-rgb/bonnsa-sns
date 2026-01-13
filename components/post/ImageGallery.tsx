@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 
 type ImageGalleryProps = {
   images: {
@@ -24,6 +23,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const sortedImages = [...images].sort((a, b) => a.sortOrder - b.sortOrder)
 
+  // 1枚の場合は全幅、複数の場合はグリッド
   const gridClass = images.length === 1
     ? ''
     : images.length === 2
@@ -39,15 +39,18 @@ export function ImageGallery({ images }: ImageGalleryProps) {
           <button
             key={image.id}
             onClick={() => setSelectedIndex(index)}
-            className={`relative aspect-video bg-muted overflow-hidden ${
-              images.length === 3 && index === 0 ? 'row-span-2 aspect-square' : ''
+            className={`relative block w-full bg-muted overflow-hidden ${
+              images.length === 3 && index === 0 ? 'row-span-2' : ''
             }`}
+            style={{
+              paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%', // 1:1 or 16:9
+            }}
           >
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={image.url}
               alt=""
-              fill
-              className="object-cover hover:opacity-90 transition-opacity"
+              className="absolute inset-0 w-full h-full object-cover hover:opacity-90 transition-opacity"
             />
           </button>
         ))}
@@ -66,12 +69,12 @@ export function ImageGallery({ images }: ImageGalleryProps) {
             <XIcon className="w-6 h-6 text-white" />
           </button>
 
-          <div className="relative max-w-4xl max-h-[90vh] w-full h-full p-4">
-            <Image
+          <div className="flex items-center justify-center max-w-4xl max-h-[90vh] w-full h-full p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={sortedImages[selectedIndex].url}
               alt=""
-              fill
-              className="object-contain"
+              className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
           </div>

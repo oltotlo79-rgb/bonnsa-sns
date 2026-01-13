@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { CommentForm } from './CommentForm'
 import { CommentList } from './CommentList'
 
@@ -32,6 +33,12 @@ export function CommentThread({
   currentUserId,
   commentCount,
 }: CommentThreadProps) {
+  const router = useRouter()
+
+  function handleCommentSuccess() {
+    router.refresh()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,7 +53,7 @@ export function CommentThread({
       </div>
 
       {currentUserId ? (
-        <CommentForm postId={postId} />
+        <CommentForm postId={postId} onSuccess={handleCommentSuccess} />
       ) : (
         <div className="text-center py-4 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground">

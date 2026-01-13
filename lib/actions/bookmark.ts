@@ -62,8 +62,10 @@ export async function getBookmarkedPosts(cursor?: string, limit = 20) {
     return { error: '認証が必要です', posts: [] }
   }
 
+  const currentUserId = session.user.id
+
   const bookmarks = await prisma.bookmark.findMany({
-    where: { userId: session.user.id },
+    where: { userId: currentUserId },
     include: {
       post: {
         include: {
@@ -90,14 +92,32 @@ export async function getBookmarkedPosts(cursor?: string, limit = 20) {
     }),
   })
 
-  const posts = bookmarks
-    .filter((bookmark) => bookmark.post)
-    .map((bookmark) => ({
-      ...bookmark.post,
-      likeCount: bookmark.post._count.likes,
-      commentCount: bookmark.post._count.comments,
-      genres: bookmark.post.genres.map((pg) => pg.genre),
-    }))
+  const validBookmarks = bookmarks.filter((bookmark) => bookmark.post)
+  const postIds = validBookmarks.map(b => b.post.id)
+
+  // 現在のユーザーのいいね状態をチェック
+  let likedPostIds: Set<string> = new Set()
+
+  if (postIds.length > 0) {
+    const userLikes = await prisma.like.findMany({
+      where: {
+        userId: currentUserId,
+        postId: { in: postIds },
+        commentId: null,
+      },
+      select: { postId: true },
+    })
+    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id): id is string => id !== null))
+  }
+
+  const posts = validBookmarks.map((bookmark) => ({
+    ...bookmark.post,
+    likeCount: bookmark.post._count.likes,
+    commentCount: bookmark.post._count.comments,
+    genres: bookmark.post.genres.map((pg) => pg.genre),
+    isLiked: likedPostIds.has(bookmark.post.id),
+    isBookmarked: true, // ブックマーク一覧なので必ずtrue
+  }))
 
   const hasMore = bookmarks.length === limit
 

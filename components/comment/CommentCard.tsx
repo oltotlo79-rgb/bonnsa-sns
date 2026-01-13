@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
@@ -22,6 +23,13 @@ import { CommentForm } from './CommentForm'
 import { CommentLikeButton } from './CommentLikeButton'
 import { deleteComment, getReplies } from '@/lib/actions/comment'
 
+type CommentMedia = {
+  id: string
+  url: string
+  type: string
+  sortOrder: number
+}
+
 type Comment = {
   id: string
   content: string
@@ -32,6 +40,7 @@ type Comment = {
     nickname: string
     avatarUrl: string | null
   }
+  media?: CommentMedia[]
   likeCount: number
   replyCount?: number
   isLiked?: boolean
@@ -50,6 +59,7 @@ export function CommentCard({
   currentUserId,
   isReply = false,
 }: CommentCardProps) {
+  const router = useRouter()
   const [showReplyForm, setShowReplyForm] = useState(false)
   const [showReplies, setShowReplies] = useState(false)
   const [replies, setReplies] = useState<Comment[]>([])
@@ -67,6 +77,8 @@ export function CommentCard({
     const result = await deleteComment(comment.id)
     if (result.error) {
       alert(result.error)
+    } else {
+      router.refresh()
     }
     setIsDeleting(false)
   }
@@ -77,7 +89,7 @@ export function CommentCard({
       return
     }
 
-    if (replies.length === 0 && comment.replyCount && comment.replyCount > 0) {
+    if (replies.length === 0 && comment.replyCount !== undefined && comment.replyCount > 0) {
       setLoadingReplies(true)
       const result = await getReplies(comment.id)
       if (result.replies) {
@@ -89,15 +101,16 @@ export function CommentCard({
     setShowReplies(true)
   }
 
-  function handleReplySuccess() {
+  async function handleReplySuccess() {
     setShowReplyForm(false)
     // 返信を再取得
-    getReplies(comment.id).then(result => {
-      if (result.replies) {
-        setReplies(result.replies as Comment[])
-        setShowReplies(true)
-      }
-    })
+    const result = await getReplies(comment.id)
+    if (result.replies) {
+      setReplies(result.replies as Comment[])
+      setShowReplies(true)
+    }
+    // ページ全体を更新してコメント数などを反映
+    router.refresh()
   }
 
   return (
@@ -132,9 +145,35 @@ export function CommentCard({
             <span className="text-muted-foreground text-xs">{timeAgo}</span>
           </div>
 
-          <p className="text-sm mt-1 whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
+          {comment.content && (
+            <p className="text-sm mt-1 whitespace-pre-wrap break-words">
+              {comment.content}
+            </p>
+          )}
+
+          {/* メディア表示 */}
+          {comment.media && comment.media.length > 0 && (
+            <div className={`mt-2 grid gap-2 ${comment.media.length === 1 ? '' : 'grid-cols-2'}`}>
+              {comment.media.map((media) => (
+                <div key={media.id} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                  {media.type === 'video' ? (
+                    <video
+                      src={media.url}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={media.url}
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-4 mt-2">
             {currentUserId ? (
@@ -145,19 +184,21 @@ export function CommentCard({
                 initialCount={comment.likeCount}
               />
             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-muted-foreground"
-                asChild
-              >
-                <a href="/login">
-                  <span className="text-xs">{comment.likeCount}</span>
-                </a>
-              </Button>
+              comment.likeCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-muted-foreground"
+                  asChild
+                >
+                  <a href="/login">
+                    <span className="text-xs">{comment.likeCount}</span>
+                  </a>
+                </Button>
+              )
             )}
 
-            {!isReply && (
+            {currentUserId && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -186,7 +227,7 @@ export function CommentCard({
                     <AlertDialogTitle>コメントを削除</AlertDialogTitle>
                     <AlertDialogDescription>
                       このコメントを削除してもよろしいですか？
-                      {!isReply && comment.replyCount && comment.replyCount > 0 && (
+                      {comment.replyCount !== undefined && comment.replyCount > 0 && (
                         <span className="block mt-2 text-destructive">
                           このコメントには{comment.replyCount}件の返信があります。
                           返信もすべて削除されます。
@@ -223,7 +264,7 @@ export function CommentCard({
           )}
 
           {/* 返信を表示ボタン */}
-          {!isReply && comment.replyCount && comment.replyCount > 0 && (
+          {comment.replyCount !== undefined && comment.replyCount > 0 && (
             <Button
               variant="ghost"
               size="sm"

@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 // 投稿いいねトグル
 export async function togglePostLike(postId: string) {
@@ -25,6 +26,8 @@ export async function togglePostLike(postId: string) {
       where: { id: existingLike.id },
     })
 
+    revalidatePath('/feed')
+    revalidatePath(`/posts/${postId}`)
     return { success: true, liked: false }
   } else {
     // いいね追加
@@ -52,6 +55,8 @@ export async function togglePostLike(postId: string) {
       })
     }
 
+    revalidatePath('/feed')
+    revalidatePath(`/posts/${postId}`)
     return { success: true, liked: true }
   }
 }
@@ -77,13 +82,13 @@ export async function toggleCommentLike(commentId: string, postId: string) {
       where: { id: existingLike.id },
     })
 
+    revalidatePath(`/posts/${postId}`)
     return { success: true, liked: false }
   } else {
     // いいね追加
     await prisma.like.create({
       data: {
         commentId,
-        postId,
         userId: session.user.id,
       },
     })
@@ -106,6 +111,7 @@ export async function toggleCommentLike(commentId: string, postId: string) {
       })
     }
 
+    revalidatePath(`/posts/${postId}`)
     return { success: true, liked: true }
   }
 }
@@ -130,6 +136,9 @@ export async function getPostLikeStatus(postId: string) {
 
 // いいねした投稿一覧
 export async function getLikedPosts(userId: string, cursor?: string, limit = 20) {
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
   const likes = await prisma.like.findMany({
     where: {
       userId,
@@ -162,14 +171,43 @@ export async function getLikedPosts(userId: string, cursor?: string, limit = 20)
     }),
   })
 
-  const posts = likes
-    .filter((like) => like.post)
-    .map((like) => ({
-      ...like.post!,
-      likeCount: like.post!._count.likes,
-      commentCount: like.post!._count.comments,
-      genres: like.post!.genres.map((pg) => pg.genre),
-    }))
+  const validLikes = likes.filter((like) => like.post)
+  const postIds = validLikes.map(like => like.post!.id)
+
+  // 現在のユーザーのいいね/ブックマーク状態をチェック
+  let likedPostIds: Set<string> = new Set()
+  let bookmarkedPostIds: Set<string> = new Set()
+
+  if (currentUserId && postIds.length > 0) {
+    const [userLikes, userBookmarks] = await Promise.all([
+      prisma.like.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+          commentId: null,
+        },
+        select: { postId: true },
+      }),
+      prisma.bookmark.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+        },
+        select: { postId: true },
+      }),
+    ])
+    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map(b => b.postId))
+  }
+
+  const posts = validLikes.map((like) => ({
+    ...like.post!,
+    likeCount: like.post!._count.likes,
+    commentCount: like.post!._count.comments,
+    genres: like.post!.genres.map((pg) => pg.genre),
+    isLiked: likedPostIds.has(like.post!.id),
+    isBookmarked: bookmarkedPostIds.has(like.post!.id),
+  }))
 
   const hasMore = likes.length === limit
 

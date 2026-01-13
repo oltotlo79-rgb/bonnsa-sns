@@ -37,6 +37,8 @@ type Post = {
   commentCount: number
   quotePost?: QuotePost | null
   repostPost?: (QuotePost & { media: PostMedia[] }) | null
+  isLiked?: boolean
+  isBookmarked?: boolean
 }
 
 type PostListProps = {

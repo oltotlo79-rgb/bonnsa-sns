@@ -38,12 +38,10 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
 
     if (result.error) {
       setError(result.error)
+      setLoading(false)
     } else {
-      setSuccess(true)
-      router.refresh()
+      router.push(`/users/${user.id}`)
     }
-
-    setLoading(false)
   }
 
   return (

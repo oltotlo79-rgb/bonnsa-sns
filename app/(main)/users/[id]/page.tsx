@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { ProfileHeader } from '@/components/user/ProfileHeader'
+import { PostCard } from '@/components/post/PostCard'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -72,10 +73,78 @@ export default async function UserProfilePage({ params }: Props) {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
       },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+      },
+      genres: {
+        include: {
+          genre: true,
+        },
+      },
+      _count: {
+        select: { likes: true, comments: true },
+      },
+      quotePost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+        },
+      },
+      repostPost: {
+        include: {
+          user: {
+            select: { id: true, nickname: true, avatarUrl: true },
+          },
+          media: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+      },
     },
     orderBy: { createdAt: 'desc' },
     take: 10,
   })
+
+  // 現在のユーザーがいいね/ブックマークしているかチェック
+  const currentUserId = session?.user?.id
+  let likedPostIds: Set<string> = new Set()
+  let bookmarkedPostIds: Set<string> = new Set()
+
+  if (currentUserId && posts.length > 0) {
+    const postIds = posts.map(p => p.id)
+
+    const [userLikes, userBookmarks] = await Promise.all([
+      prisma.like.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+          commentId: null,
+        },
+        select: { postId: true },
+      }),
+      prisma.bookmark.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+        },
+        select: { postId: true },
+      }),
+    ])
+
+    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map(b => b.postId))
+  }
+
+  // 投稿データを整形
+  const formattedPosts = posts.map((post) => ({
+    ...post,
+    likeCount: post._count.likes,
+    commentCount: post._count.comments,
+    genres: post.genres.map((pg) => pg.genre),
+    isLiked: likedPostIds.has(post.id),
+    isBookmarked: bookmarkedPostIds.has(post.id),
+  }))
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -89,15 +158,14 @@ export default async function UserProfilePage({ params }: Props) {
       <div className="bg-card rounded-lg border">
         <h2 className="px-4 py-3 font-bold border-b">投稿</h2>
 
-        {posts && posts.length > 0 ? (
+        {formattedPosts && formattedPosts.length > 0 ? (
           <div className="divide-y">
-            {posts.map((post) => (
-              <div key={post.id} className="p-4">
-                <p className="whitespace-pre-wrap">{post.content}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {new Date(post.createdAt).toLocaleDateString('ja-JP')}
-                </p>
-              </div>
+            {formattedPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                currentUserId={currentUserId}
+              />
             ))}
           </div>
         ) : (

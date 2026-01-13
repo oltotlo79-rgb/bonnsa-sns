@@ -56,23 +56,18 @@ export function PostForm({ genres }: PostFormProps) {
     const file = files[0]
     const isVideo = file.type.startsWith('video/')
 
-    // 画像と動画の同時投稿禁止
-    if (mediaFiles.length > 0) {
-      const existingIsVideo = mediaFiles[0].type === 'video'
-      if (isVideo !== existingIsVideo) {
-        setError('画像と動画を同時に投稿することはできません')
-        return
-      }
-    }
+    // 現在の画像数と動画数をカウント
+    const currentImageCount = mediaFiles.filter(m => m.type === 'image').length
+    const currentVideoCount = mediaFiles.filter(m => m.type === 'video').length
 
     // 画像は4枚まで
-    if (!isVideo && mediaFiles.length >= 4) {
+    if (!isVideo && currentImageCount >= 4) {
       setError('画像は4枚まで添付できます')
       return
     }
 
     // 動画は1本まで
-    if (isVideo && mediaFiles.length >= 1) {
+    if (isVideo && currentVideoCount >= 1) {
       setError('動画は1本まで添付できます')
       return
     }
@@ -109,10 +104,10 @@ export function PostForm({ genres }: PostFormProps) {
     const formData = new FormData()
     formData.append('content', content)
     selectedGenres.forEach(id => formData.append('genreIds', id))
-    mediaFiles.forEach(m => formData.append('mediaUrls', m.url))
-    if (mediaFiles.length > 0) {
-      formData.append('mediaType', mediaFiles[0].type)
-    }
+    mediaFiles.forEach(m => {
+      formData.append('mediaUrls', m.url)
+      formData.append('mediaTypes', m.type)
+    })
 
     const result = await createPost(formData)
 
@@ -188,7 +183,7 @@ export function PostForm({ genres }: PostFormProps) {
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || mediaFiles.length >= 4}
+            disabled={uploading || mediaFiles.length >= 5}
           >
             <ImageIcon className="w-5 h-5" />
           </Button>

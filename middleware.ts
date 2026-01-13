@@ -9,28 +9,30 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { nextUrl } = req
 
-  // 保護されたルート
-  const protectedPaths = ['/feed', '/posts', '/settings', '/notifications', '/bookmarks', '/users']
-  const isProtected = protectedPaths.some((path) =>
+  // 公開ページ（ログイン不要）
+  const publicPaths = ['/login', '/register', '/password-reset', '/verify-email']
+  const isPublicPage = publicPaths.some((path) =>
     nextUrl.pathname.startsWith(path)
   )
 
-  // 認証ページ
-  const authPaths = ['/login', '/register', '/password-reset']
-  const isAuthPage = authPaths.some((path) =>
-    nextUrl.pathname.startsWith(path)
-  )
+  // APIルートとルートページは除外
+  const isApiRoute = nextUrl.pathname.startsWith('/api')
+  const isRootPage = nextUrl.pathname === '/'
 
-  // 未認証ユーザーが保護ルートにアクセスした場合
-  if (isProtected && !isLoggedIn) {
+  // 認証済みユーザーが認証ページにアクセスした場合 → フィードへリダイレクト
+  if (isPublicPage && isLoggedIn) {
+    return NextResponse.redirect(new URL('/feed', nextUrl))
+  }
+
+  // 未認証ユーザーが公開ページ以外にアクセスした場合 → ログインへリダイレクト
+  if (!isLoggedIn && !isPublicPage && !isApiRoute) {
+    // ルートページはログインページへリダイレクト
+    if (isRootPage) {
+      return NextResponse.redirect(new URL('/login', nextUrl))
+    }
     const url = new URL('/login', nextUrl)
     url.searchParams.set('redirect', nextUrl.pathname)
     return NextResponse.redirect(url)
-  }
-
-  // 認証済みユーザーが認証ページにアクセスした場合
-  if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/feed', nextUrl))
   }
 
   return NextResponse.next()

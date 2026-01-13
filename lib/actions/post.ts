@@ -19,11 +19,21 @@ export async function createPost(formData: FormData) {
   const content = formData.get('content') as string
   const genreIds = formData.getAll('genreIds') as string[]
   const mediaUrls = formData.getAll('mediaUrls') as string[]
-  const mediaType = formData.get('mediaType') as string | null
+  const mediaTypes = formData.getAll('mediaTypes') as string[]
 
   // バリデーション
   if (!content && mediaUrls.length === 0) {
     return { error: 'テキストまたはメディアを入力してください' }
+  }
+
+  // メディアバリデーション（画像4枚まで、動画1本まで、混在OK）
+  const imageCount = mediaTypes.filter(t => t === 'image').length
+  const videoCount = mediaTypes.filter(t => t === 'video').length
+  if (imageCount > 4) {
+    return { error: '画像は4枚までです' }
+  }
+  if (videoCount > 1) {
+    return { error: '動画は1本までです' }
   }
 
   const result = createPostSchema.safeParse({ content, genreIds })
@@ -53,7 +63,7 @@ export async function createPost(formData: FormData) {
       media: mediaUrls.length > 0 ? {
         create: mediaUrls.map((url, index) => ({
           url,
-          type: mediaType || 'image',
+          type: mediaTypes[index] || 'image',
           sortOrder: index,
         })),
       } : undefined,
@@ -180,6 +190,9 @@ export async function deletePost(postId: string) {
 }
 
 export async function getPost(postId: string) {
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
@@ -221,18 +234,65 @@ export async function getPost(postId: string) {
     return { error: '投稿が見つかりません' }
   }
 
+  // 現在のユーザーがいいね/ブックマークしているかチェック
+  let isLiked = false
+  let isBookmarked = false
+
+  if (currentUserId) {
+    const [like, bookmark] = await Promise.all([
+      prisma.like.findFirst({
+        where: {
+          userId: currentUserId,
+          postId: postId,
+          commentId: null,
+        },
+      }),
+      prisma.bookmark.findFirst({
+        where: {
+          userId: currentUserId,
+          postId: postId,
+        },
+      }),
+    ])
+    isLiked = !!like
+    isBookmarked = !!bookmark
+  }
+
   return {
     post: {
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
       genres: post.genres.map((pg) => pg.genre),
+      isLiked,
+      isBookmarked,
     },
   }
 }
 
 export async function getPosts(cursor?: string, limit = 20) {
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
+  // フォローしているユーザーのIDを取得
+  let followingUserIds: string[] = []
+  if (currentUserId) {
+    const following = await prisma.follow.findMany({
+      where: { followerId: currentUserId },
+      select: { followingId: true },
+    })
+    followingUserIds = following.map(f => f.followingId)
+  }
+
+  // 自分 + フォローしているユーザーの投稿を取得
+  const userIdsToShow = currentUserId
+    ? [currentUserId, ...followingUserIds]
+    : []
+
   const posts = await prisma.post.findMany({
+    where: currentUserId ? {
+      userId: { in: userIdsToShow },
+    } : undefined,
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
@@ -274,29 +334,71 @@ export async function getPosts(cursor?: string, limit = 20) {
     }),
   })
 
+  // 現在のユーザーがいいね/ブックマークしているかチェック
+  let likedPostIds: Set<string> = new Set()
+  let bookmarkedPostIds: Set<string> = new Set()
+
+  if (currentUserId && posts.length > 0) {
+    const postIds = posts.map(p => p.id)
+
+    const [userLikes, userBookmarks] = await Promise.all([
+      prisma.like.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+          commentId: null,
+        },
+        select: { postId: true },
+      }),
+      prisma.bookmark.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+        },
+        select: { postId: true },
+      }),
+    ])
+
+    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map(b => b.postId))
+  }
+
   return {
     posts: posts.map((post) => ({
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
       genres: post.genres.map((pg) => pg.genre),
+      isLiked: likedPostIds.has(post.id),
+      isBookmarked: bookmarkedPostIds.has(post.id),
     })),
   }
 }
 
 export async function getGenres() {
   const genres = await prisma.genre.findMany({
-    orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
+    orderBy: [{ sortOrder: 'asc' }],
   })
 
   // カテゴリごとにグループ化
-  const grouped = genres.reduce((acc, genre) => {
+  const groupedMap = genres.reduce((acc, genre) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }
     acc[genre.category].push(genre)
     return acc
   }, {} as Record<string, typeof genres>)
+
+  // カテゴリの表示順序を定義
+  const categoryOrder = ['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント']
+
+  // 順序通りに並べ替え
+  const grouped: Record<string, typeof genres> = {}
+  for (const category of categoryOrder) {
+    if (groupedMap[category]) {
+      grouped[category] = groupedMap[category]
+    }
+  }
 
   return { genres: grouped }
 }
@@ -325,14 +427,20 @@ export async function uploadPostMedia(formData: FormData) {
     return { error: isVideo ? '動画は512MB以下にしてください' : '画像は5MB以下にしてください' }
   }
 
-  // TODO: Azure Blob Storageへのアップロード実装
-  const ext = file.name.split('.').pop()
+  // ストレージにアップロード
+  const { uploadFile } = await import('@/lib/storage')
+  const buffer = Buffer.from(await file.arrayBuffer())
   const folder = isVideo ? 'post-videos' : 'post-images'
-  const publicUrl = `/uploads/${folder}/${session.user.id}-${Date.now()}.${ext}`
+
+  const result = await uploadFile(buffer, file.name, file.type, folder)
+
+  if (!result.success || !result.url) {
+    return { error: result.error || 'アップロードに失敗しました' }
+  }
 
   return {
     success: true,
-    url: publicUrl,
+    url: result.url,
     type: isVideo ? 'video' : 'image',
   }
 }
