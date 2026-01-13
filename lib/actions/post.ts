@@ -274,14 +274,29 @@ export async function getPosts(cursor?: string, limit = 20) {
   const session = await auth()
   const currentUserId = session?.user?.id
 
-  // フォローしているユーザーのIDを取得
+  // フォローしているユーザーのID、ブロック/ミュートしているユーザーのIDを取得
   let followingUserIds: string[] = []
+  let blockedUserIds: string[] = []
+  let mutedUserIds: string[] = []
+
   if (currentUserId) {
-    const following = await prisma.follow.findMany({
-      where: { followerId: currentUserId },
-      select: { followingId: true },
-    })
+    const [following, blocks, mutes] = await Promise.all([
+      prisma.follow.findMany({
+        where: { followerId: currentUserId },
+        select: { followingId: true },
+      }),
+      prisma.block.findMany({
+        where: { blockerId: currentUserId },
+        select: { blockedId: true },
+      }),
+      prisma.mute.findMany({
+        where: { muterId: currentUserId },
+        select: { mutedId: true },
+      }),
+    ])
     followingUserIds = following.map(f => f.followingId)
+    blockedUserIds = blocks.map(b => b.blockedId)
+    mutedUserIds = mutes.map(m => m.mutedId)
   }
 
   // 自分 + フォローしているユーザーの投稿を取得
@@ -289,9 +304,15 @@ export async function getPosts(cursor?: string, limit = 20) {
     ? [currentUserId, ...followingUserIds]
     : []
 
+  // ブロック/ミュートしているユーザーを除外
+  const excludedUserIds = [...blockedUserIds, ...mutedUserIds]
+
   const posts = await prisma.post.findMany({
     where: currentUserId ? {
-      userId: { in: userIdsToShow },
+      userId: {
+        in: userIdsToShow,
+        notIn: excludedUserIds.length > 0 ? excludedUserIds : undefined,
+      },
     } : undefined,
     include: {
       user: {
@@ -390,7 +411,7 @@ export async function getGenres() {
   }, {} as Record<string, typeof genres>)
 
   // カテゴリの表示順序を定義
-  const categoryOrder = ['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント']
+  const categoryOrder = ['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント', 'その他']
 
   // 順序通りに並べ替え
   const grouped: Record<string, typeof genres> = {}

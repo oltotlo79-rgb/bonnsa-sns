@@ -51,7 +51,7 @@ export default async function PostDetailPage({ params }: Props) {
           </Link>
         </div>
 
-        <PostCard post={post} currentUserId={session?.user?.id} />
+        <PostCard post={post} currentUserId={session?.user?.id} disableNavigation={true} />
 
         {/* コメントセクション */}
         <div className="border-t p-4">

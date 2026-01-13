@@ -54,16 +54,39 @@ export default async function UserProfilePage({ params }: Props) {
 
   // フォロー状態を取得
   let isFollowing = false
+  let isBlocked = false
+  let isMuted = false
+
   if (session?.user?.id && !isOwner) {
-    const follow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: session.user.id,
-          followingId: id,
+    const [follow, block, mute] = await Promise.all([
+      prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: session.user.id,
+            followingId: id,
+          },
         },
-      },
-    })
+      }),
+      prisma.block.findUnique({
+        where: {
+          blockerId_blockedId: {
+            blockerId: session.user.id,
+            blockedId: id,
+          },
+        },
+      }),
+      prisma.mute.findUnique({
+        where: {
+          muterId_mutedId: {
+            muterId: session.user.id,
+            mutedId: id,
+          },
+        },
+      }),
+    ])
     isFollowing = !!follow
+    isBlocked = !!block
+    isMuted = !!mute
   }
 
   // 最近の投稿を取得
@@ -152,6 +175,8 @@ export default async function UserProfilePage({ params }: Props) {
         user={userWithCounts}
         isOwner={isOwner}
         isFollowing={isFollowing}
+        isBlocked={isBlocked}
+        isMuted={isMuted}
       />
 
       {/* 投稿一覧 */}

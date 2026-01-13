@@ -4,6 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { FollowButton } from './FollowButton'
+import { BlockButton } from './BlockButton'
+import { MuteButton } from './MuteButton'
 
 type ProfileHeaderProps = {
   user: {
@@ -21,6 +23,8 @@ type ProfileHeaderProps = {
   }
   isOwner: boolean
   isFollowing?: boolean
+  isBlocked?: boolean
+  isMuted?: boolean
 }
 
 function MapPinIcon({ className }: { className?: string }) {
@@ -51,7 +55,7 @@ function LockIcon({ className }: { className?: string }) {
   )
 }
 
-export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted }: ProfileHeaderProps) {
   const joinDate = new Date(user.createdAt)
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
 
@@ -93,14 +97,28 @@ export function ProfileHeader({ user, isOwner, isFollowing }: ProfileHeaderProps
 
       {/* プロフィール情報 */}
       <div className="px-4 pb-4 pt-14 sm:pt-20">
-        {/* 編集ボタン */}
-        <div className="flex justify-end mb-4">
+        {/* 編集ボタン・アクションボタン */}
+        <div className="flex justify-end gap-2 mb-4">
           {isOwner ? (
             <Button variant="outline" asChild>
               <Link href="/settings/profile">プロフィールを編集</Link>
             </Button>
           ) : (
-            <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
+            <>
+              <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
+              <MuteButton
+                userId={user.id}
+                nickname={user.nickname}
+                initialIsMuted={isMuted ?? false}
+                size="default"
+              />
+              <BlockButton
+                userId={user.id}
+                nickname={user.nickname}
+                initialIsBlocked={isBlocked ?? false}
+                size="default"
+              />
+            </>
           )}
         </div>
 

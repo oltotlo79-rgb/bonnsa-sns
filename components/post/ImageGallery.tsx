@@ -54,7 +54,9 @@ function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.M
         src={media.url}
         controls
         className="max-w-full max-h-full"
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation()
+        }}
         autoPlay
       />
     )
@@ -95,7 +97,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
               e.stopPropagation()
               if (onMediaClick) {
                 onMediaClick(media)
-              } else if (media.type === 'image') {
+              } else {
                 setSelectedIndex(index)
               }
             }}
@@ -116,8 +118,8 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
         ))}
       </div>
 
-      {/* モーダル（画像のみ） */}
-      {selectedIndex !== null && sortedImages[selectedIndex].type === 'image' && (
+      {/* モーダル（画像・動画） */}
+      {selectedIndex !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setSelectedIndex(null)}

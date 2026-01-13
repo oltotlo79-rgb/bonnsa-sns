@@ -58,6 +58,7 @@ type PostCardProps = {
   currentUserId?: string
   initialLiked?: boolean
   initialBookmarked?: boolean
+  disableNavigation?: boolean
 }
 
 function HeartIcon({ className, filled }: { className?: string; filled?: boolean }) {
@@ -93,7 +94,7 @@ function BookmarkIcon({ className, filled }: { className?: string; filled?: bool
   )
 }
 
-export function PostCard({ post, currentUserId, initialLiked, initialBookmarked }: PostCardProps) {
+export function PostCard({ post, currentUserId, initialLiked, initialBookmarked, disableNavigation = false }: PostCardProps) {
   const router = useRouter()
   const isOwner = currentUserId === post.user.id
   const likesCount = post.likeCount ?? 0
@@ -120,6 +121,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
             key={i}
             href={`/search?q=${encodeURIComponent(part)}`}
             className="text-bonsai-green hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
             {part}
           </Link>
@@ -130,12 +132,19 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
   }
 
   return (
-    <article className="bg-card border-b p-4 hover:bg-muted/30 transition-colors">
+    <article
+      className={`bg-card border-b p-4 hover:bg-muted/30 transition-colors ${!disableNavigation ? 'cursor-pointer' : ''}`}
+      onClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
+    >
       {/* リポスト表示 */}
       {isRepost && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 ml-12">
           <RepeatIcon className="w-3 h-3" />
-          <Link href={`/users/${post.user.id}`} className="hover:underline">
+          <Link
+            href={`/users/${post.user.id}`}
+            className="hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
             {post.user.nickname}
           </Link>
           がリポスト
@@ -144,7 +153,11 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
 
       <div className="flex gap-3">
         {/* アバター */}
-        <Link href={`/users/${displayPost.user.id}`} className="flex-shrink-0">
+        <Link
+          href={`/users/${displayPost.user.id}`}
+          className="flex-shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
             {displayPost.user.avatarUrl ? (
               <Image
@@ -165,39 +178,41 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
         <div className="flex-1 min-w-0">
           {/* ヘッダー */}
           <div className="flex items-center gap-2">
-            <Link href={`/users/${displayPost.user.id}`} className="font-medium hover:underline truncate">
+            <Link
+              href={`/users/${displayPost.user.id}`}
+              className="font-medium hover:underline truncate"
+              onClick={(e) => e.stopPropagation()}
+            >
               {displayPost.user.nickname}
             </Link>
             <span className="text-sm text-muted-foreground">{timeAgo}</span>
             {isOwner && !isRepost && (
-              <div className="ml-auto">
+              <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
                 <DeletePostButton postId={post.id} />
               </div>
             )}
           </div>
 
           {/* 本文 */}
-          <Link href={`/posts/${displayPost.id}`}>
-            {displayPost.content && (
-              <p className="mt-1 whitespace-pre-wrap break-words">
-                {renderContent(displayPost.content)}
-              </p>
-            )}
-          </Link>
+          {displayPost.content && (
+            <p className="mt-1 whitespace-pre-wrap break-words">
+              {renderContent(displayPost.content)}
+            </p>
+          )}
 
           {/* メディア */}
           {'media' in displayPost && displayPost.media && displayPost.media.length > 0 && (
             <div className="mt-3">
               <ImageGallery
                 images={displayPost.media}
-                onMediaClick={() => router.push(`/posts/${displayPost.id}`)}
+                onMediaClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
               />
             </div>
           )}
 
           {/* 引用投稿 */}
           {post.quotePost && (
-            <div className="mt-3">
+            <div className="mt-3" onClick={(e) => e.stopPropagation()}>
               <QuotedPost post={post.quotePost} />
             </div>
           )}
@@ -210,6 +225,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
                   key={genre.id}
                   href={`/search?genre=${genre.id}`}
                   className="px-2 py-0.5 text-xs bg-muted rounded-full hover:bg-muted/80"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {genre.name}
                 </Link>
@@ -218,7 +234,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
           )}
 
           {/* アクションボタン */}
-          <div className="flex items-center gap-4 mt-3 -ml-2">
+          <div className="flex items-center gap-4 mt-3 -ml-2" onClick={(e) => e.stopPropagation()}>
             {currentUserId ? (
               <LikeButton
                 postId={displayPost.id}
