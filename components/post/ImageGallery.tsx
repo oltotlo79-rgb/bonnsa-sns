@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 
+type Media = {
+  id: string
+  url: string
+  type: string
+  sortOrder: number
+}
+
 type ImageGalleryProps = {
-  images: {
-    id: string
-    url: string
-    type: string
-    sortOrder: number
-  }[]
+  images: Media[]
+  onMediaClick?: (media: Media) => void
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -19,7 +22,56 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
-export function ImageGallery({ images }: ImageGalleryProps) {
+function MediaItem({ media, onClick }: { media: Media; onClick: (e: React.MouseEvent) => void }) {
+  if (media.type === 'video') {
+    return (
+      <video
+        src={media.url}
+        controls
+        className="absolute inset-0 w-full h-full object-cover"
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+        }}
+      />
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={media.url}
+      alt=""
+      className="absolute inset-0 w-full h-full object-cover hover:opacity-90 transition-opacity"
+    />
+  )
+}
+
+function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.MouseEvent) => void }) {
+  if (media.type === 'video') {
+    return (
+      <video
+        src={media.url}
+        controls
+        className="max-w-full max-h-full"
+        onClick={onClick}
+        autoPlay
+      />
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={media.url}
+      alt=""
+      className="max-w-full max-h-full object-contain"
+      onClick={onClick}
+    />
+  )
+}
+
+export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const sortedImages = [...images].sort((a, b) => a.sortOrder - b.sortOrder)
 
@@ -35,10 +87,18 @@ export function ImageGallery({ images }: ImageGalleryProps) {
   return (
     <>
       <div className={`${gridClass} rounded-lg overflow-hidden`}>
-        {sortedImages.map((image, index) => (
+        {sortedImages.map((media, index) => (
           <button
-            key={image.id}
-            onClick={() => setSelectedIndex(index)}
+            key={media.id}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (onMediaClick) {
+                onMediaClick(media)
+              } else if (media.type === 'image') {
+                setSelectedIndex(index)
+              }
+            }}
             className={`relative block w-full bg-muted overflow-hidden ${
               images.length === 3 && index === 0 ? 'row-span-2' : ''
             }`}
@@ -46,18 +106,18 @@ export function ImageGallery({ images }: ImageGalleryProps) {
               paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%', // 1:1 or 16:9
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={image.url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover hover:opacity-90 transition-opacity"
-            />
+            <MediaItem media={media} onClick={(e) => {
+              if (media.type === 'image') {
+                e.preventDefault()
+                e.stopPropagation()
+              }
+            }} />
           </button>
         ))}
       </div>
 
-      {/* モーダル */}
-      {selectedIndex !== null && (
+      {/* モーダル（画像のみ） */}
+      {selectedIndex !== null && sortedImages[selectedIndex].type === 'image' && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setSelectedIndex(null)}
@@ -70,11 +130,8 @@ export function ImageGallery({ images }: ImageGalleryProps) {
           </button>
 
           <div className="flex items-center justify-center max-w-4xl max-h-[90vh] w-full h-full p-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={sortedImages[selectedIndex].url}
-              alt=""
-              className="max-w-full max-h-full object-contain"
+            <ModalMediaItem
+              media={sortedImages[selectedIndex]}
               onClick={(e) => e.stopPropagation()}
             />
           </div>

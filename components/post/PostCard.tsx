@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
@@ -93,6 +94,7 @@ function BookmarkIcon({ className, filled }: { className?: string; filled?: bool
 }
 
 export function PostCard({ post, currentUserId, initialLiked, initialBookmarked }: PostCardProps) {
+  const router = useRouter()
   const isOwner = currentUserId === post.user.id
   const likesCount = post.likeCount ?? 0
   const commentsCount = post.commentCount ?? 0
@@ -186,15 +188,10 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked 
           {/* メディア */}
           {'media' in displayPost && displayPost.media && displayPost.media.length > 0 && (
             <div className="mt-3">
-              {displayPost.media[0].type === 'video' ? (
-                <video
-                  src={displayPost.media[0].url}
-                  controls
-                  className="rounded-lg max-h-96 w-full"
-                />
-              ) : (
-                <ImageGallery images={displayPost.media} />
-              )}
+              <ImageGallery
+                images={displayPost.media}
+                onMediaClick={() => router.push(`/posts/${displayPost.id}`)}
+              />
             </div>
           )}
 

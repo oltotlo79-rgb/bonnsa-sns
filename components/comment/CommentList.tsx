@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { CommentCard } from './CommentCard'
 import { getComments } from '@/lib/actions/comment'
@@ -35,6 +35,12 @@ export function CommentList({
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [nextCursor, setNextCursor] = useState<string | undefined>(initialNextCursor)
   const [loading, setLoading] = useState(false)
+
+  // initialCommentsが変更されたら状態を更新
+  useEffect(() => {
+    setComments(initialComments)
+    setNextCursor(initialNextCursor)
+  }, [initialComments, initialNextCursor])
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loading) return
