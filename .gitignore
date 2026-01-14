@@ -48,3 +48,6 @@ next-env.d.ts
 # uploaded files (keep .gitkeep)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Claude Code temporary files
+tmpclaude-*-cwd

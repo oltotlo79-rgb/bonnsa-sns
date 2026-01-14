@@ -16,81 +16,79 @@
 ## Todo
 
 ### 検索ページ
-- [ ] `app/(main)/search/page.tsx` - 検索トップページ
-- [ ] `app/(main)/search/posts/page.tsx` - 投稿検索結果
-- [ ] `app/(main)/search/users/page.tsx` - ユーザー検索結果
-- [ ] `app/(main)/search/tags/page.tsx` - ハッシュタグ検索結果
+- [*] `app/(main)/search/page.tsx` - 検索トップページ
+- [*] `app/(main)/search/loading.tsx` - ローディングページ
 
 ### 検索コンポーネント
-- [ ] `components/search/SearchBar.tsx` - 検索バー
-  - [ ] テキスト入力
-  - [ ] 検索ボタン
-  - [ ] クリアボタン
-- [ ] `components/search/SearchTabs.tsx` - 検索タブ（投稿/ユーザー/タグ）
-- [ ] `components/search/SearchResults.tsx` - 検索結果コンテナ
-- [ ] `components/search/GenreFilter.tsx` - ジャンルフィルター
+- [*] `components/search/SearchBar.tsx` - 検索バー
+  - [*] テキスト入力
+  - [*] 検索ボタン
+  - [*] クリアボタン
+- [*] `components/search/SearchTabs.tsx` - 検索タブ（投稿/ユーザー/タグ）
+- [*] `components/search/SearchResults.tsx` - 検索結果コンテナ
+- [*] `components/search/GenreFilter.tsx` - ジャンルフィルター
 - [ ] `components/search/RecentSearches.tsx` - 最近の検索
 
 ### 検索種類
 
 #### 全文検索
-- [ ] 投稿本文の検索
+- [*] 投稿本文の検索
 - [ ] PostgreSQL全文検索設定
 - [ ] 日本語対応（pg_bigm等）
 
 #### ユーザー検索
-- [ ] ニックネームで検索
-- [ ] 部分一致検索
+- [*] ニックネームで検索
+- [*] 部分一致検索
 
 #### ハッシュタグ検索
-- [ ] #タグで検索
-- [ ] タグ一覧表示
-- [ ] タグごとの投稿数表示
+- [*] #タグで検索
+- [*] タグ一覧表示
+- [*] タグごとの投稿数表示
 
 #### 地域検索
 - [ ] 地域名で投稿検索
 - [ ] ユーザーの居住地域で検索
 
 ### Server Actions
-- [ ] `lib/actions/search.ts`
-  - [ ] `searchPosts` - 投稿検索
-  - [ ] `searchUsers` - ユーザー検索
-  - [ ] `searchByTag` - ハッシュタグ検索
+- [*] `lib/actions/search.ts`
+  - [*] `searchPosts` - 投稿検索
+  - [*] `searchUsers` - ユーザー検索
+  - [*] `searchByTag` - ハッシュタグ検索
   - [ ] `searchByRegion` - 地域検索
-  - [ ] `getPopularTags` - 人気タグ取得
+  - [*] `getPopularTags` - 人気タグ取得
 
 ### フィルタリング
-- [ ] ジャンル別絞り込み
-- [ ] 複数ジャンル選択対応
-- [ ] フィルター状態のURL反映
+- [*] ジャンル別絞り込み
+- [*] 複数ジャンル選択対応
+- [*] フィルター状態のURL反映
 
 ### 検索履歴
 - [ ] 最近の検索キーワード保存（ローカルストレージ）
 - [ ] 検索履歴の削除
 
 ### おすすめ表示
-- [ ] 人気のハッシュタグ
-- [ ] おすすめユーザー
+- [*] 人気のハッシュタグ
+- [*] おすすめユーザー
 
 ### UI/UX
-- [ ] 検索中のローディング表示
-- [ ] 検索結果0件の表示
+- [*] 検索中のローディング表示
+- [*] 検索結果0件の表示
 - [ ] インクリメンタルサーチ（デバウンス）
 - [ ] キーボードショートカット（/で検索フォーカス）
 
 ### パフォーマンス
-- [ ] 検索結果のキャッシュ
-- [ ] ページネーション
+- [*] 検索結果のキャッシュ（React Query）
+- [*] ページネーション（無限スクロール）
 - [ ] 検索インデックス最適化
 
 ---
 
 ## 完了条件
-- [ ] 投稿の全文検索が正常に動作する
-- [ ] ユーザー検索が正常に動作する
-- [ ] ハッシュタグ検索が正常に動作する
+- [*] 投稿の全文検索が正常に動作する
+- [*] ユーザー検索が正常に動作する
+- [*] ハッシュタグ検索が正常に動作する
 - [ ] 地域検索が正常に動作する
-- [ ] ジャンルフィルタリングが正常に動作する
+- [*] ジャンルフィルタリングが正常に動作する
 
 ## 参考コード
 ```typescript

@@ -22,18 +22,43 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
-function MediaItem({ media, onClick }: { media: Media; onClick: (e: React.MouseEvent) => void }) {
+function ExpandIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
+
+function MediaItem({ media, onClick, onExpandClick }: { media: Media; onClick: (e: React.MouseEvent) => void; onExpandClick?: (e: React.MouseEvent) => void }) {
   if (media.type === 'video') {
     return (
-      <video
-        src={media.url}
-        controls
-        className="absolute inset-0 w-full h-full object-cover"
-        onClick={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-        }}
-      />
+      <>
+        <video
+          src={media.url}
+          controls
+          className="absolute inset-0 w-full h-full object-cover"
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+          }}
+        />
+        {/* 拡大ボタン */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            onExpandClick?.(e)
+          }}
+          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+          title="拡大表示"
+        >
+          <ExpandIcon className="w-4 h-4 text-white" />
+        </button>
+      </>
     )
   }
 
@@ -108,12 +133,22 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
               paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%', // 1:1 or 16:9
             }}
           >
-            <MediaItem media={media} onClick={(e) => {
-              if (media.type === 'image') {
-                e.preventDefault()
-                e.stopPropagation()
-              }
-            }} />
+            <MediaItem
+              media={media}
+              onClick={(e) => {
+                if (media.type === 'image') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }
+              }}
+              onExpandClick={() => {
+                if (onMediaClick) {
+                  onMediaClick(media)
+                } else {
+                  setSelectedIndex(index)
+                }
+              }}
+            />
           </button>
         ))}
       </div>

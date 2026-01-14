@@ -1,8 +1,10 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
-import { LogoutButton } from '@/components/auth/LogoutButton'
+import { Toaster } from '@/components/ui/toaster'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { RightSidebar } from '@/components/layout/RightSidebar'
+import { MobileNav } from '@/components/layout/MobileNav'
+import { Header } from '@/components/layout/Header'
 
 export default async function MainLayout({
   children,
@@ -17,44 +19,28 @@ export default async function MainLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/feed" className="hover:opacity-80">
-            <Image
-              src="/logo.png"
-              alt="BON-LOG"
-              width={120}
-              height={48}
-              className="h-10 w-auto"
-              priority
-            />
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/feed"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              タイムライン
-            </Link>
-            <Link
-              href={`/users/${session.user.id}`}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              プロフィール
-            </Link>
-            <Link
-              href="/settings"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              設定
-            </Link>
-            <LogoutButton />
-          </nav>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-6">
-        {children}
-      </main>
+      {/* モバイルヘッダー */}
+      <Header userId={session.user.id} />
+
+      <div className="flex">
+        {/* 左サイドバー（デスクトップのみ） */}
+        <Sidebar userId={session.user.id} />
+
+        {/* メインコンテンツ */}
+        <main className="flex-1 min-h-screen pb-16 lg:pb-0">
+          <div className="max-w-2xl mx-auto px-4 py-4 lg:py-6">
+            {children}
+          </div>
+        </main>
+
+        {/* 右サイドバー（デスクトップのみ） */}
+        <RightSidebar />
+      </div>
+
+      {/* モバイルボトムナビ */}
+      <MobileNav userId={session.user.id} />
+
+      <Toaster />
     </div>
   )
 }
