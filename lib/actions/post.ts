@@ -26,14 +26,14 @@ export async function createPost(formData: FormData) {
     return { error: 'テキストまたはメディアを入力してください' }
   }
 
-  // メディアバリデーション（画像4枚まで、動画1本まで、混在OK）
+  // メディアバリデーション（画像4枚まで、動画2本まで、混在OK）
   const imageCount = mediaTypes.filter(t => t === 'image').length
   const videoCount = mediaTypes.filter(t => t === 'video').length
   if (imageCount > 4) {
     return { error: '画像は4枚までです' }
   }
-  if (videoCount > 1) {
-    return { error: '動画は1本までです' }
+  if (videoCount > 2) {
+    return { error: '動画は2本までです' }
   }
 
   const result = createPostSchema.safeParse({ content, genreIds })
@@ -117,6 +117,23 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     },
   })
 
+  // 引用元投稿者へ通知
+  const quotePost = await prisma.post.findUnique({
+    where: { id: quotePostId },
+    select: { userId: true },
+  })
+
+  if (quotePost && quotePost.userId !== session.user.id) {
+    await prisma.notification.create({
+      data: {
+        userId: quotePost.userId,
+        actorId: session.user.id,
+        type: 'quote',
+        postId: post.id,
+      },
+    })
+  }
+
   revalidatePath('/feed')
   return { success: true, postId: post.id }
 }
@@ -162,6 +179,35 @@ export async function createRepost(postId: string) {
       repostPostId: postId,
     },
   })
+
+  // リポスト元投稿者へ通知（リポスト時のみ、解除時は通知しない）
+  const repostPost = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { userId: true },
+  })
+
+  if (repostPost && repostPost.userId !== session.user.id) {
+    // 既存の通知を確認（重複防止）
+    const existingNotification = await prisma.notification.findFirst({
+      where: {
+        userId: repostPost.userId,
+        actorId: session.user.id,
+        type: 'repost',
+        postId,
+      },
+    })
+
+    if (!existingNotification) {
+      await prisma.notification.create({
+        data: {
+          userId: repostPost.userId,
+          actorId: session.user.id,
+          type: 'repost',
+          postId,
+        },
+      })
+    }
+  }
 
   revalidatePath('/feed')
   return { success: true, reposted: true }

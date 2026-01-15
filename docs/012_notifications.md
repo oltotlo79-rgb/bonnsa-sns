@@ -17,55 +17,57 @@ WebSocket（Socket.io）とブラウザ通知を使用。
 ## Todo
 
 ### 通知ページ
-- [ ] `app/(main)/notifications/page.tsx` - 通知一覧ページ
-- [ ] `app/(main)/notifications/loading.tsx` - ローディング
+- [x] `app/(main)/notifications/page.tsx` - 通知一覧ページ
+- [x] `app/(main)/notifications/loading.tsx` - ローディング
 
 ### 通知コンポーネント
-- [ ] `components/notification/NotificationList.tsx` - 通知一覧
-- [ ] `components/notification/NotificationItem.tsx` - 通知アイテム
-  - [ ] 通知タイプアイコン
-  - [ ] アクター情報
-  - [ ] 対象コンテンツ
-  - [ ] 日時
-  - [ ] 既読/未読状態
-- [ ] `components/notification/NotificationBadge.tsx` - 未読バッジ
-- [ ] `components/notification/NotificationListener.tsx` - リアルタイムリスナー
+- [x] `components/notification/NotificationList.tsx` - 通知一覧
+- [x] `components/notification/NotificationItem.tsx` - 通知アイテム
+  - [x] 通知タイプアイコン
+  - [x] アクター情報
+  - [x] 対象コンテンツ
+  - [x] 日時
+  - [x] 既読/未読状態
+- [x] `components/notification/NotificationBadge.tsx` - 未読バッジ
+- [ ] `components/notification/NotificationListener.tsx` - リアルタイムリスナー（将来実装）
 
 ### 通知種類
-- [ ] いいねされた時
-- [ ] コメントされた時
-- [ ] フォローされた時
-- [ ] 引用投稿された時
-- [ ] 返信された時
+- [x] いいねされた時
+- [x] コメントされた時
+- [x] フォローされた時
+- [x] 引用投稿された時
+- [x] 返信された時
+- [x] リポストされた時
 
 ### Server Actions
-- [ ] `lib/actions/notification.ts`
-  - [ ] `getNotifications` - 通知一覧取得
-  - [ ] `markAsRead` - 既読にする
-  - [ ] `markAllAsRead` - すべて既読にする
-  - [ ] `getUnreadCount` - 未読数取得
-  - [ ] `createNotification` - 通知作成
+- [x] `lib/actions/notification.ts`
+  - [x] `getNotifications` - 通知一覧取得
+  - [x] `markAsRead` - 既読にする
+  - [x] `markAllAsRead` - すべて既読にする
+  - [x] `getUnreadCount` - 未読数取得
+  - [x] `createNotification` - 通知作成
+  - [x] `deleteNotification` - 通知削除
 
-### リアルタイム通知
+### リアルタイム通知（将来実装）
 - [ ] Socket.io サーバー設定
 - [ ] 通知イベントのサブスクリプション
 - [ ] 新着通知の即座反映
 
-### ブラウザ通知
+### ブラウザ通知（将来実装）
 - [ ] Service Worker設定
 - [ ] 通知許可リクエスト
 - [ ] プッシュ通知送信
 - [ ] 通知クリックで該当ページへ遷移
 
 ### 通知バッジ
-- [ ] ナビゲーションに未読バッジ表示
-- [ ] リアルタイム更新
+- [x] ナビゲーションに未読バッジ表示
+- [x] 定期的な更新（30秒ごと）
 - [ ] ページタイトルに未読数表示
 
 ### UI/UX
-- [ ] 通知クリックで該当コンテンツへ遷移
+- [x] 通知クリックで該当コンテンツへ遷移
 - [ ] スワイプで既読（モバイル）
-- [ ] 無限スクロール
+- [x] 無限スクロール
 - [ ] 通知のグループ化（同一投稿への複数いいね等）
 
 ### 通知設定（将来）
@@ -75,11 +77,11 @@ WebSocket（Socket.io）とブラウザ通知を使用。
 ---
 
 ## 完了条件
-- [ ] 通知一覧が正常に表示される
-- [ ] リアルタイムで新着通知が表示される
-- [ ] 既読/未読管理が正常に動作する
-- [ ] ブラウザ通知が正常に動作する
-- [ ] 未読バッジが正常に表示される
+- [x] 通知一覧が正常に表示される
+- [ ] リアルタイムで新着通知が表示される（将来実装）
+- [x] 既読/未読管理が正常に動作する
+- [ ] ブラウザ通知が正常に動作する（将来実装）
+- [x] 未読バッジが正常に表示される
 
 ## 参考コード
 ```typescript

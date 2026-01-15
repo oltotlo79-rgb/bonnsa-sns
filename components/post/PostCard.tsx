@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -11,6 +12,7 @@ import { QuotedPost } from './QuotedPost'
 import { DeletePostButton } from './DeletePostButton'
 import { LikeButton } from './LikeButton'
 import { BookmarkButton } from './BookmarkButton'
+import { ReportButton } from '@/components/report/ReportButton'
 
 type PostUser = {
   id: string
@@ -94,8 +96,19 @@ function BookmarkIcon({ className, filled }: { className?: string; filled?: bool
   )
 }
 
+function MoreHorizontalIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="1"/>
+      <circle cx="19" cy="12" r="1"/>
+      <circle cx="5" cy="12" r="1"/>
+    </svg>
+  )
+}
+
 export function PostCard({ post, currentUserId, initialLiked, initialBookmarked, disableNavigation = false }: PostCardProps) {
   const router = useRouter()
+  const [showMenu, setShowMenu] = useState(false)
   const isOwner = currentUserId === post.user.id
   const likesCount = post.likeCount ?? 0
   const commentsCount = post.commentCount ?? 0
@@ -186,11 +199,34 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
               {displayPost.user.nickname}
             </Link>
             <span className="text-sm text-muted-foreground">{timeAgo}</span>
-            {isOwner && !isRepost && (
-              <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
-                <DeletePostButton postId={post.id} />
-              </div>
-            )}
+            <div className="ml-auto relative" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-1 hover:bg-muted rounded-lg transition-colors"
+              >
+                <MoreHorizontalIcon className="w-4 h-4 text-muted-foreground" />
+              </button>
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-20 bg-card border rounded-lg shadow-lg py-1 min-w-[140px]">
+                    {isOwner && !isRepost && (
+                      <DeletePostButton postId={post.id} variant="menu" onDeleted={() => setShowMenu(false)} />
+                    )}
+                    {currentUserId && !isOwner && (
+                      <ReportButton
+                        targetType="post"
+                        targetId={displayPost.id}
+                        variant="menu"
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* 本文 */}

@@ -90,6 +90,7 @@ class LocalStorageProvider implements StorageProvider {
 
 // Azure Blob Storageプロバイダー（本番環境用）
 class AzureBlobStorageProvider implements StorageProvider {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private containerClient: any
   private initialized: boolean = false
 

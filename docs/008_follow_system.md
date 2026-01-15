@@ -21,10 +21,10 @@
   - [*] 自分自身には表示しない
 
 ### フォロー一覧
-- [ ] `app/(main)/users/[id]/followers/page.tsx` - フォロワー一覧
-- [ ] `app/(main)/users/[id]/following/page.tsx` - フォロー中一覧
-- [ ] `components/user/FollowerList.tsx` - フォロワーリスト
-- [ ] `components/user/FollowingList.tsx` - フォロー中リスト
+- [x] `app/(main)/users/[id]/followers/page.tsx` - フォロワー一覧
+- [x] `app/(main)/users/[id]/following/page.tsx` - フォロー中一覧
+- [x] `components/user/FollowerList.tsx` - フォロワーリスト（ページに統合）
+- [x] `components/user/FollowingList.tsx` - フォロー中リスト（ページに統合）
 
 ### Server Actions
 - [*] `lib/actions/follow.ts`
@@ -38,16 +38,16 @@
 - [*] フォロー時にフォローされたユーザーへ通知
 
 ### UI/UX
-- [ ] フォローボタンのホバー状態
-- [ ] 「フォロー中」→ホバーで「フォロー解除」
-- [*] Optimistic UI
-- [*] フォロー数のリアルタイム更新（router.refresh()で実現）
+- [x] フォローボタンのホバー状態
+- [x] 「フォロー中」→ホバーで「フォロー解除」
+- [x] Optimistic UI
+- [x] フォロー数のリアルタイム更新（router.refresh()で実現）
 
 ### データ取得
-- [*] フォロー中ユーザーの取得
-- [*] フォロワーの取得
-- [ ] 相互フォロー判定
-- [*] ページネーション対応
+- [x] フォロー中ユーザーの取得
+- [x] フォロワーの取得
+- [ ] 相互フォロー判定（将来対応）
+- [x] ページネーション対応
 
 ### プロフィール連携
 - [*] プロフィールヘッダーにフォロー数表示
@@ -56,10 +56,10 @@
 ---
 
 ## 完了条件
-- [*] フォロー/フォロー解除が正常に動作する
-- [ ] フォロワー/フォロー中一覧が表示される
-- [*] フォロー数が正しく表示される
-- [*] 通知が正常に作成される
+- [x] フォロー/フォロー解除が正常に動作する
+- [x] フォロワー/フォロー中一覧が表示される
+- [x] フォロー数が正しく表示される
+- [x] 通知が正常に作成される
 
 ## 参考コード
 ```typescript

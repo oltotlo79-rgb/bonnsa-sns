@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { FollowButton } from './FollowButton'
 import { BlockButton } from './BlockButton'
 import { MuteButton } from './MuteButton'
+import { MessageButton } from '@/components/message/MessageButton'
 
 type ProfileHeaderProps = {
   user: {
@@ -105,6 +106,7 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted }
             </Button>
           ) : (
             <>
+              <MessageButton userId={user.id} isBlocked={isBlocked} />
               <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
               <MuteButton
                 userId={user.id}

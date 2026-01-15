@@ -13,6 +13,7 @@ type FollowButtonProps = {
 export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [loading, setLoading] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const router = useRouter()
 
   async function handleClick() {
@@ -35,14 +36,30 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
     router.refresh()
   }
 
+  // ホバー時のテキストとスタイル
+  const getButtonText = () => {
+    if (loading) return '...'
+    if (!isFollowing) return 'フォローする'
+    if (isHovered) return 'フォロー解除'
+    return 'フォロー中'
+  }
+
+  const getButtonClass = () => {
+    if (!isFollowing) return 'bg-bonsai-green hover:bg-bonsai-green/90'
+    if (isHovered) return 'border-red-500 text-red-500 hover:bg-red-50'
+    return ''
+  }
+
   return (
     <Button
       onClick={handleClick}
       disabled={loading}
       variant={isFollowing ? 'outline' : 'default'}
-      className={isFollowing ? '' : 'bg-bonsai-green hover:bg-bonsai-green/90'}
+      className={getButtonClass()}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {loading ? '...' : isFollowing ? 'フォロー中' : 'フォローする'}
+      {getButtonText()}
     </Button>
   )
 }

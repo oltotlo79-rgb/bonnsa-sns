@@ -3,6 +3,19 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
+import { NotificationBadge } from '@/components/notification/NotificationBadge'
+import { MessageBadge } from '@/components/message/MessageBadge'
+
+function LogOutIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" x2="9" y1="12" y2="12" />
+    </svg>
+  )
+}
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -147,7 +160,15 @@ export function Sidebar({ userId }: SidebarProps) {
                       : 'text-foreground hover:bg-muted'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <div className="relative">
+                    <Icon className="w-5 h-5" />
+                    {item.href === '/notifications' && (
+                      <NotificationBadge className="absolute -top-2 -right-2" />
+                    )}
+                    {item.href === '/messages' && (
+                      <MessageBadge className="absolute -top-2 -right-2" />
+                    )}
+                  </div>
                   <span>{item.label}</span>
                 </Link>
               </li>
@@ -155,6 +176,17 @@ export function Sidebar({ userId }: SidebarProps) {
           })}
         </ul>
       </nav>
+
+      {/* ログアウトボタン */}
+      <div className="p-2 border-t">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <LogOutIcon className="w-5 h-5" />
+          <span>ログアウト</span>
+        </button>
+      </div>
     </aside>
   )
 }

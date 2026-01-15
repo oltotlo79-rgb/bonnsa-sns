@@ -145,10 +145,24 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
   const session = await auth()
   const currentUserId = session?.user?.id
 
+  // ブロックしているユーザーのIDを取得
+  let blockedUserIds: string[] = []
+  if (currentUserId) {
+    const blockedUsers = await prisma.block.findMany({
+      where: { blockerId: currentUserId },
+      select: { blockedId: true },
+    })
+    blockedUserIds = blockedUsers.map(b => b.blockedId)
+  }
+
   const comments = await prisma.comment.findMany({
     where: {
       postId,
       parentId: null, // 親コメントのみ
+      // ブロックしているユーザーのコメントを除外
+      ...(blockedUserIds.length > 0 && {
+        userId: { notIn: blockedUserIds },
+      }),
     },
     include: {
       user: {
@@ -200,8 +214,24 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
   const session = await auth()
   const currentUserId = session?.user?.id
 
+  // ブロックしているユーザーのIDを取得
+  let blockedUserIds: string[] = []
+  if (currentUserId) {
+    const blockedUsers = await prisma.block.findMany({
+      where: { blockerId: currentUserId },
+      select: { blockedId: true },
+    })
+    blockedUserIds = blockedUsers.map(b => b.blockedId)
+  }
+
   const replies = await prisma.comment.findMany({
-    where: { parentId: commentId },
+    where: {
+      parentId: commentId,
+      // ブロックしているユーザーの返信を除外
+      ...(blockedUserIds.length > 0 && {
+        userId: { notIn: blockedUserIds },
+      }),
+    },
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },

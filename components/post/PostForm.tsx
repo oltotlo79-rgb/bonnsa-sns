@@ -66,9 +66,9 @@ export function PostForm({ genres }: PostFormProps) {
       return
     }
 
-    // 動画は1本まで
-    if (isVideo && currentVideoCount >= 1) {
-      setError('動画は1本まで添付できます')
+    // 動画は2本まで
+    if (isVideo && currentVideoCount >= 2) {
+      setError('動画は2本まで添付できます')
       return
     }
 

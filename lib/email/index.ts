@@ -42,6 +42,7 @@ class ResendEmailProvider implements EmailProvider {
   private resend: import('resend').Resend
 
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Resend } = require('resend')
     const apiKey = process.env.RESEND_API_KEY
     console.log('Initializing Resend with API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET')
@@ -84,6 +85,7 @@ class AzureEmailProvider implements EmailProvider {
   private client: import('@azure/communication-email').EmailClient
 
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { EmailClient } = require('@azure/communication-email')
     const connectionString = process.env.AZURE_COMMUNICATION_CONNECTION_STRING
     if (!connectionString) {

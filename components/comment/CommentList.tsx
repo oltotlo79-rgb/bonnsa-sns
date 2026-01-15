@@ -36,8 +36,9 @@ export function CommentList({
   const [nextCursor, setNextCursor] = useState<string | undefined>(initialNextCursor)
   const [loading, setLoading] = useState(false)
 
-  // initialCommentsが変更されたら状態を更新
+  // initialCommentsが変更されたら状態を更新（親コンポーネントからのデータ更新に対応）
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setComments(initialComments)
     setNextCursor(initialNextCursor)
   }, [initialComments, initialNextCursor])

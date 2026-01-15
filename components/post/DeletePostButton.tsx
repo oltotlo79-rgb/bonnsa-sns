@@ -18,6 +18,8 @@ import { deletePost } from '@/lib/actions/post'
 
 type DeletePostButtonProps = {
   postId: string
+  variant?: 'icon' | 'menu'
+  onDeleted?: () => void
 }
 
 function TrashIcon({ className }: { className?: string }) {
@@ -29,8 +31,9 @@ function TrashIcon({ className }: { className?: string }) {
   )
 }
 
-export function DeletePostButton({ postId }: DeletePostButtonProps) {
+export function DeletePostButton({ postId, variant = 'icon', onDeleted }: DeletePostButtonProps) {
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
   const router = useRouter()
 
   async function handleDelete() {
@@ -39,16 +42,25 @@ export function DeletePostButton({ postId }: DeletePostButtonProps) {
 
     if (result.success) {
       router.refresh()
+      onDeleted?.()
     }
     setLoading(false)
+    setOpen(false)
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-          <TrashIcon className="w-4 h-4" />
-        </Button>
+        {variant === 'icon' ? (
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+            <TrashIcon className="w-4 h-4" />
+          </Button>
+        ) : (
+          <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950">
+            <TrashIcon className="w-4 h-4" />
+            <span>削除する</span>
+          </button>
+        )}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

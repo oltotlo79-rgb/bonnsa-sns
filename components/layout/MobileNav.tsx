@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { NotificationBadge } from '@/components/notification/NotificationBadge'
+import { MessageBadge } from '@/components/message/MessageBadge'
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -87,7 +89,15 @@ export function MobileNav({ userId }: MobileNavProps) {
                 isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <div className="relative">
+                <Icon className="w-5 h-5" />
+                {item.href === '/notifications' && (
+                  <NotificationBadge className="absolute -top-1 -right-2" />
+                )}
+                {item.href === '/messages' && (
+                  <MessageBadge className="absolute -top-1 -right-2" />
+                )}
+              </div>
               <span className="text-[10px] mt-1">{item.label}</span>
             </Link>
           )

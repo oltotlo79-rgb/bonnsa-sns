@@ -33,7 +33,7 @@ function ExpandIcon({ className }: { className?: string }) {
   )
 }
 
-function MediaItem({ media, onClick, onExpandClick }: { media: Media; onClick: (e: React.MouseEvent) => void; onExpandClick?: (e: React.MouseEvent) => void }) {
+function MediaItem({ media, onExpandClick }: { media: Media; onExpandClick?: (e: React.MouseEvent) => void }) {
   if (media.type === 'video') {
     return (
       <>
@@ -135,12 +135,6 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
           >
             <MediaItem
               media={media}
-              onClick={(e) => {
-                if (media.type === 'image') {
-                  e.preventDefault()
-                  e.stopPropagation()
-                }
-              }}
               onExpandClick={() => {
                 if (onMediaClick) {
                   onMediaClick(media)

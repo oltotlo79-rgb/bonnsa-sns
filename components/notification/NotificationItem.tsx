@@ -85,6 +85,7 @@ function getNotificationIcon(type: string) {
     case 'follow':
       return <UserPlusIcon className="w-5 h-5 text-green-500" />
     case 'quote':
+    case 'repost':
       return <RepeatIcon className="w-5 h-5 text-purple-500" />
     case 'reply':
       return <ReplyIcon className="w-5 h-5 text-orange-500" />
@@ -105,6 +106,8 @@ function getNotificationMessage(type: string, actorName: string) {
       return <><strong>{actorName}</strong>さんがあなたをフォローしました</>
     case 'quote':
       return <><strong>{actorName}</strong>さんがあなたの投稿を引用しました</>
+    case 'repost':
+      return <><strong>{actorName}</strong>さんがあなたの投稿をリポストしました</>
     case 'reply':
       return <><strong>{actorName}</strong>さんがあなたのコメントに返信しました</>
     default:

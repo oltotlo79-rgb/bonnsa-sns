@@ -18,43 +18,43 @@
 ## Todo
 
 ### データベース設計
-- [ ] `Conversation` モデル - 会話を管理
-- [ ] `ConversationParticipant` モデル - 会話の参加者
-- [ ] `Message` モデル - メッセージ本体
+- [x] `Conversation` モデル - 会話を管理
+- [x] `ConversationParticipant` モデル - 会話の参加者
+- [x] `Message` モデル - メッセージ本体
 - [ ] `MessageMedia` モデル - メッセージに添付するメディア（任意）
-- [ ] マイグレーション実行
+- [x] マイグレーション実行
 
 ### Server Actions
-- [ ] `lib/actions/message.ts`
-  - [ ] `createConversation` - 会話を開始（または既存を取得）
-  - [ ] `sendMessage` - メッセージ送信
-  - [ ] `getConversations` - 会話一覧取得
-  - [ ] `getMessages` - 特定の会話のメッセージ取得
-  - [ ] `markAsRead` - 既読にする
-  - [ ] `getUnreadCount` - 未読メッセージ数取得
-  - [ ] `deleteMessage` - メッセージ削除（任意）
+- [x] `lib/actions/message.ts`
+  - [x] `createConversation` - 会話を開始（または既存を取得）
+  - [x] `sendMessage` - メッセージ送信
+  - [x] `getConversations` - 会話一覧取得
+  - [x] `getMessages` - 特定の会話のメッセージ取得
+  - [x] `markAsRead` - 既読にする
+  - [x] `getUnreadCount` - 未読メッセージ数取得
+  - [x] `deleteMessage` - メッセージ削除
 
 ### ページ
-- [ ] `app/(main)/messages/page.tsx` - 会話一覧ページ
-- [ ] `app/(main)/messages/[conversationId]/page.tsx` - 会話詳細ページ
+- [x] `app/(main)/messages/page.tsx` - 会話一覧ページ
+- [x] `app/(main)/messages/[conversationId]/page.tsx` - 会話詳細ページ
 - [ ] `app/(main)/messages/new/page.tsx` - 新規会話作成ページ（任意）
 
 ### コンポーネント
-- [ ] `components/message/ConversationList.tsx` - 会話一覧
-- [ ] `components/message/ConversationCard.tsx` - 会話カード
-- [ ] `components/message/MessageList.tsx` - メッセージ一覧
-- [ ] `components/message/MessageCard.tsx` - メッセージカード
-- [ ] `components/message/MessageForm.tsx` - メッセージ送信フォーム
+- [x] `components/message/ConversationList.tsx` - 会話一覧（ページに統合）
+- [x] `components/message/ConversationCard.tsx` - 会話カード（ページに統合）
+- [x] `components/message/MessageList.tsx` - メッセージ一覧
+- [x] `components/message/MessageCard.tsx` - メッセージカード（MessageListに統合）
+- [x] `components/message/MessageForm.tsx` - メッセージ送信フォーム
 - [ ] `components/message/NewConversationModal.tsx` - 新規会話モーダル
 
 ### ユーザープロフィール連携
-- [ ] プロフィールページに「メッセージを送る」ボタン追加
-- [ ] 自分自身には表示しない
-- [ ] ブロックされている場合は無効化
+- [x] プロフィールページに「メッセージを送る」ボタン追加
+- [x] 自分自身には表示しない
+- [x] ブロックされている場合は無効化
 
 ### 通知連携
-- [ ] メッセージ受信時に通知作成
-- [ ] ヘッダーに未読メッセージバッジ表示
+- [x] メッセージ受信時に通知作成
+- [x] ヘッダーに未読メッセージバッジ表示
 
 ### リアルタイム機能（Phase 3+）
 - [ ] WebSocket (Socket.io) 導入
@@ -62,19 +62,19 @@
 - [ ] 入力中インジケーター表示
 
 ### プライバシー・制限
-- [ ] ブロックしているユーザーへのメッセージ送信禁止
-- [ ] ブロックされているユーザーからのメッセージ受信拒否
-- [ ] 1日のメッセージ送信上限（スパム対策）
+- [x] ブロックしているユーザーへのメッセージ送信禁止
+- [x] ブロックされているユーザーからのメッセージ受信拒否
+- [x] 1日のメッセージ送信上限（スパム対策）- 100件/日
 
 ---
 
 ## 完了条件
-- [ ] 会話一覧が表示される
-- [ ] メッセージの送受信ができる
-- [ ] 既読状態が正しく表示される
-- [ ] 未読メッセージ数がバッジで表示される
-- [ ] 通知が正常に作成される
-- [ ] ブロック/ミュート機能と連携している
+- [x] 会話一覧が表示される
+- [x] メッセージの送受信ができる
+- [x] 既読状態が正しく表示される
+- [x] 未読メッセージ数がバッジで表示される
+- [x] 通知が正常に作成される
+- [x] ブロック/ミュート機能と連携している
 
 ---
 

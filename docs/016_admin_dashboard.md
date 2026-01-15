@@ -16,139 +16,143 @@
 ## Todo
 
 ### 管理者認証
-- [ ] `admin_users` テーブルでの管理者判定
-- [ ] 管理者専用Middleware
-- [ ] 権限チェックユーティリティ
+- [x] `admin_users` テーブルでの管理者判定
+- [x] 管理者専用Middleware
+- [x] 権限チェックユーティリティ
 
 ### 管理者ページ
-- [ ] `app/admin/layout.tsx` - 管理者レイアウト
-- [ ] `app/admin/page.tsx` - ダッシュボードトップ
-- [ ] `app/admin/users/page.tsx` - ユーザー管理
-- [ ] `app/admin/users/[id]/page.tsx` - ユーザー詳細
-- [ ] `app/admin/posts/page.tsx` - 投稿管理
-- [ ] `app/admin/reports/page.tsx` - 通報管理
-- [ ] `app/admin/events/page.tsx` - イベント管理
-- [ ] `app/admin/shops/page.tsx` - 盆栽園管理
-- [ ] `app/admin/stats/page.tsx` - 統計情報
+- [x] `app/admin/layout.tsx` - 管理者レイアウト
+- [x] `app/admin/page.tsx` - ダッシュボードトップ
+- [x] `app/admin/users/page.tsx` - ユーザー管理
+- [x] `app/admin/users/[id]/page.tsx` - ユーザー詳細
+- [x] `app/admin/posts/page.tsx` - 投稿管理
+- [x] `app/admin/reports/page.tsx` - 通報管理
+- [x] `app/admin/events/page.tsx` - イベント管理
+- [x] `app/admin/shops/page.tsx` - 盆栽園管理
+- [x] `app/admin/stats/page.tsx` - 統計情報（Recharts導入済み）
 
 ### ダッシュボードトップ
-- [ ] `components/admin/Dashboard.tsx`
-  - [ ] 総ユーザー数
-  - [ ] 本日の新規ユーザー数
-  - [ ] 総投稿数
-  - [ ] 本日の投稿数
-  - [ ] 未対応通報数
+- [x] `components/admin/Dashboard.tsx`
+  - [x] 総ユーザー数
+  - [x] 本日の新規ユーザー数
+  - [x] 総投稿数
+  - [x] 本日の投稿数
+  - [x] 未対応通報数
   - [ ] アクティブユーザー数（DAU）
 
 ### ユーザー管理
-- [ ] `components/admin/UserTable.tsx` - ユーザー一覧テーブル
-  - [ ] ユーザーID
-  - [ ] ニックネーム
-  - [ ] メールアドレス
-  - [ ] 登録日
-  - [ ] 投稿数
-  - [ ] ステータス（アクティブ/停止）
-- [ ] `components/admin/UserDetail.tsx` - ユーザー詳細
-- [ ] `components/admin/UserActions.tsx` - ユーザーアクション
-  - [ ] アカウント停止
-  - [ ] アカウント再開
-  - [ ] アカウント削除
-- [ ] ユーザー検索機能
+- [x] `components/admin/UserTable.tsx` - ユーザー一覧テーブル
+  - [x] ユーザーID
+  - [x] ニックネーム
+  - [x] メールアドレス
+  - [x] 登録日
+  - [x] 投稿数
+  - [x] ステータス（アクティブ/停止）
+- [x] `components/admin/UserDetail.tsx` - ユーザー詳細（ページに統合）
+- [x] `components/admin/UserActions.tsx` - ユーザーアクション
+  - [x] アカウント停止
+  - [x] アカウント再開
+  - [x] アカウント削除
+- [x] ユーザー検索機能
 - [ ] ソート機能（登録日、投稿数等）
 
 ### 投稿管理
-- [ ] `components/admin/PostTable.tsx` - 投稿一覧テーブル
-  - [ ] 投稿ID
-  - [ ] 投稿者
-  - [ ] 内容（プレビュー）
-  - [ ] 投稿日
-  - [ ] いいね数
-  - [ ] 通報数
+- [x] `components/admin/PostTable.tsx` - 投稿一覧テーブル
+  - [x] 投稿ID
+  - [x] 投稿者
+  - [x] 内容（プレビュー）
+  - [x] 投稿日
+  - [x] いいね数
+  - [x] 通報数
 - [ ] `components/admin/PostDetail.tsx` - 投稿詳細
-- [ ] `components/admin/PostActions.tsx` - 投稿アクション
-  - [ ] 投稿削除
+- [x] `components/admin/PostActions.tsx` - 投稿アクション
+  - [x] 投稿削除
   - [ ] 投稿者への警告
-- [ ] 投稿検索機能
-- [ ] 通報された投稿のフィルター
+- [x] 投稿検索機能
+- [x] 通報された投稿のフィルター
 
 ### 通報管理
-- [ ] `components/admin/ReportTable.tsx` - 通報一覧テーブル
-  - [ ] 通報ID
-  - [ ] 通報者
-  - [ ] 対象タイプ
-  - [ ] 通報理由
-  - [ ] ステータス
-  - [ ] 通報日
-- [ ] `components/admin/ReportDetail.tsx` - 通報詳細
-  - [ ] 通報対象のプレビュー
-  - [ ] 通報理由詳細
+- [x] `components/admin/ReportTable.tsx` - 通報一覧テーブル
+  - [x] 通報ID
+  - [x] 通報者
+  - [x] 対象タイプ
+  - [x] 通報理由
+  - [x] ステータス
+  - [x] 通報日
+- [x] `components/admin/ReportDetail.tsx` - 通報詳細
+  - [x] 通報対象のプレビュー
+  - [x] 通報理由詳細
   - [ ] 対応履歴
-- [ ] `components/admin/ReportActions.tsx` - 通報アクション
-  - [ ] 対象コンテンツ削除
-  - [ ] 通報却下
-  - [ ] ステータス更新
-- [ ] ステータスフィルター（未対応/確認済み/完了/却下）
+- [x] `components/admin/ReportActions.tsx` - 通報アクション
+  - [x] 対象コンテンツ削除
+  - [x] 通報却下
+  - [x] ステータス更新
+- [x] ステータスフィルター（未対応/確認済み/完了/却下）
 
 ### イベント管理
-- [ ] `components/admin/EventTable.tsx` - イベント一覧
-- [ ] イベント削除機能
+- [x] `components/admin/EventTable.tsx` - イベント一覧
+- [x] イベント削除機能
 - [ ] 不適切なイベントの非表示
 
 ### 盆栽園管理
-- [ ] `components/admin/ShopTable.tsx` - 盆栽園一覧
+- [x] `components/admin/ShopTable.tsx` - 盆栽園一覧
 - [ ] 盆栽園情報編集
-- [ ] 盆栽園削除
+- [x] 盆栽園削除
 - [ ] 重複盆栽園のマージ
 
 ### 統計情報
-- [ ] `components/admin/StatsChart.tsx` - グラフコンポーネント
-- [ ] ユーザー数推移グラフ
-- [ ] 投稿数推移グラフ
-- [ ] アクティブユーザー数グラフ
-- [ ] 期間選択（日/週/月）
+- [x] `app/admin/stats/StatsCharts.tsx` - グラフコンポーネント（Recharts使用）
+- [x] ユーザー数推移グラフ
+- [x] 投稿数推移グラフ
+- [x] コメント数推移グラフ
+- [ ] アクティブユーザー数グラフ（DAU関数は実装済み）
+- [x] 期間選択（7日/14日/30日）
+- [x] グラフタイプ選択（エリア/ライン/バー）
+- [x] 指標フィルタ（すべて/ユーザー/投稿/コメント）
 
 ### Server Actions
-- [ ] `lib/actions/admin.ts`
-  - [ ] `getAdminStats` - 統計情報取得
-  - [ ] `getUsers` - ユーザー一覧取得
-  - [ ] `suspendUser` - ユーザー停止
-  - [ ] `activateUser` - ユーザー再開
-  - [ ] `deleteUser` - ユーザー削除
-  - [ ] `deletePost` - 投稿削除
-  - [ ] `deleteEvent` - イベント削除
-  - [ ] `deleteShop` - 盆栽園削除
-  - [ ] `updateReportStatus` - 通報ステータス更新
+- [x] `lib/actions/admin.ts`
+  - [x] `getAdminStats` - 統計情報取得
+  - [x] `getUsers` - ユーザー一覧取得
+  - [x] `suspendUser` - ユーザー停止
+  - [x] `activateUser` - ユーザー再開
+  - [x] `deleteUser` - ユーザー削除
+  - [x] `deletePost` - 投稿削除
+  - [x] `deleteEvent` - イベント削除
+  - [x] `deleteShop` - 盆栽園削除
+  - [x] `updateReportStatus` - 通報ステータス更新
+  - [x] `getDailyActiveUsers` - DAU取得
 
 ### 管理者ログ
-- [ ] 管理者操作のログ記録
-- [ ] ログ一覧表示
-- [ ] ログ検索機能
+- [x] 管理者操作のログ記録
+- [x] ログ一覧表示
+- [x] ログ検索機能
 
 ### 権限管理
-- [ ] `admin` - 全機能アクセス可能
-- [ ] `moderator` - 通報対応、コンテンツ削除のみ
+- [x] `admin` - 全機能アクセス可能
+- [x] `moderator` - 通報対応、コンテンツ削除のみ
 
 ### UI/UX
-- [ ] サイドバーナビゲーション
-- [ ] データテーブルのページネーション
-- [ ] 検索・フィルター機能
-- [ ] 確認ダイアログ（削除操作時）
-- [ ] 成功/エラートースト表示
+- [x] サイドバーナビゲーション
+- [x] データテーブルのページネーション
+- [x] 検索・フィルター機能
+- [x] 確認ダイアログ（削除操作時）
+- [x] 成功/エラートースト表示
 
 ### セキュリティ
-- [ ] 管理者権限チェック
-- [ ] 操作ログの記録
-- [ ] 管理者専用Middleware
+- [x] 管理者権限チェック
+- [x] 操作ログの記録
+- [x] 管理者専用Middleware
 
 ---
 
 ## 完了条件
-- [ ] 管理者のみダッシュボードにアクセスできる
-- [ ] ユーザー管理が正常に動作する
-- [ ] 投稿管理が正常に動作する
-- [ ] 通報管理が正常に動作する
-- [ ] 統計情報が正常に表示される
-- [ ] 管理者操作がログに記録される
+- [x] 管理者のみダッシュボードにアクセスできる
+- [x] ユーザー管理が正常に動作する
+- [x] 投稿管理が正常に動作する
+- [x] 通報管理が正常に動作する
+- [x] 統計情報が正常に表示される
+- [x] 管理者操作がログに記録される
 
 ## 参考コード
 ```typescript

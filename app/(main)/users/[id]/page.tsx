@@ -56,9 +56,10 @@ export default async function UserProfilePage({ params }: Props) {
   let isFollowing = false
   let isBlocked = false
   let isMuted = false
+  let isBlockedByUser = false // 相手からブロックされているか
 
   if (session?.user?.id && !isOwner) {
-    const [follow, block, mute] = await Promise.all([
+    const [follow, block, mute, blockedBy] = await Promise.all([
       prisma.follow.findUnique({
         where: {
           followerId_followingId: {
@@ -83,10 +84,36 @@ export default async function UserProfilePage({ params }: Props) {
           },
         },
       }),
+      // 相手からブロックされているかチェック
+      prisma.block.findUnique({
+        where: {
+          blockerId_blockedId: {
+            blockerId: id,
+            blockedId: session.user.id,
+          },
+        },
+      }),
     ])
     isFollowing = !!follow
     isBlocked = !!block
     isMuted = !!mute
+    isBlockedByUser = !!blockedBy
+  }
+
+  // ブロック関係にある場合はプロフィールを表示しない
+  if (isBlocked || isBlockedByUser) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-card rounded-lg border p-8 text-center">
+          <h1 className="text-xl font-bold mb-2">このページは表示できません</h1>
+          <p className="text-muted-foreground">
+            {isBlocked
+              ? 'このユーザーをブロックしています'
+              : 'このユーザーからブロックされています'}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // 最近の投稿を取得

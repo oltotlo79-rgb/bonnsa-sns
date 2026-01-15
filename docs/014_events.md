@@ -16,109 +16,109 @@
 ## Todo
 
 ### パッケージインストール
-- [ ] カレンダーライブラリ（react-big-calendar or FullCalendar）
-- [ ] date-fns（日付処理）
+- [x] カレンダーライブラリ（react-big-calendar or FullCalendar）
+- [x] date-fns（日付処理）
 
 ### イベントページ
-- [ ] `app/(main)/events/page.tsx` - イベント一覧/カレンダーページ
-- [ ] `app/(main)/events/[id]/page.tsx` - イベント詳細ページ
-- [ ] `app/(main)/events/new/page.tsx` - イベント登録ページ
-- [ ] `app/(main)/events/[id]/edit/page.tsx` - イベント編集ページ
+- [x] `app/(main)/events/page.tsx` - イベント一覧/カレンダーページ
+- [x] `app/(main)/events/[id]/page.tsx` - イベント詳細ページ
+- [x] `app/(main)/events/new/page.tsx` - イベント登録ページ
+- [x] `app/(main)/events/[id]/edit/page.tsx` - イベント編集ページ
 
 ### カレンダーコンポーネント
-- [ ] `components/event/EventCalendar.tsx` - カレンダー表示
-  - [ ] 月表示
+- [x] `components/event/EventCalendar.tsx` - カレンダー表示
+  - [x] 月表示
   - [ ] 週表示
-  - [ ] 日付クリックでイベント表示
-- [ ] `components/event/CalendarDay.tsx` - カレンダー日付セル
-- [ ] `components/event/CalendarEvent.tsx` - カレンダー上のイベント表示
+  - [x] 日付クリックでイベント表示
+- [x] `components/event/CalendarDay.tsx` - カレンダー日付セル
+- [x] `components/event/CalendarEvent.tsx` - カレンダー上のイベント表示
 
 ### イベントコンポーネント
-- [ ] `components/event/EventCard.tsx` - イベントカード
-- [ ] `components/event/EventList.tsx` - イベントリスト
-- [ ] `components/event/EventDetail.tsx` - イベント詳細
-- [ ] `components/event/EventForm.tsx` - イベント登録/編集フォーム
-- [ ] `components/event/RegionFilter.tsx` - 地域フィルター
+- [x] `components/event/EventCard.tsx` - イベントカード
+- [x] `components/event/EventList.tsx` - イベントリスト
+- [x] `components/event/EventDetail.tsx` - イベント詳細
+- [x] `components/event/EventForm.tsx` - イベント登録/編集フォーム
+- [x] `components/event/RegionFilter.tsx` - 地域フィルター
 
 ### イベント登録項目
 **必須項目:**
-- [ ] タイトル入力
-- [ ] 開始日時選択
-- [ ] 終了日時選択（任意）
-- [ ] 都道府県選択
-- [ ] 市区町村入力
+- [x] タイトル入力
+- [x] 開始日時選択
+- [x] 終了日時選択（任意）
+- [x] 都道府県選択
+- [x] 市区町村入力
 
 **任意項目:**
-- [ ] 会場名
-- [ ] 主催者情報
-- [ ] 入場料
-- [ ] 即売の有無（チェックボックス）
-- [ ] 詳細説明（テキストエリア）
-- [ ] 外部リンク（公式サイト、申し込みページ等）
+- [x] 会場名
+- [x] 主催者情報
+- [x] 入場料
+- [x] 即売の有無（チェックボックス）
+- [x] 詳細説明（テキストエリア）
+- [x] 外部リンク（公式サイト、申し込みページ等）
 
 ### Server Actions
-- [ ] `lib/actions/event.ts`
-  - [ ] `createEvent` - イベント登録
-  - [ ] `updateEvent` - イベント更新
-  - [ ] `deleteEvent` - イベント削除
-  - [ ] `getEvent` - イベント詳細取得
-  - [ ] `getEvents` - イベント一覧取得
-  - [ ] `getUpcomingEvents` - 今後のイベント取得
-  - [ ] `getEventsByMonth` - 月別イベント取得
-  - [ ] `getEventsByRegion` - 地域別イベント取得
+- [x] `lib/actions/event.ts`
+  - [x] `createEvent` - イベント登録
+  - [x] `updateEvent` - イベント更新
+  - [x] `deleteEvent` - イベント削除
+  - [x] `getEvent` - イベント詳細取得
+  - [x] `getEvents` - イベント一覧取得
+  - [x] `getUpcomingEvents` - 今後のイベント取得
+  - [x] `getEventsByMonth` - 月別イベント取得
+  - [x] `getEventsByRegion` - 地域別イベント取得
 
 ### 地域フィルター
-- [ ] 都道府県選択
-- [ ] 地方ブロック選択
-  - [ ] 北海道
-  - [ ] 東北（青森、岩手、宮城、秋田、山形、福島）
-  - [ ] 関東（茨城、栃木、群馬、埼玉、千葉、東京、神奈川）
-  - [ ] 中部（新潟、富山、石川、福井、山梨、長野、岐阜、静岡、愛知）
-  - [ ] 近畿（三重、滋賀、京都、大阪、兵庫、奈良、和歌山）
-  - [ ] 中国（鳥取、島根、岡山、広島、山口）
-  - [ ] 四国（徳島、香川、愛媛、高知）
-  - [ ] 九州・沖縄（福岡、佐賀、長崎、熊本、大分、宮崎、鹿児島、沖縄）
+- [x] 都道府県選択
+- [x] 地方ブロック選択
+  - [x] 北海道
+  - [x] 東北（青森、岩手、宮城、秋田、山形、福島）
+  - [x] 関東（茨城、栃木、群馬、埼玉、千葉、東京、神奈川）
+  - [x] 中部（新潟、富山、石川、福井、山梨、長野、岐阜、静岡、愛知）
+  - [x] 近畿（三重、滋賀、京都、大阪、兵庫、奈良、和歌山）
+  - [x] 中国（鳥取、島根、岡山、広島、山口）
+  - [x] 四国（徳島、香川、愛媛、高知）
+  - [x] 九州・沖縄（福岡、佐賀、長崎、熊本、大分、宮崎、鹿児島、沖縄）
 - [ ] 複数地域選択対応
-- [ ] フィルター状態のURL反映
+- [x] フィルター状態のURL反映
 
 ### 終了イベント処理
-- [ ] 終了日が過去のイベントを自動非表示
-- [ ] 終了イベント表示切り替えオプション
+- [x] 終了日が過去のイベントを自動非表示
+- [x] 終了イベント表示切り替えオプション
 - [ ] cronジョブでの自動アーカイブ（将来）
 
 ### 表示切り替え
-- [ ] カレンダー表示
-- [ ] リスト表示
-- [ ] 切り替えボタン
+- [x] カレンダー表示
+- [x] リスト表示
+- [x] 切り替えボタン
 
 ### 権限管理
-- [ ] 自分が登録したイベントのみ編集/削除可能
-- [ ] 通報機能連携
+- [x] 自分が登録したイベントのみ編集/削除可能
+- [x] 通報機能連携
 
 ### 日付・時刻処理
-- [ ] 日本時間（JST）での表示
-- [ ] 日付フォーマット（YYYY年MM月DD日）
-- [ ] 曜日表示
+- [x] 日本時間（JST）での表示
+- [x] 日付フォーマット（YYYY年MM月DD日）
+- [x] 曜日表示
 
 ### UI/UX
-- [ ] カレンダーのスムーズな操作
-- [ ] 月送りアニメーション
-- [ ] 今日の日付ハイライト
-- [ ] イベントのある日付のマーク
-- [ ] レスポンシブ対応
+- [x] カレンダーのスムーズな操作
+- [x] 月送りアニメーション
+- [x] 今日の日付ハイライト
+- [x] イベントのある日付のマーク
+- [x] レスポンシブ対応
 
 ### 都道府県マスターデータ
-- [ ] 47都道府県のマスターデータ作成
-- [ ] 地方ブロックとの紐付け
+- [x] 47都道府県のマスターデータ作成
+- [x] 地方ブロックとの紐付け
 
 ---
 
 ## 完了条件
-- [ ] カレンダーが正常に表示される
-- [ ] イベント登録が正常に動作する
-- [ ] 地域フィルターが正常に動作する
-- [ ] 終了イベントが非表示になる
-- [ ] イベント詳細が正常に表示される
+- [x] カレンダーが正常に表示される
+- [x] イベント登録が正常に動作する
+- [x] 地域フィルターが正常に動作する
+- [x] 終了イベントが非表示になる
+- [x] イベント詳細が正常に表示される
 
 ## 参考コード
 ```typescript
