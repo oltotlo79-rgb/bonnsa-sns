@@ -4,6 +4,7 @@ import { getEvents } from '@/lib/actions/event'
 import { EventCalendarWrapper } from '@/components/event/EventCalendarWrapper'
 import { EventList } from '@/components/event/EventList'
 import { RegionFilter } from '@/components/event/RegionFilter'
+import { ShowPastToggle } from '@/components/event/ShowPastToggle'
 
 export const metadata = {
   title: 'イベント - BON-LOG',
@@ -111,23 +112,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           </Link>
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={showPast}
-            onChange={() => {}}
-            className="w-4 h-4 rounded"
-          />
-          <Link
-            href={`/events?${new URLSearchParams({
-              ...params,
-              showPast: showPast ? '' : 'true',
-            }).toString()}`}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            終了イベントも表示
-          </Link>
-        </label>
+        <ShowPastToggle showPast={showPast} />
       </div>
 
       {/* イベント表示 */}

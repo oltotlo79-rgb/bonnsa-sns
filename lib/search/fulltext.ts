@@ -1,10 +1,11 @@
-'use server'
-
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
 /**
  * PostgreSQL全文検索ユーティリティ
+ *
+ * 注意: このファイルはServer Actions ('use server') から呼び出されるユーティリティです。
+ * 直接クライアントから呼び出すことはできません。
  *
  * 対応する検索方式:
  * - pg_bigm: 2-gramベース、日本語に最適（拡張機能のインストールが必要）

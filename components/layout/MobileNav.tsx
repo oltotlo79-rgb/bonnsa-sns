@@ -75,8 +75,8 @@ export function MobileNav({ userId }: MobileNavProps) {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t lg:hidden z-50">
-      <div className="flex items-center justify-around h-14">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border/50 lg:hidden z-50 shadow-washi">
+      <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
@@ -85,20 +85,24 @@ export function MobileNav({ userId }: MobileNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground'
+              className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 ${
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <div className="relative">
+              <div className={`relative p-1.5 rounded transition-all duration-200 ${
+                isActive ? 'bg-primary/10' : ''
+              }`}>
                 <Icon className="w-5 h-5" />
                 {item.href === '/notifications' && (
-                  <NotificationBadge className="absolute -top-1 -right-2" />
+                  <NotificationBadge className="absolute -top-0.5 -right-1" />
                 )}
                 {item.href === '/messages' && (
-                  <MessageBadge className="absolute -top-1 -right-2" />
+                  <MessageBadge className="absolute -top-0.5 -right-1" />
                 )}
               </div>
-              <span className="text-[10px] mt-1">{item.label}</span>
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'font-medium' : ''}`}>{item.label}</span>
             </Link>
           )
         })}

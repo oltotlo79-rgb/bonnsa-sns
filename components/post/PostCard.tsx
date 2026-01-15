@@ -146,7 +146,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
 
   return (
     <article
-      className={`bg-card border-b p-4 hover:bg-muted/30 transition-colors ${!disableNavigation ? 'cursor-pointer' : ''}`}
+      className={`bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 hover:bg-muted/40 transition-all duration-200 ${!disableNavigation ? 'cursor-pointer' : ''}`}
       onClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
     >
       {/* リポスト表示 */}
@@ -171,17 +171,17 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
           className="flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-10 h-10 rounded-full bg-muted overflow-hidden">
+          <div className="w-11 h-11 rounded-full bg-muted overflow-hidden ring-2 ring-border/50 hover:ring-primary/50 transition-all duration-200">
             {displayPost.user.avatarUrl ? (
               <Image
                 src={displayPost.user.avatarUrl}
                 alt={displayPost.user.nickname}
-                width={40}
-                height={40}
+                width={44}
+                height={44}
                 className="object-cover w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground font-medium bg-gradient-to-br from-muted to-secondary">
                 {displayPost.user.nickname.charAt(0)}
               </div>
             )}
@@ -255,12 +255,12 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
 
           {/* ジャンルタグ */}
           {post.genres && post.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
+            <div className="flex flex-wrap gap-1.5 mt-3">
               {post.genres.map((genre) => (
                 <Link
                   key={genre.id}
                   href={`/search?genre=${genre.id}`}
-                  className="px-2 py-0.5 text-xs bg-muted rounded-full hover:bg-muted/80"
+                  className="tag-washi"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {genre.name}

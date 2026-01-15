@@ -78,6 +78,12 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // 有料会員
+  isPremium            Boolean   @default(false) @map("is_premium")
+  premiumExpiresAt     DateTime? @map("premium_expires_at")
+  stripeCustomerId     String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+
   // NextAuth.js relations
   accounts Account[]
   sessions Session[]
@@ -107,6 +113,10 @@ model User {
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
 
+  // Premium
+  scheduledPosts ScheduledPost[]
+  payments       Payment[]
+
   @@map("users")
 }
 
@@ -130,6 +140,7 @@ model Post {
   likes       Like[]
   bookmarks   Bookmark[]
   notifications Notification[]
+  scheduledPost ScheduledPost?
 
   @@index([userId])
   @@index([createdAt])
@@ -154,8 +165,9 @@ model Genre {
   category  String
   sortOrder Int      @default(0) @map("sort_order")
 
-  postGenres PostGenre[]
-  shopGenres ShopGenre[]
+  postGenres          PostGenre[]
+  shopGenres          ShopGenre[]
+  scheduledPostGenres ScheduledPostGenre[]
 
   @@map("genres")
 }
@@ -460,4 +472,74 @@ model Message {
 
   @@index([conversationId])
   @@map("messages")
+}
+
+// 有料会員 - 支払い履歴
+model Payment {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  stripePaymentId String   @unique @map("stripe_payment_id")
+  amount          Int      // 金額（円）
+  currency        String   @default("jpy")
+  status          String   // succeeded, pending, failed
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("payments")
+}
+
+// 有料会員 - 予約投稿
+model ScheduledPost {
+  id              String              @id @default(cuid())
+  userId          String              @map("user_id")
+  content         String?             @db.Text
+  scheduledAt     DateTime            @map("scheduled_at")
+  status          ScheduledPostStatus @default(pending)
+  publishedPostId String?             @unique @map("published_post_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publishedPost Post?                @relation(fields: [publishedPostId], references: [id], onDelete: SetNull)
+  media         ScheduledPostMedia[]
+  genres        ScheduledPostGenre[]
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("scheduled_posts")
+}
+
+enum ScheduledPostStatus {
+  pending   // 予約中
+  published // 公開済み
+  failed    // 公開失敗
+  cancelled // キャンセル
+}
+
+model ScheduledPostMedia {
+  id              String @id @default(cuid())
+  scheduledPostId String @map("scheduled_post_id")
+  url             String
+  type            String @default("image")
+  sortOrder       Int    @default(0) @map("sort_order")
+
+  scheduledPost ScheduledPost @relation(fields: [scheduledPostId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledPostId])
+  @@map("scheduled_post_media")
+}
+
+model ScheduledPostGenre {
+  scheduledPostId String @map("scheduled_post_id")
+  genreId         String @map("genre_id")
+
+  scheduledPost ScheduledPost @relation(fields: [scheduledPostId], references: [id], onDelete: Cascade)
+  genre         Genre         @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([scheduledPostId, genreId])
+  @@map("scheduled_post_genres")
 }

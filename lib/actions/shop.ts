@@ -49,10 +49,14 @@ export async function getShops(options?: {
       ? shop.reviews.reduce((sum, r) => sum + r.rating, 0) / shop.reviews.length
       : null
 
+    // Prisma DecimalからJavaScript numberへ明示的に変換
+    const lat = shop.latitude !== null ? Number(shop.latitude.toString()) : null
+    const lng = shop.longitude !== null ? Number(shop.longitude.toString()) : null
+
     return {
       ...shop,
-      latitude: shop.latitude ? Number(shop.latitude) : null,
-      longitude: shop.longitude ? Number(shop.longitude) : null,
+      latitude: lat,
+      longitude: lng,
       genres: shop.genres.map((sg) => sg.genre),
       averageRating,
       reviewCount: shop.reviews.length,
@@ -106,11 +110,15 @@ export async function getShop(shopId: string) {
     ? shop.reviews.reduce((sum, r) => sum + r.rating, 0) / shop.reviews.length
     : null
 
+  // Prisma DecimalからJavaScript numberへ明示的に変換
+  const lat = shop.latitude !== null ? Number(shop.latitude.toString()) : null
+  const lng = shop.longitude !== null ? Number(shop.longitude.toString()) : null
+
   return {
     shop: {
       ...shop,
-      latitude: shop.latitude ? Number(shop.latitude) : null,
-      longitude: shop.longitude ? Number(shop.longitude) : null,
+      latitude: lat,
+      longitude: lng,
       genres: shop.genres.map((sg) => sg.genre),
       averageRating,
       reviewCount: shop.reviews.length,

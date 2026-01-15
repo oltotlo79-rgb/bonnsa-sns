@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
+import { fulltextSearchPosts, fulltextSearchUsers, getSearchMode } from '@/lib/search/fulltext'
 
 export async function searchPosts(
   query: string,
@@ -36,7 +37,96 @@ export async function searchPosts(
     ].filter((id) => id !== currentUserId)
   }
 
-  // 投稿を検索（部分一致）
+  const searchMode = getSearchMode()
+
+  // 共通のinclude設定
+  const postInclude = {
+    user: {
+      select: { id: true, nickname: true, avatarUrl: true },
+    },
+    media: {
+      orderBy: { sortOrder: 'asc' },
+    },
+    genres: {
+      include: { genre: true },
+    },
+    _count: {
+      select: { likes: true, comments: true },
+    },
+  } as const
+
+  // 全文検索モードの場合
+  if (query && (searchMode === 'bigm' || searchMode === 'trgm')) {
+    // まず全文検索でIDを取得
+    const postIds = await fulltextSearchPosts(query, {
+      excludedUserIds,
+      genreIds,
+      cursor,
+      limit,
+    })
+
+    if (postIds.length === 0) {
+      return { posts: [], nextCursor: undefined }
+    }
+
+    // IDで投稿を取得
+    const fetchedPosts = await prisma.post.findMany({
+      where: {
+        id: { in: postIds },
+      },
+      include: postInclude,
+    })
+
+    // 元の順序を維持
+    const posts = postIds
+      .map(id => fetchedPosts.find(p => p.id === id))
+      .filter((p): p is NonNullable<typeof p> => p !== undefined)
+
+    // 現在のユーザーがいいね/ブックマークしているかチェック
+    let likedPostIds: Set<string> = new Set()
+    let bookmarkedPostIds: Set<string> = new Set()
+
+    if (currentUserId && posts.length > 0) {
+      const ids = posts.map((p) => p.id)
+
+      const [userLikes, userBookmarks] = await Promise.all([
+        prisma.like.findMany({
+          where: {
+            userId: currentUserId,
+            postId: { in: ids },
+            commentId: null,
+          },
+          select: { postId: true },
+        }),
+        prisma.bookmark.findMany({
+          where: {
+            userId: currentUserId,
+            postId: { in: ids },
+          },
+          select: { postId: true },
+        }),
+      ])
+
+      likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id): id is string => id !== null))
+      bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+    }
+
+    const formattedPosts = posts.map((post) => ({
+      ...post,
+      likeCount: post._count.likes,
+      commentCount: post._count.comments,
+      genres: post.genres.map((pg) => pg.genre),
+      isLiked: likedPostIds.has(post.id),
+      isBookmarked: bookmarkedPostIds.has(post.id),
+    }))
+
+    return {
+      posts: formattedPosts,
+      nextCursor: posts.length === limit ? posts[posts.length - 1]?.id : undefined,
+    }
+  }
+
+  // 従来のLIKE検索
   const posts = await prisma.post.findMany({
     where: {
       AND: [
@@ -66,20 +156,7 @@ export async function searchPosts(
           : {},
       ],
     },
-    include: {
-      user: {
-        select: { id: true, nickname: true, avatarUrl: true },
-      },
-      media: {
-        orderBy: { sortOrder: 'asc' },
-      },
-      genres: {
-        include: { genre: true },
-      },
-      _count: {
-        select: { likes: true, comments: true },
-      },
-    },
+    include: postInclude,
     orderBy: { createdAt: 'desc' },
     take: limit,
     ...(cursor && {
@@ -153,6 +230,57 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
       .filter((id) => id !== currentUserId)
   }
 
+  const searchMode = getSearchMode()
+
+  // 共通のselect設定
+  const userSelect = {
+    id: true,
+    nickname: true,
+    avatarUrl: true,
+    bio: true,
+    _count: {
+      select: { followers: true, following: true },
+    },
+  } as const
+
+  // 全文検索モードの場合
+  if (query && (searchMode === 'bigm' || searchMode === 'trgm')) {
+    // まず全文検索でIDを取得
+    const userIds = await fulltextSearchUsers(query, {
+      excludedUserIds,
+      currentUserId,
+      cursor,
+      limit,
+    })
+
+    if (userIds.length === 0) {
+      return { users: [], nextCursor: undefined }
+    }
+
+    // IDでユーザーを取得
+    const fetchedUsers = await prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+      },
+      select: userSelect,
+    })
+
+    // 元の順序を維持
+    const users = userIds
+      .map(id => fetchedUsers.find(u => u.id === id))
+      .filter((u): u is NonNullable<typeof u> => u !== undefined)
+
+    return {
+      users: users.map((user) => ({
+        ...user,
+        followersCount: user._count.followers,
+        followingCount: user._count.following,
+      })),
+      nextCursor: users.length === limit ? users[users.length - 1]?.id : undefined,
+    }
+  }
+
+  // 従来のLIKE検索
   const users = await prisma.user.findMany({
     where: {
       AND: [
@@ -190,15 +318,7 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
           : {},
       ],
     },
-    select: {
-      id: true,
-      nickname: true,
-      avatarUrl: true,
-      bio: true,
-      _count: {
-        select: { followers: true, following: true },
-      },
-    },
+    select: userSelect,
     take: limit,
     ...(cursor && {
       cursor: { id: cursor },

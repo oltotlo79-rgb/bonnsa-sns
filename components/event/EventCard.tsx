@@ -54,13 +54,21 @@ function formatEventDate(startDate: Date, endDate: Date | null): string {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const isPast = new Date(event.startDate) < new Date()
+  const now = new Date()
+  const startDate = new Date(event.startDate)
+  const endDate = event.endDate ? new Date(event.endDate) : null
+
+  // イベントステータスの判定
+  // 終了: endDateがあればendDate経過後、なければstartDate経過後
+  const isEnded = endDate ? endDate < now : startDate < now
+  // 開催中: startDate経過後かつendDate前（endDateがない場合は開催中にならない）
+  const isOngoing = !isEnded && startDate <= now && endDate && endDate >= now
 
   return (
     <Link
       href={`/events/${event.id}`}
       className={`block bg-card border rounded-lg p-4 hover:bg-muted/50 transition-colors ${
-        isPast ? 'opacity-60' : ''
+        isEnded ? 'opacity-60' : ''
       }`}
     >
       <h3 className="font-semibold mb-2 line-clamp-2">{event.title}</h3>
@@ -94,9 +102,14 @@ export function EventCard({ event }: EventCardProps) {
             即売あり
           </span>
         )}
-        {isPast && (
+        {isEnded && (
           <span className="text-xs px-2 py-0.5 bg-muted-foreground/20 text-muted-foreground rounded-full">
             終了
+          </span>
+        )}
+        {isOngoing && (
+          <span className="text-xs px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">
+            開催中
           </span>
         )}
       </div>

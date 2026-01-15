@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,8 +15,15 @@ type Genre = {
   category: string
 }
 
+type MembershipLimits = {
+  maxPostLength: number
+  maxImages: number
+  maxVideos: number
+}
+
 type PostFormProps = {
   genres: Record<string, Genre[]>
+  limits?: MembershipLimits
 }
 
 function ImageIcon({ className }: { className?: string }) {
@@ -36,8 +44,15 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
-export function PostForm({ genres }: PostFormProps) {
+const DEFAULT_LIMITS: MembershipLimits = {
+  maxPostLength: 500,
+  maxImages: 4,
+  maxVideos: 2,
+}
+
+export function PostForm({ genres, limits = DEFAULT_LIMITS }: PostFormProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [content, setContent] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
   const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([])
@@ -46,7 +61,7 @@ export function PostForm({ genres }: PostFormProps) {
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const maxChars = 500
+  const maxChars = limits.maxPostLength
   const remainingChars = maxChars - content.length
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -60,15 +75,15 @@ export function PostForm({ genres }: PostFormProps) {
     const currentImageCount = mediaFiles.filter(m => m.type === 'image').length
     const currentVideoCount = mediaFiles.filter(m => m.type === 'video').length
 
-    // 画像は4枚まで
-    if (!isVideo && currentImageCount >= 4) {
-      setError('画像は4枚まで添付できます')
+    // 画像上限チェック
+    if (!isVideo && currentImageCount >= limits.maxImages) {
+      setError(`画像は${limits.maxImages}枚まで添付できます`)
       return
     }
 
-    // 動画は2本まで
-    if (isVideo && currentVideoCount >= 2) {
-      setError('動画は2本まで添付できます')
+    // 動画上限チェック
+    if (isVideo && currentVideoCount >= limits.maxVideos) {
+      setError(`動画は${limits.maxVideos}本まで添付できます`)
       return
     }
 
@@ -118,6 +133,8 @@ export function PostForm({ genres }: PostFormProps) {
       setContent('')
       setSelectedGenres([])
       setMediaFiles([])
+      // React Queryのタイムラインキャッシュを無効化して再取得
+      await queryClient.invalidateQueries({ queryKey: ['timeline'] })
       router.refresh()
       setLoading(false)
     }
@@ -183,11 +200,14 @@ export function PostForm({ genres }: PostFormProps) {
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || mediaFiles.length >= 5}
+            disabled={uploading || mediaFiles.length >= (limits.maxImages + limits.maxVideos)}
           >
             <ImageIcon className="w-5 h-5" />
           </Button>
           {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+          {limits.maxPostLength > 500 && (
+            <span className="text-xs text-amber-600 font-medium">Premium</span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Bookmark } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { toggleBookmark } from '@/lib/actions/bookmark'
 
@@ -16,6 +17,12 @@ export function BookmarkButton({
 }: BookmarkButtonProps) {
   const [bookmarked, setBookmarked] = useState(initialBookmarked)
   const [isPending, startTransition] = useTransition()
+  const queryClient = useQueryClient()
+
+  // propsが更新されたら状態を同期
+  useEffect(() => {
+    setBookmarked(initialBookmarked)
+  }, [initialBookmarked])
 
   async function handleToggle() {
     // Optimistic UI
@@ -28,6 +35,9 @@ export function BookmarkButton({
       if (result.error) {
         // ロールバック
         setBookmarked(bookmarked)
+      } else {
+        // React Queryのキャッシュを無効化して再取得
+        queryClient.invalidateQueries({ queryKey: ['timeline'] })
       }
     })
   }

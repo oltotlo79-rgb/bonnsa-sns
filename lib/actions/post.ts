@@ -3,12 +3,7 @@
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
-
-const createPostSchema = z.object({
-  content: z.string().max(500, '投稿は500文字以内で入力してください').optional(),
-  genreIds: z.array(z.string()).max(3, 'ジャンルは3つまで選択できます'),
-})
+import { getMembershipLimits } from '@/lib/premium'
 
 export async function createPost(formData: FormData) {
   const session = await auth()
@@ -21,24 +16,32 @@ export async function createPost(formData: FormData) {
   const mediaUrls = formData.getAll('mediaUrls') as string[]
   const mediaTypes = formData.getAll('mediaTypes') as string[]
 
+  // 会員種別に応じた制限を取得
+  const limits = await getMembershipLimits(session.user.id)
+
   // バリデーション
   if (!content && mediaUrls.length === 0) {
     return { error: 'テキストまたはメディアを入力してください' }
   }
 
-  // メディアバリデーション（画像4枚まで、動画2本まで、混在OK）
-  const imageCount = mediaTypes.filter(t => t === 'image').length
-  const videoCount = mediaTypes.filter(t => t === 'video').length
-  if (imageCount > 4) {
-    return { error: '画像は4枚までです' }
-  }
-  if (videoCount > 2) {
-    return { error: '動画は2本までです' }
+  // 文字数チェック（会員種別で分岐）
+  if (content && content.length > limits.maxPostLength) {
+    return { error: `投稿は${limits.maxPostLength}文字以内で入力してください` }
   }
 
-  const result = createPostSchema.safeParse({ content, genreIds })
-  if (!result.success) {
-    return { error: result.error.issues[0].message }
+  // ジャンル数チェック
+  if (genreIds.length > 3) {
+    return { error: 'ジャンルは3つまで選択できます' }
+  }
+
+  // メディアバリデーション（会員種別で分岐）
+  const imageCount = mediaTypes.filter(t => t === 'image').length
+  const videoCount = mediaTypes.filter(t => t === 'video').length
+  if (imageCount > limits.maxImages) {
+    return { error: `画像は${limits.maxImages}枚までです` }
+  }
+  if (videoCount > limits.maxVideos) {
+    return { error: `動画は${limits.maxVideos}本までです` }
   }
 
   // 投稿制限チェック（1日20件）
@@ -91,8 +94,11 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     return { error: '引用コメントを入力してください' }
   }
 
-  if (content.length > 500) {
-    return { error: '投稿は500文字以内で入力してください' }
+  // 会員種別に応じた制限を取得
+  const limits = await getMembershipLimits(session.user.id)
+
+  if (content.length > limits.maxPostLength) {
+    return { error: `投稿は${limits.maxPostLength}文字以内で入力してください` }
   }
 
   // 投稿制限チェック

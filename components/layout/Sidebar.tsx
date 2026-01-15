@@ -98,10 +98,43 @@ function MessageIcon({ className }: { className?: string }) {
   )
 }
 
+function CalendarPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
+      <path d="M3 10h18" />
+      <path d="M16 19h6" />
+      <path d="M19 16v6" />
+    </svg>
+  )
+}
+
+function BarChartIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" x2="12" y1="20" y2="10" />
+      <line x1="18" x2="18" y1="20" y2="4" />
+      <line x1="6" x2="6" y1="20" y2="14" />
+    </svg>
+  )
+}
+
+function CrownIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+      <path d="M5 21h14" />
+    </svg>
+  )
+}
+
 type NavItem = {
   href: string
   icon: React.FC<{ className?: string }>
   label: string
+  premium?: boolean
 }
 
 const navItems: NavItem[] = [
@@ -114,24 +147,31 @@ const navItems: NavItem[] = [
   { href: '/events', icon: CalendarIcon, label: 'イベント' },
 ]
 
+const premiumNavItems: NavItem[] = [
+  { href: '/posts/scheduled', icon: CalendarPlusIcon, label: '予約投稿', premium: true },
+  { href: '/analytics', icon: BarChartIcon, label: '投稿分析', premium: true },
+]
+
 type SidebarProps = {
   userId?: string
+  isPremium?: boolean
 }
 
-export function Sidebar({ userId }: SidebarProps) {
+export function Sidebar({ userId, isPremium }: SidebarProps) {
   const pathname = usePathname()
 
-  const allNavItems = [
+  const allNavItems: NavItem[] = [
     ...navItems,
+    ...(isPremium ? premiumNavItems : []),
     ...(userId ? [{ href: `/users/${userId}`, icon: UserIcon, label: 'プロフィール' }] : []),
     { href: '/settings', icon: SettingsIcon, label: '設定' },
   ]
 
   return (
-    <aside className="sticky top-0 h-screen w-64 border-r bg-card hidden lg:flex flex-col">
+    <aside className="sticky top-0 h-screen w-64 border-r bg-card/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
       {/* ロゴ */}
-      <div className="p-4 border-b">
-        <Link href="/feed" className="flex items-center">
+      <div className="p-5 border-b border-border/50">
+        <Link href="/feed" className="flex items-center gap-3">
           <Image
             src="/logo.png"
             alt="BON-LOG"
@@ -141,10 +181,11 @@ export function Sidebar({ userId }: SidebarProps) {
             priority
           />
         </Link>
+        <p className="text-[10px] text-muted-foreground mt-1 tracking-wider">盆栽愛好家のコミュニティ</p>
       </div>
 
       {/* ナビゲーション */}
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-1">
           {allNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -154,10 +195,10 @@ export function Sidebar({ userId }: SidebarProps) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded transition-all duration-200 ${
                     isActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-foreground hover:bg-muted'
+                      ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+                      : 'text-foreground hover:bg-muted/70 hover:translate-x-1'
                   }`}
                 >
                   <div className="relative">
@@ -169,7 +210,12 @@ export function Sidebar({ userId }: SidebarProps) {
                       <MessageBadge className="absolute -top-2 -right-2" />
                     )}
                   </div>
-                  <span>{item.label}</span>
+                  <span className="text-sm flex items-center gap-1.5">
+                    {item.label}
+                    {item.premium && (
+                      <CrownIcon className="w-3.5 h-3.5 text-amber-500" />
+                    )}
+                  </span>
                 </Link>
               </li>
             )
@@ -177,14 +223,17 @@ export function Sidebar({ userId }: SidebarProps) {
         </ul>
       </nav>
 
+      {/* 装飾ライン */}
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
       {/* ログアウトボタン */}
-      <div className="p-2 border-t">
+      <div className="p-3">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex items-center gap-3 px-4 py-3 w-full rounded text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all duration-200"
         >
           <LogOutIcon className="w-5 h-5" />
-          <span>ログアウト</span>
+          <span className="text-sm">ログアウト</span>
         </button>
       </div>
     </aside>

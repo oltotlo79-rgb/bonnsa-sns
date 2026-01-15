@@ -33,8 +33,8 @@
 
 #### 全文検索
 - [*] 投稿本文の検索
-- [ ] PostgreSQL全文検索設定
-- [ ] 日本語対応（pg_bigm等）
+- [x] PostgreSQL全文検索設定（pg_trgm/pg_bigm両対応）
+- [x] 日本語対応（pg_bigm/pg_trgm + GINインデックス）
 
 #### ユーザー検索
 - [*] ニックネームで検索
@@ -79,7 +79,7 @@
 ### パフォーマンス
 - [*] 検索結果のキャッシュ（React Query）
 - [*] ページネーション（無限スクロール）
-- [ ] 検索インデックス最適化
+- [x] 検索インデックス最適化（GINインデックス対応）
 
 ---
 
@@ -228,9 +228,19 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
 
 ```sql
 -- PostgreSQL 全文検索設定
--- 日本語対応のための設定（pg_bigm拡張が必要）
-CREATE EXTENSION IF NOT EXISTS pg_bigm;
+-- 環境変数 SEARCH_MODE で切り替え可能（bigm/trgm/like）
+-- セットアップ: npx tsx scripts/setup-fulltext-search.ts
 
--- 投稿テキストにインデックス作成
-CREATE INDEX posts_content_idx ON posts USING gin (content gin_bigm_ops);
+-- pg_trgm版（Azure等のクラウドDB対応・推奨）
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+SELECT set_limit(0.1); -- 類似度閾値
+CREATE INDEX IF NOT EXISTS posts_content_trgm_idx ON posts USING gin (content gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS users_nickname_trgm_idx ON users USING gin (nickname gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS users_bio_trgm_idx ON users USING gin (bio gin_trgm_ops);
+
+-- pg_bigm版（日本語最適・要インストール）
+-- CREATE EXTENSION IF NOT EXISTS pg_bigm;
+-- CREATE INDEX IF NOT EXISTS posts_content_bigm_idx ON posts USING gin (content gin_bigm_ops);
+-- CREATE INDEX IF NOT EXISTS users_nickname_bigm_idx ON users USING gin (nickname gin_bigm_ops);
+-- CREATE INDEX IF NOT EXISTS users_bio_bigm_idx ON users USING gin (bio gin_bigm_ops);
 ```

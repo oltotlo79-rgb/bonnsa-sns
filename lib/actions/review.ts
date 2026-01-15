@@ -70,6 +70,47 @@ export async function createReview(formData: FormData) {
   return { success: true, reviewId: review.id }
 }
 
+// レビュー編集
+export async function updateReview(reviewId: string, formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const ratingStr = formData.get('rating') as string
+  const content = formData.get('content') as string | null
+
+  // 所有者確認
+  const review = await prisma.shopReview.findUnique({
+    where: { id: reviewId },
+    select: { userId: true, shopId: true },
+  })
+
+  if (!review) {
+    return { error: 'レビューが見つかりません' }
+  }
+
+  if (review.userId !== session.user.id) {
+    return { error: '編集権限がありません' }
+  }
+
+  const rating = parseInt(ratingStr, 10)
+  if (isNaN(rating) || rating < 1 || rating > 5) {
+    return { error: '評価は1〜5の間で選択してください' }
+  }
+
+  await prisma.shopReview.update({
+    where: { id: reviewId },
+    data: {
+      rating,
+      content: content?.trim() || null,
+    },
+  })
+
+  revalidatePath(`/shops/${review.shopId}`)
+  return { success: true }
+}
+
 // レビュー削除
 export async function deleteReview(reviewId: string) {
   const session = await auth()

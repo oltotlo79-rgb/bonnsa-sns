@@ -1,38 +1,33 @@
-import { auth, signOut } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Toaster } from '@/components/ui/toaster'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { RightSidebar } from '@/components/layout/RightSidebar'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { Header } from '@/components/layout/Header'
-import { prisma } from '@/lib/db'
+import { isPremiumUser } from '@/lib/premium'
 
 export default async function MainLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // usersテーブルが空の場合はログアウトしてトップページへ
-  const userCount = await prisma.user.count()
-  if (userCount === 0) {
-    await signOut({ redirect: false })
-    redirect('/')
-  }
-
   const session = await auth()
 
   if (!session?.user) {
     redirect('/login')
   }
 
+  const isPremium = await isPremiumUser(session.user.id)
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background asanoha-pattern">
       {/* モバイルヘッダー */}
-      <Header userId={session.user.id} />
+      <Header userId={session.user.id} isPremium={isPremium} />
 
       <div className="flex">
         {/* 左サイドバー（デスクトップのみ） */}
-        <Sidebar userId={session.user.id} />
+        <Sidebar userId={session.user.id} isPremium={isPremium} />
 
         {/* メインコンテンツ */}
         <main className="flex-1 min-h-screen pb-16 lg:pb-0">

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { isPremiumUser } from '@/lib/premium'
 import { ProfileHeader } from '@/components/user/ProfileHeader'
 import { PostCard } from '@/components/post/PostCard'
 
@@ -51,6 +52,9 @@ export default async function UserProfilePage({ params }: Props) {
   }
 
   const isOwner = session?.user?.id === user.id
+
+  // プレミアム会員状態を取得
+  const isPremium = await isPremiumUser(id)
 
   // フォロー状態を取得
   let isFollowing = false
@@ -204,6 +208,7 @@ export default async function UserProfilePage({ params }: Props) {
         isFollowing={isFollowing}
         isBlocked={isBlocked}
         isMuted={isMuted}
+        isPremium={isPremium}
       />
 
       {/* 投稿一覧 */}

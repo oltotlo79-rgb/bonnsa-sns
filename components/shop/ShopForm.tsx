@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createShop, updateShop, geocodeAddress } from '@/lib/actions/shop'
+import { BusinessHoursInput } from '@/components/shop/BusinessHoursInput'
 
 interface Genre {
   id: string
@@ -203,19 +204,11 @@ export function ShopForm({ genres, initialData, mode }: ShopFormProps) {
       </div>
 
       {/* 営業時間 */}
-      <div className="space-y-2">
-        <label htmlFor="businessHours" className="text-sm font-medium">
-          営業時間
-        </label>
-        <input
-          id="businessHours"
-          type="text"
-          value={businessHours}
-          onChange={(e) => setBusinessHours(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          placeholder="例: 9:00〜17:00"
-        />
-      </div>
+      <BusinessHoursInput
+        value={businessHours}
+        onChange={setBusinessHours}
+        disabled={isPending}
+      />
 
       {/* 定休日 */}
       <div className="space-y-2">

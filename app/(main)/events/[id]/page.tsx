@@ -100,7 +100,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   }
 
   const event = result.event
-  const isPast = new Date(event.startDate) < new Date()
+  const now = new Date()
+  const startDate = new Date(event.startDate)
+  const endDate = event.endDate ? new Date(event.endDate) : null
+
+  // イベントステータスの判定
+  // 終了: endDateがあればendDate経過後、なければstartDate経過後
+  const isEnded = endDate ? endDate < now : startDate < now
+  // 開催中: startDate経過後かつendDate前（endDateがない場合は開催中にならない）
+  const isOngoing = !isEnded && startDate <= now && endDate && endDate >= now
 
   const formatEventDateTime = (date: Date) => {
     return format(new Date(date), 'yyyy年M月d日(E) HH:mm', { locale: ja })
@@ -124,9 +132,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                {isPast && (
+                {isEnded && (
                   <span className="text-xs px-2 py-0.5 bg-muted-foreground/20 text-muted-foreground rounded-full">
                     終了
+                  </span>
+                )}
+                {isOngoing && (
+                  <span className="text-xs px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full">
+                    開催中
                   </span>
                 )}
                 {event.hasSales && (

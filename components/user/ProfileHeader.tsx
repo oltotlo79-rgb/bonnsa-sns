@@ -26,6 +26,7 @@ type ProfileHeaderProps = {
   isFollowing?: boolean
   isBlocked?: boolean
   isMuted?: boolean
+  isPremium?: boolean
 }
 
 function MapPinIcon({ className }: { className?: string }) {
@@ -56,7 +57,15 @@ function LockIcon({ className }: { className?: string }) {
   )
 }
 
-export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted }: ProfileHeaderProps) {
+function CrownIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+    </svg>
+  )
+}
+
+export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, isPremium }: ProfileHeaderProps) {
   const joinDate = new Date(user.createdAt)
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
 
@@ -124,9 +133,15 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted }
           )}
         </div>
 
-        {/* 名前・非公開マーク */}
+        {/* 名前・プレミアムバッジ・非公開マーク */}
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-xl sm:text-2xl font-bold">{user.nickname}</h1>
+          {isPremium && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded" title="プレミアム会員">
+              <CrownIcon className="w-3 h-3" />
+              Premium
+            </span>
+          )}
           {!user.isPublic && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
               <LockIcon className="w-3 h-3" />

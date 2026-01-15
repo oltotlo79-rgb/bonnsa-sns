@@ -81,6 +81,15 @@ export function StarRating({ rating, size = 'md', interactive = false, onChange 
   )
 }
 
+// 入力用の星評価コンポーネント
+export function StarRatingInput({ value, onChange, size = 'md' }: {
+  value: number
+  onChange: (rating: number) => void
+  size?: 'sm' | 'md' | 'lg'
+}) {
+  return <StarRating rating={value} onChange={onChange} size={size} interactive />
+}
+
 // 読み取り専用の星評価表示（半星対応）
 export function StarRatingDisplay({ rating, size = 'md', showValue = false }: {
   rating: number;

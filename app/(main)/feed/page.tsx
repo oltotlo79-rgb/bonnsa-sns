@@ -3,6 +3,7 @@ import { PostForm } from '@/components/post/PostForm'
 import { Timeline } from '@/components/feed/Timeline'
 import { getGenres } from '@/lib/actions/post'
 import { getTimeline } from '@/lib/actions/feed'
+import { getMembershipLimits } from '@/lib/premium'
 
 export const metadata = {
   title: 'タイムライン - BON-LOG',
@@ -11,9 +12,10 @@ export const metadata = {
 export default async function FeedPage() {
   const session = await auth()
 
-  const [genresResult, timelineResult] = await Promise.all([
+  const [genresResult, timelineResult, limits] = await Promise.all([
     getGenres(),
-    getTimeline()
+    getTimeline(),
+    session?.user?.id ? getMembershipLimits(session.user.id) : Promise.resolve({ maxPostLength: 500, maxImages: 4, maxVideos: 2, canSchedulePost: false, canViewAnalytics: false }),
   ])
 
   const genres = genresResult.genres || {}
@@ -23,7 +25,7 @@ export default async function FeedPage() {
     <div className="space-y-6">
       {/* 投稿フォーム */}
       <div className="bg-card rounded-lg border p-4">
-        <PostForm genres={genres} />
+        <PostForm genres={genres} limits={limits} />
       </div>
 
       {/* タイムライン */}

@@ -8,10 +8,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-noto-sans-jp);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-shippori-mincho);
   --color-bonsai-green: var(--bonsai-green);
   --color-bonsai-brown: var(--bonsai-brown);
   --color-bonsai-beige: var(--bonsai-beige);
   --color-bonsai-cream: var(--bonsai-cream);
+  --color-washi: var(--washi);
+  --color-sumi: var(--sumi);
+  --color-aka: var(--aka);
+  --color-ai: var(--ai);
+  --color-matcha: var(--matcha);
+  --color-kincha: var(--kincha);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,76 +58,99 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.98 0.005 90);
-  --foreground: oklch(0.25 0.02 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 60);
-  --primary: oklch(0.45 0.12 145);
+  --radius: 0.25rem;
+
+  /* 和風カラーパレット - 侘び寂びの美学 */
+  --background: oklch(0.97 0.008 85);        /* 生成り - kinari */
+  --foreground: oklch(0.22 0.015 50);        /* 墨色 - sumi */
+  --card: oklch(0.99 0.004 90);              /* 和紙 - washi */
+  --card-foreground: oklch(0.22 0.015 50);
+  --popover: oklch(0.99 0.004 90);
+  --popover-foreground: oklch(0.22 0.015 50);
+
+  /* 松の緑 - Primary */
+  --primary: oklch(0.42 0.08 155);           /* 松葉色 - matsuba */
   --primary-foreground: oklch(0.98 0.005 90);
-  --secondary: oklch(0.92 0.02 80);
-  --secondary-foreground: oklch(0.35 0.03 60);
-  --muted: oklch(0.95 0.01 80);
-  --muted-foreground: oklch(0.5 0.02 60);
-  --accent: oklch(0.55 0.08 50);
+
+  /* 土色系 - Secondary */
+  --secondary: oklch(0.88 0.025 75);         /* 亜麻色 - ama */
+  --secondary-foreground: oklch(0.30 0.03 50);
+
+  /* 薄墨 - Muted */
+  --muted: oklch(0.93 0.01 80);              /* 白練 - shironeri */
+  --muted-foreground: oklch(0.48 0.02 50);
+
+  /* 錆朱 - Accent */
+  --accent: oklch(0.55 0.12 45);             /* 錆朱 - sabiaka */
   --accent-foreground: oklch(0.98 0.005 90);
-  --destructive: oklch(0.577 0.245 27.325);
-  --bonsai-green: oklch(0.45 0.12 145);
-  --bonsai-brown: oklch(0.45 0.08 50);
-  --bonsai-beige: oklch(0.92 0.02 80);
-  --bonsai-cream: oklch(0.98 0.005 90);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* 朱色 - Destructive */
+  --destructive: oklch(0.55 0.20 25);        /* 朱色 - shu */
+
+  /* 伝統色 */
+  --bonsai-green: oklch(0.42 0.08 155);      /* 松葉色 */
+  --bonsai-brown: oklch(0.45 0.08 55);       /* 栗皮茶 - kurikawacha */
+  --bonsai-beige: oklch(0.88 0.025 75);      /* 亜麻色 */
+  --bonsai-cream: oklch(0.97 0.008 85);      /* 生成り */
+  --washi: oklch(0.99 0.004 90);             /* 和紙 */
+  --sumi: oklch(0.22 0.015 50);              /* 墨 */
+  --aka: oklch(0.55 0.20 25);                /* 朱 */
+  --ai: oklch(0.35 0.10 250);                /* 藍 */
+  --matcha: oklch(0.55 0.10 140);            /* 抹茶 */
+  --kincha: oklch(0.50 0.12 70);             /* 金茶 */
+
+  --border: oklch(0.85 0.02 75);
+  --input: oklch(0.90 0.015 80);
+  --ring: oklch(0.42 0.08 155);
+
+  --chart-1: oklch(0.42 0.08 155);           /* 松葉色 */
+  --chart-2: oklch(0.55 0.12 45);            /* 錆朱 */
+  --chart-3: oklch(0.35 0.10 250);           /* 藍 */
+  --chart-4: oklch(0.50 0.12 70);            /* 金茶 */
+  --chart-5: oklch(0.55 0.10 140);           /* 抹茶 */
+
+  --sidebar: oklch(0.97 0.008 85);
+  --sidebar-foreground: oklch(0.22 0.015 50);
+  --sidebar-primary: oklch(0.42 0.08 155);
+  --sidebar-primary-foreground: oklch(0.98 0.005 90);
+  --sidebar-accent: oklch(0.93 0.01 80);
+  --sidebar-accent-foreground: oklch(0.22 0.015 50);
+  --sidebar-border: oklch(0.85 0.02 75);
+  --sidebar-ring: oklch(0.42 0.08 155);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.15 0.015 50);        /* 漆黒 - shikkoku */
+  --foreground: oklch(0.92 0.008 85);        /* 生成り */
+  --card: oklch(0.20 0.015 50);              /* 墨色 */
+  --card-foreground: oklch(0.92 0.008 85);
+  --popover: oklch(0.20 0.015 50);
+  --popover-foreground: oklch(0.92 0.008 85);
+  --primary: oklch(0.60 0.10 155);           /* 若松 */
+  --primary-foreground: oklch(0.15 0.015 50);
+  --secondary: oklch(0.30 0.02 50);
+  --secondary-foreground: oklch(0.92 0.008 85);
+  --muted: oklch(0.25 0.015 50);
+  --muted-foreground: oklch(0.65 0.015 80);
+  --accent: oklch(0.60 0.15 45);             /* 緋色 */
+  --accent-foreground: oklch(0.15 0.015 50);
+  --destructive: oklch(0.60 0.20 25);
+  --border: oklch(0.30 0.02 50);
+  --input: oklch(0.28 0.02 50);
+  --ring: oklch(0.60 0.10 155);
+  --chart-1: oklch(0.60 0.10 155);
+  --chart-2: oklch(0.60 0.15 45);
+  --chart-3: oklch(0.55 0.12 250);
+  --chart-4: oklch(0.60 0.12 70);
+  --chart-5: oklch(0.60 0.10 140);
+  --sidebar: oklch(0.18 0.015 50);
+  --sidebar-foreground: oklch(0.92 0.008 85);
+  --sidebar-primary: oklch(0.60 0.10 155);
+  --sidebar-primary-foreground: oklch(0.15 0.015 50);
+  --sidebar-accent: oklch(0.25 0.015 50);
+  --sidebar-accent-foreground: oklch(0.92 0.008 85);
+  --sidebar-border: oklch(0.30 0.02 50);
+  --sidebar-ring: oklch(0.60 0.10 155);
 }
 
 @layer base {
@@ -130,4 +160,303 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* 和風装飾パターン */
+.washi-texture {
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* 麻の葉模様 */
+.asanoha-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='none' stroke='%23d4c4a8' stroke-width='0.5' opacity='0.3'/%3E%3Cpath d='M20 0L20 40M0 20L40 20' stroke='%23d4c4a8' stroke-width='0.3' opacity='0.2'/%3E%3C/svg%3E");
+  background-size: 40px 40px;
+}
+
+/* 青海波模様 */
+.seigaiha-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='40' viewBox='0 0 80 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40C20 40 20 20 40 20S60 40 80 40' fill='none' stroke='%23566d4e' stroke-width='0.5' opacity='0.15'/%3E%3Cpath d='M-40 40C-20 40 -20 20 0 20S20 40 40 40' fill='none' stroke='%23566d4e' stroke-width='0.5' opacity='0.15'/%3E%3Cpath d='M40 40C60 40 60 20 80 20S100 40 120 40' fill='none' stroke='%23566d4e' stroke-width='0.5' opacity='0.15'/%3E%3C/svg%3E");
+  background-size: 80px 40px;
+}
+
+/* 市松模様 */
+.ichimatsu-pattern {
+  background-image:
+    linear-gradient(45deg, rgba(86, 109, 78, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(86, 109, 78, 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(86, 109, 78, 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(86, 109, 78, 0.05) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 0, 10px -10px, 0 10px;
+}
+
+/* 和風ボーダー装飾 */
+.washi-border {
+  position: relative;
+}
+.washi-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--primary) 20%,
+    var(--primary) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* 墨流し風グラデーション */
+.suminagashi {
+  background: linear-gradient(
+    135deg,
+    oklch(0.97 0.008 85) 0%,
+    oklch(0.95 0.012 80) 25%,
+    oklch(0.97 0.008 85) 50%,
+    oklch(0.94 0.015 75) 75%,
+    oklch(0.97 0.008 85) 100%
+  );
+}
+
+/* 和風シャドウ */
+.shadow-washi {
+  box-shadow:
+    0 1px 2px rgba(34, 34, 34, 0.04),
+    0 2px 4px rgba(34, 34, 34, 0.04),
+    0 4px 8px rgba(34, 34, 34, 0.04);
+}
+
+.shadow-washi-lg {
+  box-shadow:
+    0 2px 4px rgba(34, 34, 34, 0.04),
+    0 4px 8px rgba(34, 34, 34, 0.04),
+    0 8px 16px rgba(34, 34, 34, 0.06),
+    0 16px 32px rgba(34, 34, 34, 0.04);
+}
+
+/* 和風ホバーエフェクト */
+.hover-washi {
+  transition: all 0.3s ease;
+}
+.hover-washi:hover {
+  background: linear-gradient(
+    135deg,
+    oklch(0.95 0.015 80) 0%,
+    oklch(0.93 0.02 75) 100%
+  );
+}
+
+/* 和風ボタンスタイル */
+.btn-washi {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.btn-washi::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+.btn-washi:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* 縦書きテキスト */
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+
+/* 和風区切り線 */
+.divider-bamboo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.divider-bamboo::before,
+.divider-bamboo::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* 墨で描いたような丸 */
+.ink-circle {
+  position: relative;
+}
+.ink-circle::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    var(--primary) 10%,
+    transparent 20%,
+    var(--primary) 30%,
+    transparent 40%,
+    var(--primary) 50%,
+    transparent 60%,
+    var(--primary) 70%,
+    transparent 80%,
+    var(--primary) 90%,
+    transparent 100%
+  );
+  opacity: 0.3;
+  animation: ink-rotate 20s linear infinite;
+}
+@keyframes ink-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.93 0.01 80);
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.70 0.03 70);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0.05 70);
+}
+
+/* 和風フォーカスリング */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* 和風セレクション */
+::selection {
+  background: oklch(0.42 0.08 155 / 0.25);
+  color: oklch(0.22 0.015 50);
+}
+
+/* カード和風装飾 */
+.card-washi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.card-washi::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--primary) 30%,
+    var(--primary) 70%,
+    transparent 100%
+  );
+  border-radius: 0 0 2px 2px;
+}
+
+/* 和風タグ */
+.tag-washi {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  background: linear-gradient(135deg, oklch(0.93 0.02 80) 0%, oklch(0.90 0.025 75) 100%);
+  border: 1px solid oklch(0.85 0.02 75);
+  border-radius: 2px;
+  color: oklch(0.35 0.03 50);
+  transition: all 0.2s ease;
+}
+.tag-washi:hover {
+  background: linear-gradient(135deg, oklch(0.90 0.025 75) 0%, oklch(0.87 0.03 70) 100%);
+  border-color: var(--primary);
+}
+
+/* 入力フィールド和風スタイル */
+.input-washi {
+  background: oklch(0.99 0.004 90);
+  border: 1px solid oklch(0.85 0.02 75);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+.input-washi:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px oklch(0.42 0.08 155 / 0.1);
+}
+
+/* アバター和風 */
+.avatar-washi {
+  border: 2px solid oklch(0.85 0.02 75);
+  box-shadow: 0 2px 4px rgba(34, 34, 34, 0.08);
+}
+
+/* 和風アニメーション */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out;
+}
+
+/* 和風ローディング */
+@keyframes brush-stroke {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* 印鑑風装飾 */
+.hanko {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid var(--aka);
+  border-radius: 50%;
+  color: var(--aka);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* 縁取り装飾 */
+.frame-washi {
+  border: 1px solid var(--border);
+  padding: 1px;
+  background: linear-gradient(135deg,
+    oklch(0.97 0.008 85) 0%,
+    oklch(0.93 0.015 80) 50%,
+    oklch(0.97 0.008 85) 100%
+  );
+}
+.frame-washi > * {
+  background: var(--card);
 }

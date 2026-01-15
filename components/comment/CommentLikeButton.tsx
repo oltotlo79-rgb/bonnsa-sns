@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Heart } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { toggleCommentLike } from '@/lib/actions/like'
 
@@ -21,6 +22,13 @@ export function CommentLikeButton({
   const [liked, setLiked] = useState(initialLiked)
   const [count, setCount] = useState(initialCount)
   const [isPending, startTransition] = useTransition()
+  const queryClient = useQueryClient()
+
+  // propsが更新されたら状態を同期
+  useEffect(() => {
+    setLiked(initialLiked)
+    setCount(initialCount)
+  }, [initialLiked, initialCount])
 
   async function handleToggle() {
     // Optimistic UI
@@ -35,6 +43,9 @@ export function CommentLikeButton({
         // ロールバック
         setLiked(liked)
         setCount(initialCount)
+      } else {
+        // React Queryのキャッシュを無効化
+        queryClient.invalidateQueries({ queryKey: ['timeline'] })
       }
     })
   }
