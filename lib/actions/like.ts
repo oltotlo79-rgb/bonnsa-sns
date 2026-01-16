@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { recordLikeReceived } from './analytics'
 
 // 投稿いいねトグル
 export async function togglePostLike(postId: string) {
@@ -53,6 +54,9 @@ export async function togglePostLike(postId: string) {
           postId,
         },
       })
+
+      // いいね受信を記録
+      recordLikeReceived(post.userId).catch(() => {})
     }
 
     revalidatePath('/feed')

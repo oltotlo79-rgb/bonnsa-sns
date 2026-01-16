@@ -1,15 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Docker用のstandalone出力を有効化
-  output: 'standalone',
+  // Vercelではstandalone出力は不要（Dockerを使う場合はコメントを解除）
+  // output: 'standalone',
 
   images: {
     remotePatterns: [
-      // Azure Blob Storage
+      // Azure Blob Storage（後方互換性のため残す）
       {
         protocol: 'https',
         hostname: '*.blob.core.windows.net',
+      },
+      // Cloudflare R2
+      {
+        protocol: 'https',
+        hostname: '*.r2.dev',
       },
       // Unsplash (ランディングページ用)
       {

@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import { auth } from '@/lib/auth'
 import { getPost } from '@/lib/actions/post'
 import { getComments, getCommentCount } from '@/lib/actions/comment'
+import { recordPostView } from '@/lib/actions/analytics'
 import { PostCard } from '@/components/post/PostCard'
 import { CommentThread } from '@/components/comment'
 import Link from 'next/link'
@@ -71,6 +72,12 @@ export default async function PostDetailPage({ params }: Props) {
   }
 
   const post = postResult.post
+
+  // 投稿閲覧を記録（自分以外の投稿を見た場合）
+  if (session?.user?.id && post.user.id !== session.user.id) {
+    // バックグラウンドで記録（レスポンスをブロックしない）
+    recordPostView(post.user.id).catch(() => {})
+  }
 
   return (
     <div className="max-w-2xl mx-auto">

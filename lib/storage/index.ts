@@ -2,6 +2,7 @@
  * ストレージ抽象化レイヤー
  * 環境変数に応じて適切なプロバイダーを自動選択
  *
+ * - 本番環境 (STORAGE_PROVIDER=r2): Cloudflare R2（推奨）
  * - 本番環境 (STORAGE_PROVIDER=azure): Azure Blob Storage
  * - 開発環境 (STORAGE_PROVIDER=local または未設定): ローカルファイル保存
  */
@@ -165,6 +166,101 @@ class AzureBlobStorageProvider implements StorageProvider {
   }
 }
 
+// Cloudflare R2 Storage Provider（本番環境推奨・S3互換API）
+class CloudflareR2StorageProvider implements StorageProvider {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private s3Client: any = null
+  private bucket: string
+  private publicUrl: string
+  private initialized: boolean = false
+
+  constructor() {
+    this.bucket = process.env.R2_BUCKET_NAME || 'uploads'
+    this.publicUrl = process.env.R2_PUBLIC_URL || ''
+    console.log('Storage provider initialized: r2')
+  }
+
+  private async ensureInitialized() {
+    if (this.initialized) return
+
+    const { S3Client } = await import('@aws-sdk/client-s3')
+
+    const accountId = process.env.R2_ACCOUNT_ID
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+
+    if (!accountId || !accessKeyId || !secretAccessKey) {
+      throw new Error('Cloudflare R2 credentials not configured')
+    }
+
+    this.s3Client = new S3Client({
+      region: 'auto',
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId, secretAccessKey },
+    })
+
+    console.log('Cloudflare R2 bucket:', this.bucket)
+    this.initialized = true
+  }
+
+  async upload(file: Buffer, filename: string, contentType: string, folder: string): Promise<UploadResult> {
+    try {
+      await this.ensureInitialized()
+
+      const { PutObjectCommand } = await import('@aws-sdk/client-s3')
+
+      // ユニークなファイル名を生成
+      const ext = getExtension(contentType)
+      const uniqueName = `${folder}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: uniqueName,
+        Body: file,
+        ContentType: contentType,
+      })
+
+      await this.s3Client.send(command)
+
+      // 公開URLを生成
+      const url = this.publicUrl
+        ? `${this.publicUrl}/${uniqueName}`
+        : `https://${this.bucket}.${process.env.R2_ACCOUNT_ID}.r2.dev/${uniqueName}`
+
+      console.log('R2 upload success:', url)
+      return { success: true, url }
+    } catch (err) {
+      console.error('R2 upload error:', err)
+      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    }
+  }
+
+  async delete(url: string): Promise<DeleteResult> {
+    try {
+      await this.ensureInitialized()
+
+      const { DeleteObjectCommand } = await import('@aws-sdk/client-s3')
+
+      // URLからキーを取得
+      const urlObj = new URL(url)
+      const key = urlObj.pathname.startsWith('/') ? urlObj.pathname.slice(1) : urlObj.pathname
+
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      })
+
+      await this.s3Client.send(command)
+
+      console.log('R2 delete success:', url)
+      return { success: true }
+    } catch (err) {
+      console.error('R2 delete error:', err)
+      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    }
+  }
+}
+
 // プロバイダーのシングルトンインスタンス
 let storageProvider: StorageProvider | null = null
 
@@ -174,6 +270,9 @@ function getStorageProvider(): StorageProvider {
   const provider = process.env.STORAGE_PROVIDER || 'local'
 
   switch (provider) {
+    case 'r2':
+      storageProvider = new CloudflareR2StorageProvider()
+      break
     case 'azure':
       storageProvider = new AzureBlobStorageProvider()
       break

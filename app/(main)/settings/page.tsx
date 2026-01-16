@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ThemeSelect } from '@/components/theme/ThemeToggle'
 
 function ChevronRightIcon({ className }: { className?: string }) {
   return (
@@ -47,7 +48,7 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-card rounded-lg border">
         <h1 className="px-4 py-3 font-bold text-lg border-b">設定</h1>
 
@@ -68,6 +69,14 @@ export default function SettingsPage() {
               <ChevronRightIcon className="w-5 h-5 text-muted-foreground" />
             </Link>
           ))}
+        </div>
+      </div>
+
+      {/* 表示設定 */}
+      <div className="bg-card rounded-lg border">
+        <h2 className="px-4 py-3 font-bold border-b">表示設定</h2>
+        <div className="p-4">
+          <ThemeSelect />
         </div>
       </div>
     </div>

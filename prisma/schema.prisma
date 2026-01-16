@@ -119,6 +119,12 @@ model User {
   scheduledPosts ScheduledPost[]
   payments       Payment[]
 
+  // 下書き
+  draftPosts     DraftPost[]
+
+  // 盆栽
+  bonsais        Bonsai[]
+
   @@map("users")
 }
 
@@ -145,6 +151,7 @@ model Post {
   bookmarks   Bookmark[]
   notifications Notification[]
   scheduledPost ScheduledPost?
+  hashtags    PostHashtag[]
 
   @@index([userId])
   @@index([createdAt])
@@ -174,6 +181,7 @@ model Genre {
   postGenres          PostGenre[]
   shopGenres          ShopGenre[]
   scheduledPostGenres ScheduledPostGenre[]
+  draftPostGenres     DraftPostGenre[]
 
   @@map("genres")
 }
@@ -580,4 +588,129 @@ model ScheduledPostGenre {
 
   @@id([scheduledPostId, genreId])
   @@map("scheduled_post_genres")
+}
+
+// 下書き投稿
+model DraftPost {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  content   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media  DraftPostMedia[]
+  genres DraftPostGenre[]
+
+  @@index([userId])
+  @@map("draft_posts")
+}
+
+model DraftPostMedia {
+  id          String @id @default(cuid())
+  draftPostId String @map("draft_post_id")
+  url         String
+  type        String @default("image")
+  sortOrder   Int    @default(0) @map("sort_order")
+
+  draftPost DraftPost @relation(fields: [draftPostId], references: [id], onDelete: Cascade)
+
+  @@index([draftPostId])
+  @@map("draft_post_media")
+}
+
+model DraftPostGenre {
+  draftPostId String @map("draft_post_id")
+  genreId     String @map("genre_id")
+
+  draftPost DraftPost @relation(fields: [draftPostId], references: [id], onDelete: Cascade)
+  genre     Genre     @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([draftPostId, genreId])
+  @@map("draft_post_genres")
+}
+
+// ハッシュタグ
+model Hashtag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  count     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posts PostHashtag[]
+
+  @@index([count])
+  @@map("hashtags")
+}
+
+model PostHashtag {
+  postId    String @map("post_id")
+  hashtagId String @map("hashtag_id")
+
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, hashtagId])
+  @@map("post_hashtags")
+}
+
+// 盆栽成長記録
+model Bonsai {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  species     String?
+  acquiredAt  DateTime? @map("acquired_at")
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records BonsaiRecord[]
+
+  @@index([userId])
+  @@map("bonsais")
+}
+
+model BonsaiRecord {
+  id        String   @id @default(cuid())
+  bonsaiId  String   @map("bonsai_id")
+  content   String?  @db.Text
+  recordAt  DateTime @default(now()) @map("record_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bonsai Bonsai             @relation(fields: [bonsaiId], references: [id], onDelete: Cascade)
+  images BonsaiRecordImage[]
+
+  @@index([bonsaiId])
+  @@index([recordAt])
+  @@map("bonsai_records")
+}
+
+model BonsaiRecordImage {
+  id       String @id @default(cuid())
+  recordId String @map("record_id")
+  url      String
+  sortOrder Int   @default(0) @map("sort_order")
+
+  record BonsaiRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@map("bonsai_record_images")
+}
+
+// ユーザーアナリティクス
+model UserAnalytics {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  date          DateTime @db.Date
+  profileViews  Int      @default(0) @map("profile_views")
+  postViews     Int      @default(0) @map("post_views")
+  likesReceived Int      @default(0) @map("likes_received")
+  newFollowers  Int      @default(0) @map("new_followers")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@map("user_analytics")
 }

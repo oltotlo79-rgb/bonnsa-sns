@@ -226,3 +226,202 @@ BON-LOG
     text,
   })
 }
+
+// サブスクリプション期限切れ間近通知メール
+export async function sendSubscriptionExpiringEmail(
+  email: string,
+  nickname: string,
+  expiresAt: Date
+): Promise<EmailResult> {
+  const daysRemaining = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const expirationDate = expiresAt.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+  const settingsUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'}/settings/subscription`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プレミアム会員の有効期限について</title>
+</head>
+<body style="font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #2d5016 0%, #4a7c23 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: #fff; margin: 0; font-size: 24px;">BON-LOG</h1>
+    <p style="color: #e8f5e9; margin: 10px 0 0 0; font-size: 14px;">盆栽愛好家のためのSNS</p>
+  </div>
+
+  <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
+    <h2 style="color: #2d5016; margin-top: 0;">${nickname}さん、プレミアム会員の有効期限が近づいています</h2>
+
+    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; color: #856404;">
+        <strong>有効期限: ${expirationDate}</strong><br>
+        残り<strong>${daysRemaining}日</strong>で有効期限が切れます。
+      </p>
+    </div>
+
+    <p>プレミアム会員が終了すると、以下の機能がご利用いただけなくなります：</p>
+
+    <ul style="color: #666;">
+      <li>予約投稿機能</li>
+      <li>拡張文字数（1000文字→500文字）</li>
+      <li>拡張画像添付（8枚→4枚）</li>
+      <li>詳細アナリティクス</li>
+      <li>広告非表示</li>
+    </ul>
+
+    <p>引き続きプレミアム機能をご利用いただくには、サブスクリプションを更新してください。</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${settingsUrl}" style="display: inline-block; background: #4a7c23; color: #fff; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold;">サブスクリプションを確認</a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+
+    <p style="color: #999; font-size: 12px;">
+      このメールは自動送信されています。ご不明な点がございましたら、サポートまでお問い合わせください。
+    </p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+    <p>このメールはBON-LOGから自動送信されています。</p>
+  </div>
+</body>
+</html>
+`
+
+  const text = `
+BON-LOG - プレミアム会員有効期限のお知らせ
+
+${nickname}さん
+
+プレミアム会員の有効期限が近づいています。
+
+有効期限: ${expirationDate}
+残り${daysRemaining}日で有効期限が切れます。
+
+プレミアム会員が終了すると、以下の機能がご利用いただけなくなります：
+- 予約投稿機能
+- 拡張文字数（1000文字→500文字）
+- 拡張画像添付（8枚→4枚）
+- 詳細アナリティクス
+- 広告非表示
+
+引き続きプレミアム機能をご利用いただくには、サブスクリプションを更新してください。
+
+サブスクリプションを確認: ${settingsUrl}
+
+---
+BON-LOG
+盆栽愛好家のためのSNS
+`
+
+  return sendEmail({
+    to: email,
+    subject: '【BON-LOG】プレミアム会員の有効期限が近づいています',
+    html,
+    text,
+  })
+}
+
+// サブスクリプション期限切れ通知メール
+export async function sendSubscriptionExpiredEmail(
+  email: string,
+  nickname: string
+): Promise<EmailResult> {
+  const settingsUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'}/settings/subscription`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プレミアム会員の有効期限が切れました</title>
+</head>
+<body style="font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #2d5016 0%, #4a7c23 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: #fff; margin: 0; font-size: 24px;">BON-LOG</h1>
+    <p style="color: #e8f5e9; margin: 10px 0 0 0; font-size: 14px;">盆栽愛好家のためのSNS</p>
+  </div>
+
+  <div style="background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
+    <h2 style="color: #2d5016; margin-top: 0;">${nickname}さん、プレミアム会員の有効期限が切れました</h2>
+
+    <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; color: #721c24;">
+        <strong>プレミアム会員の有効期限が切れました。</strong>
+      </p>
+    </div>
+
+    <p>プレミアム機能がご利用いただけなくなりました：</p>
+
+    <ul style="color: #666;">
+      <li>予約投稿は自動的にキャンセルされました</li>
+      <li>投稿文字数が500文字に制限されます</li>
+      <li>画像添付が4枚に制限されます</li>
+      <li>詳細アナリティクスはご利用いただけません</li>
+    </ul>
+
+    <p>引き続きプレミアム機能をご利用いただくには、サブスクリプションを再度お申し込みください。</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${settingsUrl}" style="display: inline-block; background: #4a7c23; color: #fff; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold;">プレミアムに再登録</a>
+    </div>
+
+    <p style="color: #666;">
+      BON-LOGをご利用いただきありがとうございます。<br>
+      無料会員でも引き続き基本機能をお楽しみいただけます。
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+
+    <p style="color: #999; font-size: 12px;">
+      このメールは自動送信されています。ご不明な点がございましたら、サポートまでお問い合わせください。
+    </p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+    <p>このメールはBON-LOGから自動送信されています。</p>
+  </div>
+</body>
+</html>
+`
+
+  const text = `
+BON-LOG - プレミアム会員有効期限切れのお知らせ
+
+${nickname}さん
+
+プレミアム会員の有効期限が切れました。
+
+プレミアム機能がご利用いただけなくなりました：
+- 予約投稿は自動的にキャンセルされました
+- 投稿文字数が500文字に制限されます
+- 画像添付が4枚に制限されます
+- 詳細アナリティクスはご利用いただけません
+
+引き続きプレミアム機能をご利用いただくには、サブスクリプションを再度お申し込みください。
+
+プレミアムに再登録: ${settingsUrl}
+
+BON-LOGをご利用いただきありがとうございます。
+無料会員でも引き続き基本機能をお楽しみいただけます。
+
+---
+BON-LOG
+盆栽愛好家のためのSNS
+`
+
+  return sendEmail({
+    to: email,
+    subject: '【BON-LOG】プレミアム会員の有効期限が切れました',
+    html,
+    text,
+  })
+}

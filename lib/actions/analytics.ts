@@ -340,3 +340,166 @@ export async function getAnalyticsDashboard(days = 30) {
     engagementTrend: 'error' in engagementTrend ? null : engagementTrend,
   }
 }
+
+// ===== UserAnalyticsモデル用関数 =====
+
+/**
+ * プロフィール閲覧を記録
+ */
+export async function recordProfileView(userId: string) {
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await prisma.userAnalytics.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: { profileViews: { increment: 1 } },
+      create: { userId, date: today, profileViews: 1 },
+    })
+  } catch (error) {
+    console.error('Record profile view error:', error)
+  }
+}
+
+/**
+ * 投稿閲覧を記録
+ */
+export async function recordPostView(userId: string) {
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await prisma.userAnalytics.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: { postViews: { increment: 1 } },
+      create: { userId, date: today, postViews: 1 },
+    })
+  } catch (error) {
+    console.error('Record post view error:', error)
+  }
+}
+
+/**
+ * いいね受信を記録
+ */
+export async function recordLikeReceived(userId: string) {
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await prisma.userAnalytics.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: { likesReceived: { increment: 1 } },
+      create: { userId, date: today, likesReceived: 1 },
+    })
+  } catch (error) {
+    console.error('Record like received error:', error)
+  }
+}
+
+/**
+ * フォロワー増加を記録
+ */
+export async function recordNewFollower(userId: string) {
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await prisma.userAnalytics.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: { newFollowers: { increment: 1 } },
+      create: { userId, date: today, newFollowers: 1 },
+    })
+  } catch (error) {
+    console.error('Record new follower error:', error)
+  }
+}
+
+/**
+ * 詳細アナリティクスデータ取得
+ */
+export async function getDetailedAnalytics(days: number = 30) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const isPremium = await isPremiumUser(session.user.id)
+  if (!isPremium) {
+    return { error: 'プレミアム会員限定機能です' }
+  }
+
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days)
+  startDate.setHours(0, 0, 0, 0)
+
+  const endDate = new Date()
+  endDate.setHours(23, 59, 59, 999)
+
+  try {
+    const analyticsData = await prisma.userAnalytics.findMany({
+      where: {
+        userId: session.user.id,
+        date: { gte: startDate, lte: endDate },
+      },
+      orderBy: { date: 'asc' },
+    })
+
+    // 集計
+    const totals = analyticsData.reduce(
+      (acc, data) => ({
+        profileViews: acc.profileViews + data.profileViews,
+        postViews: acc.postViews + data.postViews,
+        likesReceived: acc.likesReceived + data.likesReceived,
+        newFollowers: acc.newFollowers + data.newFollowers,
+      }),
+      { profileViews: 0, postViews: 0, likesReceived: 0, newFollowers: 0 }
+    )
+
+    // 日別データを配列に変換
+    const dailyData = analyticsData.map((data) => ({
+      date: data.date.toISOString().split('T')[0],
+      profileViews: data.profileViews,
+      postViews: data.postViews,
+      likesReceived: data.likesReceived,
+      newFollowers: data.newFollowers,
+    }))
+
+    return {
+      totals,
+      dailyData,
+      period: {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+        days,
+      },
+    }
+  } catch (error) {
+    console.error('Get detailed analytics error:', error)
+    return { error: '分析データの取得に失敗しました' }
+  }
+}
+
+/**
+ * 簡易統計（無料ユーザー向け）
+ */
+export async function getBasicStats() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const [postsCount, followersCount, followingCount, likesCount] = await Promise.all([
+    prisma.post.count({ where: { userId: session.user.id, isHidden: false } }),
+    prisma.follow.count({ where: { followingId: session.user.id } }),
+    prisma.follow.count({ where: { followerId: session.user.id } }),
+    prisma.like.count({
+      where: {
+        post: { userId: session.user.id },
+      },
+    }),
+  ])
+
+  return {
+    postsCount,
+    followersCount,
+    followingCount,
+    totalLikesReceived: likesCount,
+  }
+}

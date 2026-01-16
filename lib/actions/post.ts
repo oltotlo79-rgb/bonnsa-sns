@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { getMembershipLimits } from '@/lib/premium'
 import { sanitizePostContent } from '@/lib/sanitize'
+import { attachHashtagsToPost, detachHashtagsFromPost } from './hashtag'
+import { notifyMentionedUsers } from './mention'
 
 export async function createPost(formData: FormData) {
   const session = await auth()
@@ -80,6 +82,12 @@ export async function createPost(formData: FormData) {
     },
   })
 
+  // ハッシュタグを関連付け
+  await attachHashtagsToPost(post.id, content)
+
+  // メンションされたユーザーに通知
+  await notifyMentionedUsers(post.id, content, session.user.id)
+
   revalidatePath('/feed')
   return { success: true, postId: post.id }
 }
@@ -125,6 +133,12 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
       quotePostId,
     },
   })
+
+  // ハッシュタグを関連付け
+  await attachHashtagsToPost(post.id, content)
+
+  // メンションされたユーザーに通知
+  await notifyMentionedUsers(post.id, content, session.user.id)
 
   // 引用元投稿者へ通知
   const quotePost = await prisma.post.findUnique({
@@ -237,6 +251,9 @@ export async function deletePost(postId: string) {
   if (!post || post.userId !== session.user.id) {
     return { error: '削除権限がありません' }
   }
+
+  // ハッシュタグの関連付けを削除
+  await detachHashtagsFromPost(postId)
 
   await prisma.post.delete({ where: { id: postId } })
 

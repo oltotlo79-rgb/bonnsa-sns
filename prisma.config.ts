@@ -18,6 +18,8 @@ export default defineConfig({
     seed: 'npx tsx prisma/seed.ts',
   },
   datasource: {
-    url: process.env.DATABASE_URL,
+    // Prisma CLIはDIRECT_URLを使用（db push, migrate等のDDL操作用）
+    // DIRECT_URLが設定されていない場合はDATABASE_URLを使用
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
   },
 });

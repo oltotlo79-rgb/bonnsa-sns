@@ -1,27 +1,7 @@
-// シンプルなインメモリレート制限
-// 注意: 本番環境では Redis などの分散キャッシュを使用することを推奨
+// レート制限（Redis対応、インメモリフォールバック付き）
+// UPSTASH_REDIS_REST_URL と UPSTASH_REDIS_REST_TOKEN が設定されている場合は Redis を使用
 
-interface RateLimitEntry {
-  count: number
-  resetTime: number
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>()
-
-// 古いエントリをクリーンアップ（メモリリーク防止）
-const cleanupInterval = setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetTime < now) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 60000) // 1分ごとにクリーンアップ
-
-// Node.js終了時にクリーンアップ
-if (typeof process !== 'undefined') {
-  process.on('exit', () => clearInterval(cleanupInterval))
-}
+import { getRedisClient } from './redis'
 
 interface RateLimitOptions {
   windowMs: number      // 時間窓（ミリ秒）
@@ -34,44 +14,56 @@ interface RateLimitResult {
   resetTime: number
 }
 
-export function rateLimit(
+export async function rateLimit(
   identifier: string,
   options: RateLimitOptions
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const { windowMs, maxRequests } = options
-  const now = Date.now()
-  const key = identifier
+  const redis = getRedisClient()
+  const key = `ratelimit:${identifier}`
+  const windowSeconds = Math.ceil(windowMs / 1000)
 
-  const entry = rateLimitStore.get(key)
+  try {
+    // 現在のカウントを取得
+    const currentStr = await redis.get(key)
+    const ttl = await redis.ttl(key)
 
-  // 新しいエントリまたは期限切れの場合
-  if (!entry || entry.resetTime < now) {
-    rateLimitStore.set(key, {
-      count: 1,
-      resetTime: now + windowMs,
-    })
+    if (!currentStr || ttl < 0) {
+      // 新しいウィンドウを開始
+      await redis.set(key, '1', { ex: windowSeconds })
+      return {
+        success: true,
+        remaining: maxRequests - 1,
+        resetTime: Date.now() + windowMs,
+      }
+    }
+
+    const current = parseInt(currentStr, 10)
+
+    if (current >= maxRequests) {
+      // 制限超過
+      return {
+        success: false,
+        remaining: 0,
+        resetTime: Date.now() + ttl * 1000,
+      }
+    }
+
+    // カウントを増加
+    const newCount = await redis.incr(key)
     return {
       success: true,
-      remaining: maxRequests - 1,
-      resetTime: now + windowMs,
+      remaining: Math.max(0, maxRequests - newCount),
+      resetTime: Date.now() + ttl * 1000,
     }
-  }
-
-  // 制限内の場合
-  if (entry.count < maxRequests) {
-    entry.count++
+  } catch (error) {
+    console.error('Rate limit error:', error)
+    // Redis エラー時は許可（フェイルオープン）
     return {
       success: true,
-      remaining: maxRequests - entry.count,
-      resetTime: entry.resetTime,
+      remaining: maxRequests,
+      resetTime: Date.now() + windowMs,
     }
-  }
-
-  // 制限超過
-  return {
-    success: false,
-    remaining: 0,
-    resetTime: entry.resetTime,
   }
 }
 
@@ -120,11 +112,11 @@ export function getClientIp(request: Request): string {
 }
 
 // レート制限チェック用ヘルパー
-export function checkRateLimit(
+export async function checkRateLimit(
   request: Request,
   limitType: keyof typeof RATE_LIMITS,
   additionalKey?: string
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const ip = getClientIp(request)
   const key = additionalKey ? `${limitType}:${ip}:${additionalKey}` : `${limitType}:${ip}`
   return rateLimit(key, RATE_LIMITS[limitType])

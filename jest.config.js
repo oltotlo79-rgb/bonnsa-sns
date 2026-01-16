@@ -47,9 +47,9 @@ const customJestConfig = {
   // テストタイムアウト
   testTimeout: 10000,
 
-  // 変換対象外
+  // 変換対象外（ESMモジュールを除外しない）
   transformIgnorePatterns: [
-    '/node_modules/',
+    '/node_modules/(?!(isomorphic-dompurify|dompurify|@panva|jose|nanoid|uuid)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
 

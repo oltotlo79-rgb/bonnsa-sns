@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
+import { recordNewFollower } from './analytics'
 
 // フォロートグル
 export async function toggleFollow(userId: string) {
@@ -53,6 +54,9 @@ export async function toggleFollow(userId: string) {
         type: 'follow',
       },
     })
+
+    // フォロワー増加を記録
+    recordNewFollower(userId).catch(() => {})
 
     return { success: true, following: true }
   }

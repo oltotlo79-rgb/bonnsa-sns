@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { isPremiumUser } from '@/lib/premium'
+import { recordProfileView } from '@/lib/actions/analytics'
 import { ProfileHeader } from '@/components/user/ProfileHeader'
 import { PostCard } from '@/components/post/PostCard'
 
@@ -83,6 +84,12 @@ export default async function UserProfilePage({ params }: Props) {
   }
 
   const isOwner = session?.user?.id === user.id
+
+  // プロフィール閲覧を記録（自分以外のプロフィールを見た場合）
+  if (!isOwner && session?.user?.id) {
+    // バックグラウンドで記録（レスポンスをブロックしない）
+    recordProfileView(id).catch(() => {})
+  }
 
   // プレミアム会員状態を取得
   const isPremium = await isPremiumUser(id)

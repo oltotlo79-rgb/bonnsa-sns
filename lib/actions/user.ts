@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { uploadFile } from '@/lib/storage'
 
 const profileSchema = z.object({
   nickname: z.string().min(1, 'ニックネームは必須です').max(50, 'ニックネームは50文字以内で入力してください'),
@@ -136,18 +137,22 @@ export async function uploadAvatar(formData: FormData) {
     return { error: 'JPEG、PNG、WebP形式のみ対応しています' }
   }
 
-  // TODO: Azure Blob Storageへのアップロード実装
-  // 開発環境では仮のURLを返す
-  const publicUrl = `/uploads/avatars/${session.user.id}-${Date.now()}.${file.type.split('/')[1]}`
+  // ストレージにアップロード（環境に応じてローカル or Azure Blob Storage）
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const result = await uploadFile(buffer, file.name, file.type, 'avatars')
+
+  if (!result.success || !result.url) {
+    return { error: result.error || 'アップロードに失敗しました' }
+  }
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { avatarUrl: publicUrl },
+    data: { avatarUrl: result.url },
   })
 
   revalidatePath(`/users/${session.user.id}`)
   revalidatePath('/settings/profile')
-  return { success: true, url: publicUrl }
+  return { success: true, url: result.url }
 }
 
 export async function uploadHeader(formData: FormData) {
@@ -172,17 +177,22 @@ export async function uploadHeader(formData: FormData) {
     return { error: 'JPEG、PNG、WebP形式のみ対応しています' }
   }
 
-  // TODO: Azure Blob Storageへのアップロード実装
-  const publicUrl = `/uploads/headers/${session.user.id}-${Date.now()}.${file.type.split('/')[1]}`
+  // ストレージにアップロード（環境に応じてローカル or Azure Blob Storage）
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const result = await uploadFile(buffer, file.name, file.type, 'headers')
+
+  if (!result.success || !result.url) {
+    return { error: result.error || 'アップロードに失敗しました' }
+  }
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { headerUrl: publicUrl },
+    data: { headerUrl: result.url },
   })
 
   revalidatePath(`/users/${session.user.id}`)
   revalidatePath('/settings/profile')
-  return { success: true, url: publicUrl }
+  return { success: true, url: result.url }
 }
 
 export async function deleteAccount() {

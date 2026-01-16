@@ -36,7 +36,7 @@ async function getClientIp(): Promise<string> {
 export async function checkLoginAllowed(email: string) {
   const ip = await getClientIp()
   const key = getLoginKey(ip, sanitizeInput(email))
-  const result = checkLoginAttempt(key)
+  const result = await checkLoginAttempt(key)
 
   return {
     allowed: result.allowed,
@@ -50,7 +50,7 @@ export async function recordLoginFailure(email: string) {
   const ip = await getClientIp()
   const sanitizedEmail = sanitizeInput(email)
   const key = getLoginKey(ip, sanitizedEmail)
-  const result = recordFailedLogin(key)
+  const result = await recordFailedLogin(key)
 
   // セキュリティログに記録
   logLoginFailure(sanitizedEmail, ip, 'invalid_credentials')
@@ -70,7 +70,7 @@ export async function recordLoginFailure(email: string) {
 export async function clearLoginAttempts(email: string) {
   const ip = await getClientIp()
   const key = getLoginKey(ip, sanitizeInput(email))
-  resetLoginAttempts(key)
+  await resetLoginAttempts(key)
 }
 
 export async function registerUser(data: {
