@@ -67,8 +67,8 @@ export default async function EditScheduledPostPage({
     id: scheduledPost.id,
     content: scheduledPost.content,
     scheduledAt: scheduledPost.scheduledAt,
-    genreIds: scheduledPost.genres.map(g => g.genreId),
-    media: scheduledPost.media.map(m => ({ url: m.url, type: m.type })),
+    genreIds: scheduledPost.genres.map((g: { genreId: string }) => g.genreId),
+    media: scheduledPost.media.map((m: { url: string; type: string }) => ({ url: m.url, type: m.type })),
   }
 
   return (
