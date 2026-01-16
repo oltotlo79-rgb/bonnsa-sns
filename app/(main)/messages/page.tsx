@@ -6,6 +6,20 @@ import { getConversations } from '@/lib/actions/message'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
+type Conversation = {
+  id: string
+  updatedAt: Date
+  otherUser?: {
+    id: string
+    nickname: string | null
+    avatarUrl: string | null
+  } | null
+  lastMessage?: {
+    content: string
+  } | null
+  hasUnread: boolean
+}
+
 function MessageSquareIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -49,7 +63,7 @@ export default async function MessagesPage() {
           </div>
         ) : (
           <div className="divide-y">
-            {conversations.map((conversation) => (
+            {conversations.map((conversation: Conversation) => (
               <Link
                 key={conversation.id}
                 href={`/messages/${conversation.id}`}
