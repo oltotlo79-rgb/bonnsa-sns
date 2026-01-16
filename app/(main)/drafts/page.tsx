@@ -4,6 +4,15 @@ import { getDrafts } from '@/lib/actions/draft'
 import Link from 'next/link'
 import { DraftCard } from '@/components/draft/DraftCard'
 
+type Draft = {
+  id: string
+  content: string | null
+  createdAt: Date
+  updatedAt: Date
+  media: { id: string; url: string; type: string }[]
+  genres: { genreId: string; genre: { id: string; name: string } }[]
+}
+
 export const metadata = {
   title: '下書き - BON-LOG',
   description: 'あなたの下書き一覧',
@@ -80,7 +89,7 @@ export default async function DraftsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {drafts.map((draft) => (
+          {drafts.map((draft: Draft) => (
             <DraftCard key={draft.id} draft={draft} />
           ))}
         </div>
