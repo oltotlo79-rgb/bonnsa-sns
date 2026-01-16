@@ -477,7 +477,8 @@ export async function getGenres() {
   })
 
   // カテゴリごとにグループ化
-  const groupedMap = genres.reduce<Record<string, typeof genres>>((acc, genre) => {
+  type GenreType = typeof genres[number]
+  const groupedMap = genres.reduce((acc: Record<string, GenreType[]>, genre: GenreType) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }

@@ -81,7 +81,7 @@ export function ShopSearchForm({
   }
 
   // ジャンルをカテゴリごとにグループ化
-  const groupedGenres = genres.reduce<Record<string, Genre[]>>((acc, g) => {
+  const groupedGenres = genres.reduce((acc: Record<string, Genre[]>, g: Genre) => {
     if (!acc[g.category]) {
       acc[g.category] = []
     }

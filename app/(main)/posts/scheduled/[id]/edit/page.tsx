@@ -15,7 +15,8 @@ async function getGenres() {
     orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
   })
 
-  return genres.reduce<Record<string, typeof genres>>((acc, genre) => {
+  type GenreType = typeof genres[number]
+  return genres.reduce((acc: Record<string, GenreType[]>, genre: GenreType) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }

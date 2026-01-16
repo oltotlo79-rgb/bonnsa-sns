@@ -328,7 +328,7 @@ export async function getReportStats() {
       resolved,
       dismissed,
       total: pending + reviewed + resolved + dismissed,
-      byType: byType.reduce<Record<string, number>>((acc, item) => {
+      byType: byType.reduce((acc: Record<string, number>, item: { targetType: string; _count: number }) => {
         acc[item.targetType] = item._count
         return acc
       }, {}),
