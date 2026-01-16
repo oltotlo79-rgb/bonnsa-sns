@@ -15,13 +15,13 @@ async function getGenres() {
     orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
   })
 
-  return genres.reduce((acc, genre) => {
+  return genres.reduce<Record<string, typeof genres>>((acc, genre) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }
     acc[genre.category].push(genre)
     return acc
-  }, {} as Record<string, typeof genres>)
+  }, {})
 }
 
 export default async function NewScheduledPostPage() {

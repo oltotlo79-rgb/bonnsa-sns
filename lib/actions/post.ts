@@ -477,13 +477,13 @@ export async function getGenres() {
   })
 
   // カテゴリごとにグループ化
-  const groupedMap = genres.reduce((acc, genre) => {
+  const groupedMap = genres.reduce<Record<string, typeof genres>>((acc, genre) => {
     if (!acc[genre.category]) {
       acc[genre.category] = []
     }
     acc[genre.category].push(genre)
     return acc
-  }, {} as Record<string, typeof genres>)
+  }, {})
 
   // カテゴリの表示順序を定義
   const categoryOrder = ['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント', 'その他']

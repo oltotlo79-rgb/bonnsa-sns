@@ -81,13 +81,13 @@ export function ShopSearchForm({
   }
 
   // ジャンルをカテゴリごとにグループ化
-  const groupedGenres = genres.reduce((acc, g) => {
+  const groupedGenres = genres.reduce<Record<string, Genre[]>>((acc, g) => {
     if (!acc[g.category]) {
       acc[g.category] = []
     }
     acc[g.category].push(g)
     return acc
-  }, {} as Record<string, Genre[]>)
+  }, {})
 
   return (
     <div className="bg-card rounded-lg border p-4 space-y-4">
