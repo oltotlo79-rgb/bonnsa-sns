@@ -128,7 +128,7 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
   }
 
   const shop = result.shop
-  const hasReviewed = shop.reviews.some((r) => r.user.id === session?.user?.id)
+  const hasReviewed = shop.reviews.some((r: { user: { id: string } }) => r.user.id === session?.user?.id)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
 
   return (
@@ -235,7 +235,7 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
           <div className="mt-4">
             <p className="text-sm text-muted-foreground mb-2">取り扱いジャンル</p>
             <div className="flex flex-wrap gap-2">
-              {shop.genres.map((genre) => (
+              {shop.genres.map((genre: { id: string; name: string }) => (
                 <span
                   key={genre.id}
                   className="px-3 py-1 text-sm bg-muted rounded-full"
