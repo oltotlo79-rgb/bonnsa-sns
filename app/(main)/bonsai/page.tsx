@@ -4,6 +4,18 @@ import { getBonsais } from '@/lib/actions/bonsai'
 import Link from 'next/link'
 import Image from 'next/image'
 
+type BonsaiWithRecords = {
+  id: string
+  name: string
+  species: string | null
+  acquiredAt: Date | null
+  description: string | null
+  records?: {
+    images?: { url: string }[]
+  }[]
+  _count?: { records: number }
+}
+
 export const metadata = {
   title: 'マイ盆栽 - BON-LOG',
   description: 'あなたの盆栽コレクションを管理',
@@ -77,7 +89,7 @@ export default async function BonsaiListPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {bonsais.map((bonsai) => {
+          {bonsais.map((bonsai: BonsaiWithRecords) => {
             const latestRecord = bonsai.records?.[0]
             const latestImage = latestRecord?.images?.[0]?.url
 
