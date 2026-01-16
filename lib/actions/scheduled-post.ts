@@ -141,9 +141,9 @@ export async function getScheduledPosts() {
   })
 
   return {
-    scheduledPosts: scheduledPosts.map(sp => ({
+    scheduledPosts: scheduledPosts.map((sp: typeof scheduledPosts[number]) => ({
       ...sp,
-      genres: sp.genres.map(g => g.genre),
+      genres: sp.genres.map((g: { genre: typeof sp.genres[number]['genre'] }) => g.genre),
     })),
   }
 }
@@ -182,7 +182,7 @@ export async function getScheduledPost(id: string) {
   return {
     scheduledPost: {
       ...scheduledPost,
-      genres: scheduledPost.genres.map(g => g.genre),
+      genres: scheduledPost.genres.map((g: { genre: typeof scheduledPost.genres[number]['genre'] }) => g.genre),
     },
   }
 }

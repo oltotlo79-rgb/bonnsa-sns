@@ -90,7 +90,7 @@ export async function generateMetadata({ params }: ShopDetailPageProps): Promise
 
   const shop = result.shop
   const title = shop.name
-  const description = `${shop.address}にある盆栽園「${shop.name}」の情報。${shop.averageRating ? `評価: ${shop.averageRating.toFixed(1)}点` : ''}${shop.genres.length > 0 ? ` 取り扱い: ${shop.genres.map(g => g.name).join('、')}` : ''}`
+  const description = `${shop.address}にある盆栽園「${shop.name}」の情報。${shop.averageRating ? `評価: ${shop.averageRating.toFixed(1)}点` : ''}${shop.genres.length > 0 ? ` 取り扱い: ${shop.genres.map((g: { name: string }) => g.name).join('、')}` : ''}`
 
   return {
     title,
