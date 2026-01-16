@@ -53,6 +53,7 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -64,6 +65,12 @@ export function RegisterForm() {
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
     const nickname = formData.get('nickname') as string
+
+    if (!agreedToTerms) {
+      setError('利用規約とプライバシーポリシーに同意してください')
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('パスワードが一致しません')
@@ -193,11 +200,32 @@ export function RegisterForm() {
         </div>
       </div>
 
+      {/* 利用規約・プライバシーポリシー同意 */}
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          id="agreeTerms"
+          checked={agreedToTerms}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+        />
+        <label htmlFor="agreeTerms" className="text-sm text-muted-foreground">
+          <Link href="/terms" target="_blank" className="text-primary hover:underline">
+            利用規約
+          </Link>
+          および
+          <Link href="/privacy" target="_blank" className="text-primary hover:underline">
+            プライバシーポリシー
+          </Link>
+          に同意します
+        </label>
+      </div>
+
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading || !agreedToTerms}>
         {loading ? '登録中...' : '新規登録'}
       </Button>
 

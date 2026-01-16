@@ -6,13 +6,26 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Link from 'next/link'
 
-// デフォルトマーカーアイコンの修正（Leafletの既知のバグ対応）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+// カスタムピンアイコン（盆栽園用）
+const shopPinIcon = L.divIcon({
+  className: 'custom-pin-icon',
+  html: `
+    <svg width="32" height="44" viewBox="0 0 32 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 28 16 28s16-16 16-28c0-8.837-7.163-16-16-16z" fill="#16a34a"/>
+      <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 28 16 28s16-16 16-28c0-8.837-7.163-16-16-16z" fill="url(#paint0_linear)" fill-opacity="0.3"/>
+      <circle cx="16" cy="14" r="7" fill="white"/>
+      <path d="M16 10c-1.5 0-2.5 1-2.5 2 0 .5.2 1 .5 1.3-.8.4-1.5 1.2-1.5 2.2 0 1.4 1.3 2.5 3.5 2.5s3.5-1.1 3.5-2.5c0-1-.7-1.8-1.5-2.2.3-.3.5-.8.5-1.3 0-1-1-2-2.5-2z" fill="#16a34a"/>
+      <defs>
+        <linearGradient id="paint0_linear" x1="16" y1="0" x2="16" y2="44" gradientUnits="userSpaceOnUse">
+          <stop stop-color="white"/>
+          <stop offset="1" stop-color="white" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  `,
+  iconSize: [32, 44],
+  iconAnchor: [16, 44],
+  popupAnchor: [0, -44],
 })
 
 export interface Shop {
@@ -154,6 +167,7 @@ export function Map({ shops, center = [35.6762, 139.6503], zoom = 6 }: MapProps)
           <Marker
             key={shop.id}
             position={[shop.latitude!, shop.longitude!]}
+            icon={shopPinIcon}
           >
             <Popup>
               <div className="min-w-[180px]">

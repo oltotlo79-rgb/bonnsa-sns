@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Metadata } from 'next'
 import { auth } from '@/lib/auth'
 import { getPost } from '@/lib/actions/post'
 import { getComments, getCommentCount } from '@/lib/actions/comment'
@@ -10,19 +11,48 @@ type Props = {
   params: Promise<{ id: string }>
 }
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const result = await getPost(id)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
 
   if (result.error || !result.post) {
     return { title: '投稿が見つかりません' }
   }
 
-  const content = result.post.content || '投稿'
-  const truncated = content.length > 50 ? content.slice(0, 50) + '...' : content
+  const post = result.post
+  const content = post.content || '投稿'
+  const truncated = content.length > 100 ? content.slice(0, 100) + '...' : content
+  const title = `${post.user.nickname}さんの投稿`
+
+  // 投稿画像があればOG imageに使用
+  const ogImage = post.media?.[0]?.url || '/og-image.jpg'
 
   return {
-    title: `${result.post.user.nickname}: "${truncated}" - BON-LOG`,
+    title,
+    description: truncated,
+    openGraph: {
+      type: 'article',
+      title,
+      description: truncated,
+      url: `${baseUrl}/posts/${id}`,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+      publishedTime: post.createdAt?.toString(),
+      authors: [post.user.nickname],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: truncated,
+      images: [ogImage],
+    },
   }
 }
 

@@ -129,6 +129,7 @@ export async function searchPosts(
   // 従来のLIKE検索
   const posts = await prisma.post.findMany({
     where: {
+      isHidden: false, // 非表示投稿を除外
       AND: [
         query
           ? {
@@ -367,6 +368,7 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
   // ハッシュタグを含む投稿を検索
   const posts = await prisma.post.findMany({
     where: {
+      isHidden: false, // 非表示投稿を除外
       AND: [
         {
           content: {
@@ -453,6 +455,7 @@ export async function getPopularTags(limit = 10) {
 
   const posts = await prisma.post.findMany({
     where: {
+      isHidden: false, // 非表示投稿を除外
       createdAt: { gte: oneWeekAgo },
       content: {
         contains: '#',

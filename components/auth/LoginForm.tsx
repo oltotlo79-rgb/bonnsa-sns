@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
+import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -61,6 +62,14 @@ export function LoginForm() {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
+    // ログイン試行チェック
+    const checkResult = await checkLoginAllowed(email)
+    if (!checkResult.allowed) {
+      setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
+      setLoading(false)
+      return
+    }
+
     const result = await signIn('credentials', {
       email,
       password,
@@ -68,10 +77,19 @@ export function LoginForm() {
     })
 
     if (result?.error) {
-      setError('メールアドレスまたはパスワードが間違っています')
+      // ログイン失敗を記録
+      const failureResult = await recordLoginFailure(email)
+      if (failureResult.locked) {
+        setError(failureResult.message || 'アカウントが一時的にロックされました。しばらく待ってから再試行してください。')
+      } else {
+        setError(`メールアドレスまたはパスワードが間違っています${failureResult.remainingAttempts > 0 ? `（残り${failureResult.remainingAttempts}回）` : ''}`)
+      }
       setLoading(false)
       return
     }
+
+    // ログイン成功時にカウンターをリセット
+    await clearLoginAttempts(email)
 
     router.push('/feed')
     router.refresh()

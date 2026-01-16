@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import type { ReportReason, ReportTargetType, ReportStatus } from '@/lib/constants/report'
+import { AUTO_HIDE_THRESHOLD, TARGET_TYPE_LABELS } from '@/lib/constants/report'
 
 interface CreateReportParams {
   targetType: ReportTargetType
@@ -60,6 +61,15 @@ export async function createReport(params: CreateReportParams) {
       targetUserId = shop.createdBy
       break
     }
+    case 'review': {
+      const review = await prisma.shopReview.findUnique({
+        where: { id: targetId },
+        select: { userId: true },
+      })
+      if (!review) return { error: '対象が見つかりません' }
+      targetUserId = review.userId
+      break
+    }
     case 'user': {
       const user = await prisma.user.findUnique({
         where: { id: targetId },
@@ -100,7 +110,88 @@ export async function createReport(params: CreateReportParams) {
     },
   })
 
+  // 自動非表示チェック（同一コンテンツへの通報者数をカウント）
+  const reportCount = await prisma.report.count({
+    where: {
+      targetType,
+      targetId,
+    },
+  })
+
+  // しきい値に達したら自動非表示
+  if (reportCount >= AUTO_HIDE_THRESHOLD) {
+    await autoHideContent(targetType, targetId, reportCount)
+  }
+
   return { success: true }
+}
+
+// コンテンツを自動非表示にする
+async function autoHideContent(
+  targetType: ReportTargetType,
+  targetId: string,
+  reportCount: number
+) {
+  const now = new Date()
+
+  // コンテンツを非表示に更新
+  switch (targetType) {
+    case 'post':
+      await prisma.post.update({
+        where: { id: targetId },
+        data: { isHidden: true, hiddenAt: now },
+      })
+      break
+    case 'comment':
+      await prisma.comment.update({
+        where: { id: targetId },
+        data: { isHidden: true, hiddenAt: now },
+      })
+      break
+    case 'event':
+      await prisma.event.update({
+        where: { id: targetId },
+        data: { isHidden: true, hiddenAt: now },
+      })
+      break
+    case 'shop':
+      await prisma.bonsaiShop.update({
+        where: { id: targetId },
+        data: { isHidden: true, hiddenAt: now },
+      })
+      break
+    case 'review':
+      await prisma.shopReview.update({
+        where: { id: targetId },
+        data: { isHidden: true, hiddenAt: now },
+      })
+      break
+    case 'user':
+      // ユーザーの場合はアカウント停止
+      await prisma.user.update({
+        where: { id: targetId },
+        data: { isSuspended: true, suspendedAt: now },
+      })
+      break
+  }
+
+  // 該当する通報のステータスをauto_hiddenに更新
+  await prisma.report.updateMany({
+    where: { targetType, targetId, status: 'pending' },
+    data: { status: 'auto_hidden' },
+  })
+
+  // 管理者通知を作成
+  const label = TARGET_TYPE_LABELS[targetType]
+  await prisma.adminNotification.create({
+    data: {
+      type: 'auto_hidden',
+      targetType,
+      targetId,
+      message: `${label}が${reportCount}件の通報を受け自動非表示になりました`,
+      reportCount,
+    },
+  })
 }
 
 // 通報一覧取得（管理者用）

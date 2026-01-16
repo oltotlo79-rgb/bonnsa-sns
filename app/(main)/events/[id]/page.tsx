@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
+import { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { getEvent } from '@/lib/actions/event'
 import { DeleteEventButton } from './DeleteEventButton'
+import { EventJsonLd } from '@/components/seo/JsonLd'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -78,16 +80,44 @@ function EditIcon({ className }: { className?: string }) {
   )
 }
 
-export async function generateMetadata({ params }: EventDetailPageProps) {
+export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
   const result = await getEvent(id)
 
   if (result.error || !result.event) {
-    return { title: 'イベントが見つかりません - BON-LOG' }
+    return { title: 'イベントが見つかりません' }
   }
 
+  const event = result.event
+  const title = event.title
+  const startDateStr = format(new Date(event.startDate), 'yyyy年M月d日', { locale: ja })
+  const locationStr = [event.prefecture, event.city, event.venue].filter(Boolean).join(' ')
+  const description = `${startDateStr}開催${locationStr ? `（${locationStr}）` : ''}${event.description ? ` - ${event.description.slice(0, 100)}` : ''}`
+
   return {
-    title: `${result.event.title} - BON-LOG`,
+    title,
+    description,
+    openGraph: {
+      type: 'website',
+      title: `${title} - 盆栽イベント`,
+      description,
+      url: `${baseUrl}/events/${id}`,
+      images: [
+        {
+          url: '/og-image.jpg',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} - 盆栽イベント`,
+      description,
+      images: ['/og-image.jpg'],
+    },
   }
 }
 
@@ -114,7 +144,21 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     return format(new Date(date), 'yyyy年M月d日(E) HH:mm', { locale: ja })
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
+  const locationStr = [event.prefecture, event.city, event.venue].filter(Boolean).join(' ')
+
   return (
+    <>
+      <EventJsonLd
+        name={event.title}
+        startDate={new Date(event.startDate).toISOString()}
+        endDate={event.endDate ? new Date(event.endDate).toISOString() : undefined}
+        location={locationStr ? { name: event.venue || undefined, address: locationStr } : undefined}
+        description={event.description || undefined}
+        url={`${baseUrl}/events/${event.id}`}
+        organizer={event.organizer || undefined}
+        offers={event.admissionFee ? { price: event.admissionFee } : undefined}
+      />
     <div className="space-y-6">
       {/* 戻るボタン */}
       <Link
@@ -262,5 +306,6 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         </div>
       </div>
     </div>
+    </>
   )
 }

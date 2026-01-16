@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createReport } from '@/lib/actions/report'
-import { REPORT_REASONS, type ReportTargetType, type ReportReason } from '@/lib/constants/report'
+import { REPORT_REASONS, TARGET_TYPE_LABELS, type ReportTargetType, type ReportReason } from '@/lib/constants/report'
 
 interface ReportModalProps {
   targetType: ReportTargetType
@@ -26,14 +26,6 @@ function CheckCircleIcon({ className }: { className?: string }) {
       <path d="m9 12 2 2 4-4"/>
     </svg>
   )
-}
-
-const TARGET_TYPE_LABELS: Record<ReportTargetType, string> = {
-  post: '投稿',
-  comment: 'コメント',
-  event: 'イベント',
-  shop: '盆栽園',
-  user: 'ユーザー',
 }
 
 export function ReportModal({ targetType, targetId, onClose }: ReportModalProps) {

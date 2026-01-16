@@ -24,6 +24,8 @@ export default async function ProfileEditPage() {
       location: true,
       avatarUrl: true,
       headerUrl: true,
+      bonsaiStartYear: true,
+      bonsaiStartMonth: true,
     },
   })
 
@@ -39,6 +41,8 @@ export default async function ProfileEditPage() {
     location: user.location,
     avatar_url: user.avatarUrl,
     header_url: user.headerUrl,
+    bonsai_start_year: user.bonsaiStartYear,
+    bonsai_start_month: user.bonsaiStartMonth,
   }
 
   return (

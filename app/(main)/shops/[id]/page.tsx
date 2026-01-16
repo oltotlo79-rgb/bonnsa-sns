@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Metadata } from 'next'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { getShop } from '@/lib/actions/shop'
@@ -6,6 +7,7 @@ import { StarRatingDisplay } from '@/components/shop/StarRating'
 import { ReviewForm } from '@/components/shop/ReviewForm'
 import { ReviewList } from '@/components/shop/ReviewList'
 import { MapWrapperSmall } from '@/components/shop/MapWrapper'
+import { LocalBusinessJsonLd } from '@/components/seo/JsonLd'
 
 interface ShopDetailPageProps {
   params: Promise<{ id: string }>
@@ -77,16 +79,42 @@ function ArrowLeftIcon({ className }: { className?: string }) {
   )
 }
 
-export async function generateMetadata({ params }: ShopDetailPageProps) {
+export async function generateMetadata({ params }: ShopDetailPageProps): Promise<Metadata> {
   const { id } = await params
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
   const result = await getShop(id)
 
   if (result.error || !result.shop) {
-    return { title: '盆栽園が見つかりません - BON-LOG' }
+    return { title: '盆栽園が見つかりません' }
   }
 
+  const shop = result.shop
+  const title = shop.name
+  const description = `${shop.address}にある盆栽園「${shop.name}」の情報。${shop.averageRating ? `評価: ${shop.averageRating.toFixed(1)}点` : ''}${shop.genres.length > 0 ? ` 取り扱い: ${shop.genres.map(g => g.name).join('、')}` : ''}`
+
   return {
-    title: `${result.shop.name} - BON-LOG`,
+    title,
+    description,
+    openGraph: {
+      type: 'website',
+      title: `${title} - 盆栽園`,
+      description,
+      url: `${baseUrl}/shops/${id}`,
+      images: [
+        {
+          url: '/og-image.jpg',
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} - 盆栽園`,
+      description,
+      images: ['/og-image.jpg'],
+    },
   }
 }
 
@@ -101,8 +129,27 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
 
   const shop = result.shop
   const hasReviewed = shop.reviews.some((r) => r.user.id === session?.user?.id)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
 
   return (
+    <>
+      <LocalBusinessJsonLd
+        name={shop.name}
+        address={shop.address}
+        url={`${baseUrl}/shops/${shop.id}`}
+        telephone={shop.phone || undefined}
+        openingHours={shop.businessHours || undefined}
+        aggregateRating={
+          shop.averageRating !== null && shop.reviewCount > 0
+            ? { ratingValue: shop.averageRating, reviewCount: shop.reviewCount }
+            : undefined
+        }
+        geo={
+          shop.latitude !== null && shop.longitude !== null
+            ? { latitude: shop.latitude, longitude: shop.longitude }
+            : undefined
+        }
+      />
     <div className="space-y-6">
       {/* 戻るボタン */}
       <Link
@@ -252,5 +299,6 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
         />
       </div>
     </div>
+    </>
   )
 }

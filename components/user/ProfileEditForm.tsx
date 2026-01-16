@@ -18,6 +18,8 @@ type ProfileEditFormProps = {
     location: string | null
     avatar_url: string | null
     header_url: string | null
+    bonsai_start_year: number | null
+    bonsai_start_month: number | null
   }
 }
 
@@ -95,6 +97,40 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
             placeholder="自己紹介を入力..."
           />
           <p className="text-xs text-muted-foreground">最大200文字</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>盆栽を始めた時期（任意）</Label>
+          <div className="flex gap-2">
+            <select
+              name="bonsaiStartYear"
+              defaultValue={user.bonsai_start_year?.toString() || ''}
+              className="flex-1 h-10 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">年を選択</option>
+              {Array.from({ length: new Date().getFullYear() - 1949 }, (_, i) => {
+                const year = new Date().getFullYear() - i
+                return (
+                  <option key={year} value={year}>
+                    {year}年
+                  </option>
+                )
+              })}
+            </select>
+            <select
+              name="bonsaiStartMonth"
+              defaultValue={user.bonsai_start_month?.toString() || ''}
+              className="flex-1 h-10 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">月を選択</option>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}月
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">盆栽歴としてプロフィールに表示されます</p>
         </div>
 
         {error && (

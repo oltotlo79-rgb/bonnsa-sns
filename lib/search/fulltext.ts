@@ -126,7 +126,8 @@ export async function fulltextSearchPosts(
       postIds = await prisma.$queryRaw<{ id: string }[]>`
         SELECT p.id
         FROM posts p
-        WHERE p.content LIKE '%' || ${escapedQuery} || '%'
+        WHERE p.is_hidden = false
+        AND p.content LIKE '%' || ${escapedQuery} || '%'
         ${excludedUserIds.length > 0 ? Prisma.sql`AND p.user_id NOT IN (${Prisma.join(excludedUserIds)})` : Prisma.empty}
         ${genreIds.length > 0 ? Prisma.sql`
           AND EXISTS (
@@ -144,7 +145,8 @@ export async function fulltextSearchPosts(
       postIds = await prisma.$queryRaw<{ id: string }[]>`
         SELECT p.id
         FROM posts p
-        WHERE p.content % ${escapedQuery} OR p.content ILIKE '%' || ${escapedQuery} || '%'
+        WHERE p.is_hidden = false
+        AND (p.content % ${escapedQuery} OR p.content ILIKE '%' || ${escapedQuery} || '%')
         ${excludedUserIds.length > 0 ? Prisma.sql`AND p.user_id NOT IN (${Prisma.join(excludedUserIds)})` : Prisma.empty}
         ${genreIds.length > 0 ? Prisma.sql`
           AND EXISTS (
@@ -162,7 +164,8 @@ export async function fulltextSearchPosts(
       postIds = await prisma.$queryRaw<{ id: string }[]>`
         SELECT p.id
         FROM posts p
-        WHERE p.content ILIKE '%' || ${escapedQuery} || '%'
+        WHERE p.is_hidden = false
+        AND p.content ILIKE '%' || ${escapedQuery} || '%'
         ${excludedUserIds.length > 0 ? Prisma.sql`AND p.user_id NOT IN (${Prisma.join(excludedUserIds)})` : Prisma.empty}
         ${genreIds.length > 0 ? Prisma.sql`
           AND EXISTS (
@@ -201,7 +204,8 @@ async function fulltextSearchPostsWithLike(
   const postIds = await prisma.$queryRaw<{ id: string }[]>`
     SELECT p.id
     FROM posts p
-    WHERE p.content ILIKE '%' || ${escapedQuery} || '%'
+    WHERE p.is_hidden = false
+    AND p.content ILIKE '%' || ${escapedQuery} || '%'
     ${excludedUserIds.length > 0 ? Prisma.sql`AND p.user_id NOT IN (${Prisma.join(excludedUserIds)})` : Prisma.empty}
     ${genreIds.length > 0 ? Prisma.sql`
       AND EXISTS (

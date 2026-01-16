@@ -63,20 +63,22 @@ model PasswordResetToken {
 
 // ユーザー関連
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  password      String?   // パスワードハッシュ
-  nickname      String
-  avatarUrl     String?   @map("avatar_url")
-  headerUrl     String?   @map("header_url")
-  bio           String?
-  location      String?
-  isPublic      Boolean   @default(true) @map("is_public")
-  isSuspended   Boolean   @default(false) @map("is_suspended")
-  suspendedAt   DateTime? @map("suspended_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(cuid())
+  email            String    @unique
+  emailVerified    DateTime? @map("email_verified")
+  password         String?   // パスワードハッシュ
+  nickname         String
+  avatarUrl        String?   @map("avatar_url")
+  headerUrl        String?   @map("header_url")
+  bio              String?
+  location         String?
+  bonsaiStartYear  Int?      @map("bonsai_start_year")  // 盆栽を始めた年（任意）
+  bonsaiStartMonth Int?      @map("bonsai_start_month") // 盆栽を始めた月（任意）
+  isPublic         Boolean   @default(true) @map("is_public")
+  isSuspended      Boolean   @default(false) @map("is_suspended")
+  suspendedAt      DateTime? @map("suspended_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   // 有料会員
   isPremium            Boolean   @default(false) @map("is_premium")
@@ -122,12 +124,14 @@ model User {
 
 // 投稿関連
 model Post {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  content      String?  @db.Text
-  quotePostId  String?  @map("quote_post_id")
-  repostPostId String?  @map("repost_post_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  content      String?   @db.Text
+  quotePostId  String?   @map("quote_post_id")
+  repostPostId String?   @map("repost_post_id")
+  isHidden     Boolean   @default(false) @map("is_hidden")
+  hiddenAt     DateTime? @map("hidden_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   quotePost   Post?      @relation("QuotePost", fields: [quotePostId], references: [id], onDelete: SetNull)
@@ -144,6 +148,7 @@ model Post {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([isHidden])
   @@map("posts")
 }
 
@@ -163,6 +168,7 @@ model Genre {
   id        String   @id @default(cuid())
   name      String
   category  String
+  type      String   @default("post") // "post" or "shop"
   sortOrder Int      @default(0) @map("sort_order")
 
   postGenres          PostGenre[]
@@ -185,12 +191,14 @@ model PostGenre {
 
 // コメント
 model Comment {
-  id        String   @id @default(cuid())
-  postId    String   @map("post_id")
-  userId    String   @map("user_id")
-  parentId  String?  @map("parent_id")
-  content   String   @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String    @id @default(cuid())
+  postId    String    @map("post_id")
+  userId    String    @map("user_id")
+  parentId  String?   @map("parent_id")
+  content   String    @db.Text
+  isHidden  Boolean   @default(false) @map("is_hidden")
+  hiddenAt  DateTime? @map("hidden_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -313,23 +321,26 @@ model Notification {
 
 // 盆栽園
 model BonsaiShop {
-  id           String   @id @default(cuid())
-  name         String
-  address      String
-  latitude     Decimal? @db.Decimal(10, 7)
-  longitude    Decimal? @db.Decimal(10, 7)
-  phone        String?
-  website      String?
-  businessHours String? @map("business_hours")
-  closedDays   String?  @map("closed_days")
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String    @id @default(cuid())
+  name          String
+  address       String
+  latitude      Decimal?  @db.Decimal(10, 7)
+  longitude     Decimal?  @db.Decimal(10, 7)
+  phone         String?
+  website       String?
+  businessHours String?   @map("business_hours")
+  closedDays    String?   @map("closed_days")
+  isHidden      Boolean   @default(false) @map("is_hidden")
+  hiddenAt      DateTime? @map("hidden_at")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   creator User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   genres  ShopGenre[]
   reviews ShopReview[]
 
+  @@index([isHidden])
   @@map("bonsai_shops")
 }
 
@@ -345,17 +356,20 @@ model ShopGenre {
 }
 
 model ShopReview {
-  id        String   @id @default(cuid())
-  shopId    String   @map("shop_id")
-  userId    String   @map("user_id")
-  rating    Int      // 1-5
-  content   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String    @id @default(cuid())
+  shopId    String    @map("shop_id")
+  userId    String    @map("user_id")
+  rating    Int       // 1-5
+  content   String?   @db.Text
+  isHidden  Boolean   @default(false) @map("is_hidden")
+  hiddenAt  DateTime? @map("hidden_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   shop   BonsaiShop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
   user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images ShopReviewImage[]
 
+  @@index([isHidden])
   @@map("shop_reviews")
 }
 
@@ -371,25 +385,28 @@ model ShopReviewImage {
 
 // イベント
 model Event {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   title        String
-  description  String?  @db.Text
-  startDate    DateTime @map("start_date")
+  description  String?   @db.Text
+  startDate    DateTime  @map("start_date")
   endDate      DateTime? @map("end_date")
   prefecture   String?
   city         String?
   venue        String?
   organizer    String?
-  admissionFee String?  @map("admission_fee")
-  hasSales     Boolean  @default(false) @map("has_sales")
-  externalUrl  String?  @map("external_url")
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
+  admissionFee String?   @map("admission_fee")
+  hasSales     Boolean   @default(false) @map("has_sales")
+  externalUrl  String?   @map("external_url")
+  isHidden     Boolean   @default(false) @map("is_hidden")
+  hiddenAt     DateTime? @map("hidden_at")
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@index([startDate])
   @@index([prefecture])
+  @@index([isHidden])
   @@map("events")
 }
 
@@ -397,15 +414,17 @@ model Event {
 model Report {
   id          String   @id @default(cuid())
   reporterId  String   @map("reporter_id")
-  targetType  String   @map("target_type") // 'post', 'comment', 'event', 'shop', 'user'
+  targetType  String   @map("target_type") // 'post', 'comment', 'event', 'shop', 'review', 'user'
   targetId    String   @map("target_id")
   reason      String   // 'spam', 'inappropriate', 'harassment', 'copyright', 'other'
   description String?  @db.Text
-  status      String   @default("pending") // 'pending', 'reviewed', 'resolved'
+  status      String   @default("pending") // 'pending', 'reviewed', 'resolved', 'auto_hidden'
   createdAt   DateTime @default(now()) @map("created_at")
 
   reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 
+  @@index([targetType, targetId])
+  @@index([status])
   @@map("reports")
 }
 
@@ -433,6 +452,25 @@ model AdminLog {
   admin AdminUser @relation(fields: [adminId], references: [userId], onDelete: Cascade)
 
   @@map("admin_logs")
+}
+
+// 管理者通知（自動非表示など）
+model AdminNotification {
+  id          String   @id @default(cuid())
+  type        String   // 'auto_hidden', 'report_threshold', etc.
+  targetType  String   @map("target_type") // 'post', 'comment', 'event', 'shop', 'review'
+  targetId    String   @map("target_id")
+  message     String
+  reportCount Int      @map("report_count")
+  isRead      Boolean  @default(false) @map("is_read")
+  isResolved  Boolean  @default(false) @map("is_resolved")
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([isRead])
+  @@index([isResolved])
+  @@index([createdAt])
+  @@map("admin_notifications")
 }
 
 // ダイレクトメッセージ

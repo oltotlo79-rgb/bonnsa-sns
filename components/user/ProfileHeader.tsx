@@ -16,6 +16,8 @@ type ProfileHeaderProps = {
     headerUrl: string | null
     bio: string | null
     location: string | null
+    bonsaiStartYear: number | null
+    bonsaiStartMonth: number | null
     isPublic: boolean
     createdAt: string | Date
     postsCount: number
@@ -65,9 +67,47 @@ function CrownIcon({ className }: { className?: string }) {
   )
 }
 
+function SproutIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M7 20h10" />
+      <path d="M10 20c5.5-2.5.8-6.4 3-10" />
+      <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z" />
+      <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z" />
+    </svg>
+  )
+}
+
+// 盆栽歴を計算
+function calculateBonsaiExperience(startYear: number | null, startMonth: number | null): string | null {
+  if (!startYear) return null
+
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
+
+  const startMonthNum = startMonth || 1
+  let years = currentYear - startYear
+  let months = currentMonth - startMonthNum
+
+  if (months < 0) {
+    years -= 1
+    months += 12
+  }
+
+  if (years < 0) return null
+  if (years === 0) {
+    if (months === 0) return '1ヶ月未満'
+    return `${months}ヶ月`
+  }
+  if (months === 0) return `${years}年`
+  return `${years}年${months}ヶ月`
+}
+
 export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, isPremium }: ProfileHeaderProps) {
   const joinDate = new Date(user.createdAt)
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
+  const bonsaiExperience = calculateBonsaiExperience(user.bonsaiStartYear, user.bonsaiStartMonth)
 
   return (
     <div className="bg-card rounded-lg border">
@@ -161,6 +201,12 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, 
             <span className="flex items-center gap-1">
               <MapPinIcon className="w-4 h-4" />
               {user.location}
+            </span>
+          )}
+          {bonsaiExperience && (
+            <span className="flex items-center gap-1">
+              <SproutIcon className="w-4 h-4" />
+              盆栽歴 {bonsaiExperience}
             </span>
           )}
           <span className="flex items-center gap-1">

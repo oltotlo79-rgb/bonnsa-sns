@@ -9,6 +9,8 @@ const profileSchema = z.object({
   nickname: z.string().min(1, 'ニックネームは必須です').max(50, 'ニックネームは50文字以内で入力してください'),
   bio: z.string().max(200, '自己紹介は200文字以内で入力してください').optional(),
   location: z.string().max(100, '居住地域は100文字以内で入力してください').optional(),
+  bonsaiStartYear: z.number().int().min(1900).max(new Date().getFullYear()).nullable().optional(),
+  bonsaiStartMonth: z.number().int().min(1).max(12).nullable().optional(),
 })
 
 export async function getUser(userId: string) {
@@ -62,10 +64,18 @@ export async function updateProfile(formData: FormData) {
     return { error: '認証が必要です' }
   }
 
+  // 盆栽開始年月の処理
+  const bonsaiStartYearStr = formData.get('bonsaiStartYear') as string
+  const bonsaiStartMonthStr = formData.get('bonsaiStartMonth') as string
+  const bonsaiStartYear = bonsaiStartYearStr ? parseInt(bonsaiStartYearStr, 10) : null
+  const bonsaiStartMonth = bonsaiStartMonthStr ? parseInt(bonsaiStartMonthStr, 10) : null
+
   const result = profileSchema.safeParse({
     nickname: formData.get('nickname'),
     bio: formData.get('bio') || '',
     location: formData.get('location') || '',
+    bonsaiStartYear: isNaN(bonsaiStartYear as number) ? null : bonsaiStartYear,
+    bonsaiStartMonth: isNaN(bonsaiStartMonth as number) ? null : bonsaiStartMonth,
   })
 
   if (!result.success) {
@@ -78,6 +88,8 @@ export async function updateProfile(formData: FormData) {
       nickname: result.data.nickname,
       bio: result.data.bio || null,
       location: result.data.location || null,
+      bonsaiStartYear: result.data.bonsaiStartYear ?? null,
+      bonsaiStartMonth: result.data.bonsaiStartMonth ?? null,
     },
   })
 

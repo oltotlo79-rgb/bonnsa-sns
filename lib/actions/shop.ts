@@ -14,6 +14,7 @@ export async function getShops(options?: {
 
   const shops = await prisma.bonsaiShop.findMany({
     where: {
+      isHidden: false, // 非表示盆栽園を除外
       ...(search && {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
@@ -34,6 +35,7 @@ export async function getShops(options?: {
         include: { genre: true },
       },
       reviews: {
+        where: { isHidden: false }, // 非表示レビューを除外
         select: { rating: true },
       },
     },
@@ -82,7 +84,7 @@ export async function getShop(shopId: string) {
   const currentUserId = session?.user?.id
 
   const shop = await prisma.bonsaiShop.findUnique({
-    where: { id: shopId },
+    where: { id: shopId, isHidden: false },
     include: {
       creator: {
         select: { id: true, nickname: true, avatarUrl: true },
@@ -91,6 +93,7 @@ export async function getShop(shopId: string) {
         include: { genre: true },
       },
       reviews: {
+        where: { isHidden: false }, // 非表示レビューを除外
         include: {
           user: {
             select: { id: true, nickname: true, avatarUrl: true },
@@ -292,15 +295,17 @@ export async function deleteShop(shopId: string) {
   return { success: true }
 }
 
-// 住所から緯度経度を取得（Nominatim Geocoding）
+// 住所から緯度経度を取得（国土地理院API）
 export async function geocodeAddress(address: string) {
   try {
     const encodedAddress = encodeURIComponent(address)
+
+    // 国土地理院の住所検索API
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
+      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodedAddress}`,
       {
         headers: {
-          'User-Agent': 'BON-LOG/1.0',
+          'Accept': 'application/json',
         },
       }
     )
@@ -311,23 +316,80 @@ export async function geocodeAddress(address: string) {
 
     const data = await response.json()
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       return { error: '住所が見つかりませんでした' }
     }
 
+    // 国土地理院APIのレスポンス形式: [経度, 緯度]
+    const [longitude, latitude] = data[0].geometry.coordinates
+
     return {
-      latitude: parseFloat(data[0].lat),
-      longitude: parseFloat(data[0].lon),
-      displayName: data[0].display_name,
+      latitude: latitude,
+      longitude: longitude,
+      displayName: data[0].properties.title,
     }
   } catch {
     return { error: '住所の検索中にエラーが発生しました' }
   }
 }
 
+// 住所候補を検索（複数件返す）- 国土地理院API使用
+export async function searchAddressSuggestions(query: string) {
+  if (!query.trim() || query.length < 2) {
+    return { suggestions: [] }
+  }
+
+  try {
+    const encodedQuery = encodeURIComponent(query)
+
+    // 国土地理院の住所検索API
+    const response = await fetch(
+      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodedQuery}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      return { suggestions: [], originalQuery: query }
+    }
+
+    const data = await response.json()
+
+    if (!data || data.length === 0) {
+      return { suggestions: [], originalQuery: query }
+    }
+
+    // 最大5件の候補を返す
+    const suggestions = data.slice(0, 5).map((item: {
+      geometry: {
+        coordinates: [number, number] // [経度, 緯度]
+      }
+      properties: {
+        title: string
+      }
+    }) => {
+      const [longitude, latitude] = item.geometry.coordinates
+      return {
+        latitude: latitude,
+        longitude: longitude,
+        displayName: item.properties.title,
+        formattedAddress: item.properties.title,
+      }
+    })
+
+    return { suggestions, originalQuery: query }
+  } catch {
+    return { suggestions: [], originalQuery: query }
+  }
+}
+
 // 盆栽園のジャンル一覧を取得
 export async function getShopGenres() {
   const genres = await prisma.genre.findMany({
+    where: { type: 'shop' },
     orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
   })
 

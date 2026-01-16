@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { sanitizePostContent } from '@/lib/sanitize'
 
 // コメント作成
 export async function createComment(formData: FormData) {
@@ -13,12 +14,13 @@ export async function createComment(formData: FormData) {
 
   const postId = formData.get('postId') as string
   const parentId = formData.get('parentId') as string | null
-  const content = formData.get('content') as string
+  const rawContent = formData.get('content') as string
+  const content = sanitizePostContent(rawContent)
   const mediaUrls = formData.getAll('mediaUrls') as string[]
   const mediaTypes = formData.getAll('mediaTypes') as string[]
 
   // バリデーション
-  if ((!content || content.trim().length === 0) && mediaUrls.length === 0) {
+  if ((!content || content.length === 0) && mediaUrls.length === 0) {
     return { error: 'コメント内容またはメディアを入力してください' }
   }
 
@@ -159,6 +161,7 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
     where: {
       postId,
       parentId: null, // 親コメントのみ
+      isHidden: false, // 非表示コメントを除外
       // ブロックしているユーザーのコメントを除外
       ...(blockedUserIds.length > 0 && {
         userId: { notIn: blockedUserIds },
@@ -227,6 +230,7 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
   const replies = await prisma.comment.findMany({
     where: {
       parentId: commentId,
+      isHidden: false, // 非表示コメントを除外
       // ブロックしているユーザーの返信を除外
       ...(blockedUserIds.length > 0 && {
         userId: { notIn: blockedUserIds },
@@ -280,7 +284,7 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
 // コメント数取得
 export async function getCommentCount(postId: string) {
   const count = await prisma.comment.count({
-    where: { postId },
+    where: { postId, isHidden: false },
   })
 
   return { count }

@@ -41,6 +41,7 @@ export async function getEvents(options?: {
 
   const events = await prisma.event.findMany({
     where: {
+      isHidden: false, // 非表示イベントを除外
       ...(dateFilter && { startDate: dateFilter }),
       ...(prefectureFilter && { prefecture: { in: prefectureFilter } }),
     },
@@ -64,6 +65,7 @@ export async function getUpcomingEvents(limit = 10, region?: string) {
 
   const events = await prisma.event.findMany({
     where: {
+      isHidden: false, // 非表示イベントを除外
       startDate: { gte: today },
       ...(prefectures && { prefecture: { in: prefectures } }),
     },
@@ -86,6 +88,7 @@ export async function getEventsByMonth(year: number, month: number) {
 
   const events = await prisma.event.findMany({
     where: {
+      isHidden: false, // 非表示イベントを除外
       OR: [
         // 開始日が月内
         {
@@ -125,7 +128,7 @@ export async function getEvent(eventId: string) {
   const currentUserId = session?.user?.id
 
   const event = await prisma.event.findUnique({
-    where: { id: eventId },
+    where: { id: eventId, isHidden: false },
     include: {
       creator: {
         select: { id: true, nickname: true, avatarUrl: true },

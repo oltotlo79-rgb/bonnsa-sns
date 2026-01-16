@@ -3,7 +3,75 @@
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import { headers } from 'next/headers'
 import { sendPasswordResetEmail } from '@/lib/email'
+import {
+  checkLoginAttempt,
+  recordFailedLogin,
+  resetLoginAttempts,
+  getLoginKey,
+} from '@/lib/login-tracker'
+import { sanitizeInput } from '@/lib/sanitize'
+import {
+  logLoginFailure,
+  logLoginLockout,
+  logRegisterSuccess,
+  logPasswordResetRequest,
+  logPasswordResetSuccess,
+} from '@/lib/security-logger'
+
+// IPアドレス取得
+async function getClientIp(): Promise<string> {
+  const headersList = await headers()
+  const cfIp = headersList.get('cf-connecting-ip')
+  if (cfIp) return cfIp
+  const xForwardedFor = headersList.get('x-forwarded-for')
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim()
+  const xRealIp = headersList.get('x-real-ip')
+  if (xRealIp) return xRealIp
+  return 'unknown'
+}
+
+// ログイン前のチェック（レート制限）
+export async function checkLoginAllowed(email: string) {
+  const ip = await getClientIp()
+  const key = getLoginKey(ip, sanitizeInput(email))
+  const result = checkLoginAttempt(key)
+
+  return {
+    allowed: result.allowed,
+    message: result.message,
+    remainingAttempts: result.remainingAttempts,
+  }
+}
+
+// ログイン失敗を記録
+export async function recordLoginFailure(email: string) {
+  const ip = await getClientIp()
+  const sanitizedEmail = sanitizeInput(email)
+  const key = getLoginKey(ip, sanitizedEmail)
+  const result = recordFailedLogin(key)
+
+  // セキュリティログに記録
+  logLoginFailure(sanitizedEmail, ip, 'invalid_credentials')
+
+  if (!result.allowed) {
+    logLoginLockout(sanitizedEmail, ip)
+  }
+
+  return {
+    locked: !result.allowed,
+    message: result.message,
+    remainingAttempts: result.remainingAttempts,
+  }
+}
+
+// ログイン成功時のリセット
+export async function clearLoginAttempts(email: string) {
+  const ip = await getClientIp()
+  const key = getLoginKey(ip, sanitizeInput(email))
+  resetLoginAttempts(key)
+}
 
 export async function registerUser(data: {
   email: string
@@ -31,6 +99,10 @@ export async function registerUser(data: {
     },
   })
 
+  // セキュリティログに記録
+  const ip = await getClientIp()
+  logRegisterSuccess(user.id, ip)
+
   return { success: true, userId: user.id }
 }
 
@@ -38,6 +110,11 @@ export async function registerUser(data: {
  * パスワードリセットメール送信
  */
 export async function requestPasswordReset(email: string) {
+  const ip = await getClientIp()
+
+  // セキュリティログに記録
+  logPasswordResetRequest(email, ip)
+
   // ユーザーの存在確認（セキュリティのため、存在しなくても成功を返す）
   const user = await prisma.user.findUnique({
     where: { email },
@@ -143,6 +220,9 @@ export async function resetPassword(data: {
   await prisma.passwordResetToken.deleteMany({
     where: { email },
   })
+
+  // セキュリティログに記録
+  logPasswordResetSuccess(user.id)
 
   return { success: true }
 }

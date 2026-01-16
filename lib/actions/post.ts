@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { getMembershipLimits } from '@/lib/premium'
+import { sanitizePostContent } from '@/lib/sanitize'
 
 export async function createPost(formData: FormData) {
   const session = await auth()
@@ -11,7 +12,8 @@ export async function createPost(formData: FormData) {
     return { error: '認証が必要です' }
   }
 
-  const content = formData.get('content') as string
+  const rawContent = formData.get('content') as string
+  const content = sanitizePostContent(rawContent)
   const genreIds = formData.getAll('genreIds') as string[]
   const mediaUrls = formData.getAll('mediaUrls') as string[]
   const mediaTypes = formData.getAll('mediaTypes') as string[]
@@ -88,7 +90,8 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     return { error: '認証が必要です' }
   }
 
-  const content = formData.get('content') as string
+  const rawContent = formData.get('content') as string
+  const content = sanitizePostContent(rawContent)
 
   if (!content) {
     return { error: '引用コメントを入力してください' }
@@ -246,7 +249,7 @@ export async function getPost(postId: string) {
   const currentUserId = session?.user?.id
 
   const post = await prisma.post.findUnique({
-    where: { id: postId },
+    where: { id: postId, isHidden: false },
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
@@ -360,12 +363,15 @@ export async function getPosts(cursor?: string, limit = 20) {
   const excludedUserIds = [...blockedUserIds, ...mutedUserIds]
 
   const posts = await prisma.post.findMany({
-    where: currentUserId ? {
-      userId: {
-        in: userIdsToShow,
-        notIn: excludedUserIds.length > 0 ? excludedUserIds : undefined,
-      },
-    } : undefined,
+    where: {
+      isHidden: false,
+      ...(currentUserId && {
+        userId: {
+          in: userIdsToShow,
+          notIn: excludedUserIds.length > 0 ? excludedUserIds : undefined,
+        },
+      }),
+    },
     include: {
       user: {
         select: { id: true, nickname: true, avatarUrl: true },

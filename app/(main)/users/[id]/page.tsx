@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Metadata } from 'next'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { isPremiumUser } from '@/lib/premium'
@@ -9,16 +10,46 @@ type Props = {
   params: Promise<{ id: string }>
 }
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
 
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { nickname: true },
+    select: { nickname: true, bio: true, avatarUrl: true },
   })
 
+  if (!user) {
+    return { title: 'ユーザーが見つかりません' }
+  }
+
+  const title = `${user.nickname}さんのプロフィール`
+  const description = user.bio || `${user.nickname}さんのBON-LOGプロフィールページ`
+  const ogImage = user.avatarUrl || '/og-image.jpg'
+
   return {
-    title: user ? `${user.nickname} - BON-LOG` : 'ユーザーが見つかりません',
+    title,
+    description,
+    openGraph: {
+      type: 'profile',
+      title,
+      description,
+      url: `${baseUrl}/users/${id}`,
+      images: [
+        {
+          url: ogImage,
+          width: 400,
+          height: 400,
+          alt: `${user.nickname}のアバター`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [ogImage],
+    },
   }
 }
 
