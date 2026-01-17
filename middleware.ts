@@ -30,8 +30,8 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.jsのために必要
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.blob.core.windows.net https://images.unsplash.com https://*.tile.openstreetmap.org",
-    "connect-src 'self' https://*.blob.core.windows.net",
+    "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org",
+    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
