@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { deleteScheduledPost } from '@/lib/actions/scheduled-post'
 import { Calendar, Clock, Edit, Trash2, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
-import { ScheduledPostStatus } from '@prisma/client'
+
+type ScheduledPostStatus = 'pending' | 'published' | 'failed' | 'cancelled'
 
 type ScheduledPostCardProps = {
   post: {

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { ScheduledPostCard } from './ScheduledPostCard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScheduledPostStatus } from '@prisma/client'
+
+type ScheduledPostStatus = 'pending' | 'published' | 'failed' | 'cancelled'
 
 type ScheduledPost = {
   id: string
