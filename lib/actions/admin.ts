@@ -289,7 +289,7 @@ export async function getAdminPosts(options?: {
       select: { targetId: true },
       distinct: ['targetId'],
     })
-    reportedPostIds = reports.map((r) => r.targetId)
+    reportedPostIds = reports.map((r: typeof reports[number]) => r.targetId)
   }
 
   const where = {
