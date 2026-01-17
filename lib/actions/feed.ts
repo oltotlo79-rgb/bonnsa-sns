@@ -111,7 +111,7 @@ export async function getTimeline(cursor?: string, limit = 20) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id): id is string => id !== null))
+    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
     bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
   }
 

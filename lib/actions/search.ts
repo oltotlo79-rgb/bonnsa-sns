@@ -80,7 +80,7 @@ export async function searchPosts(
     // 元の順序を維持
     const posts = postIds
       .map(id => fetchedPosts.find(p => p.id === id))
-      .filter((p): p is NonNullable<typeof p> => p !== undefined)
+      .filter((p: typeof fetchedPosts[number] | undefined): p is typeof fetchedPosts[number] => p !== undefined)
 
     // 現在のユーザーがいいね/ブックマークしているかチェック
     let likedPostIds: Set<string> = new Set()
@@ -107,7 +107,7 @@ export async function searchPosts(
         }),
       ])
 
-      likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id): id is string => id !== null))
+      likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
       bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
     }
 
@@ -191,7 +191,7 @@ export async function searchPosts(
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id): id is string => id !== null))
+    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
     bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
   }
 
@@ -269,7 +269,7 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
     // 元の順序を維持
     const users = userIds
       .map(id => fetchedUsers.find(u => u.id === id))
-      .filter((u): u is NonNullable<typeof u> => u !== undefined)
+      .filter((u: typeof fetchedUsers[number] | undefined): u is typeof fetchedUsers[number] => u !== undefined)
 
     return {
       users: users.map((user) => ({
@@ -431,7 +431,7 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id): id is string => id !== null))
+    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
     bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
   }
 

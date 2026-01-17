@@ -196,7 +196,7 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
       },
       select: { commentId: true },
     })
-    likedCommentIds = new Set(userLikes.map(l => l.commentId).filter((id): id is string => id !== null))
+    likedCommentIds = new Set(userLikes.map(l => l.commentId).filter((id: string | null): id is string => id !== null))
   }
 
   const hasMore = comments.length === limit
@@ -265,7 +265,7 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
       },
       select: { commentId: true },
     })
-    likedReplyIds = new Set(userLikes.map(l => l.commentId).filter((id): id is string => id !== null))
+    likedReplyIds = new Set(userLikes.map(l => l.commentId).filter((id: string | null): id is string => id !== null))
   }
 
   const hasMore = replies.length === limit

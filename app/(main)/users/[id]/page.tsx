@@ -224,7 +224,7 @@ export default async function UserProfilePage({ params }: Props) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id): id is string => id !== null))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
     bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
@@ -255,7 +255,7 @@ export default async function UserProfilePage({ params }: Props) {
 
         {formattedPosts && formattedPosts.length > 0 ? (
           <div className="divide-y">
-            {formattedPosts.map((post) => (
+            {formattedPosts.map((post: typeof formattedPosts[number]) => (
               <PostCard
                 key={post.id}
                 post={post}
