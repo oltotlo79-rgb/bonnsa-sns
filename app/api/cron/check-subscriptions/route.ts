@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
     )
 
     const emailsSent = emailResults.filter(
-      (r) => r.status === 'fulfilled' && r.value.success
+      (r): r is PromiseFulfilledResult<{ success: boolean }> => r.status === 'fulfilled' && r.value.success
     ).length
     const emailsFailed = emailResults.filter(
-      (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+      (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !(r as PromiseFulfilledResult<{ success: boolean }>).value.success)
     ).length
 
     console.log(
@@ -147,10 +147,10 @@ export async function POST(request: NextRequest) {
     )
 
     const emailsSent = emailResults.filter(
-      (r) => r.status === 'fulfilled' && r.value.success
+      (r): r is PromiseFulfilledResult<{ success: boolean }> => r.status === 'fulfilled' && r.value.success
     ).length
     const emailsFailed = emailResults.filter(
-      (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+      (r) => r.status === 'rejected' || (r.status === 'fulfilled' && !(r as PromiseFulfilledResult<{ success: boolean }>).value.success)
     ).length
 
     // アプリ内通知を作成（期限切れ3日前に1回のみ）
