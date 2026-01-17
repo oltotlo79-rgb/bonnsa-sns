@@ -327,7 +327,7 @@ export async function getAdminPosts(options?: {
 
   // 通報件数を追加
   const postsWithReportCount = await Promise.all(
-    posts.map(async (post) => {
+    posts.map(async (post: typeof posts[number]) => {
       const reportCount = await prisma.report.count({
         where: { targetType: 'post', targetId: post.id },
       })
