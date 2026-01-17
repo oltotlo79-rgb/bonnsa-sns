@@ -30,7 +30,7 @@ export async function RightSidebar() {
         </h3>
         {recommendedUsers.length > 0 ? (
           <ul className="space-y-3">
-            {recommendedUsers.map((user) => (
+            {recommendedUsers.map((user: typeof recommendedUsers[number]) => (
               <li key={user.id}>
                 <Link
                   href={`/users/${user.id}`}
@@ -82,7 +82,7 @@ export async function RightSidebar() {
         </h3>
         {trendingGenres.length > 0 ? (
           <ul className="space-y-2">
-            {trendingGenres.map((genre, index) => (
+            {trendingGenres.map((genre: typeof trendingGenres[number], index: number) => (
               <li key={genre.id}>
                 <Link
                   href={`/search?genre=${genre.id}`}
