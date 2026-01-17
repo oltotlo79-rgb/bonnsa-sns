@@ -1,35 +1,57 @@
-import DOMPurify from 'isomorphic-dompurify'
+// サーバーサイド互換のサニタイズ関数
+// isomorphic-dompurifyはVercelで動作しないため、シンプルな実装を使用
 
-// テキストコンテンツのサニタイズ（HTMLタグを完全に除去）
-export function sanitizeText(input: string | null | undefined): string {
-  if (!input) return ''
+// HTMLタグを除去する関数
+function stripHtmlTags(input: string): string {
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // scriptタグを除去
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // styleタグを除去
+    .replace(/<[^>]+>/g, '') // 全てのHTMLタグを除去
+}
 
-  // DOMPurifyでHTMLを除去し、純粋なテキストのみを返す
-  const sanitized = DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [], // HTMLタグを全て除去
-    ALLOWED_ATTR: [], // 属性も全て除去
-  })
+// HTMLエンティティをデコード
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+}
 
-  // 追加の安全対策：特殊文字をエスケープ
-  return sanitized
+// 特殊文字をエスケープ
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
 }
 
+// テキストコンテンツのサニタイズ（HTMLタグを完全に除去）
+export function sanitizeText(input: string | null | undefined): string {
+  if (!input) return ''
+
+  // HTMLタグを除去
+  const stripped = stripHtmlTags(input)
+
+  // HTMLエンティティをデコード
+  const decoded = decodeHtmlEntities(stripped)
+
+  // 再度エスケープして安全なテキストに
+  return escapeHtml(decoded)
+}
+
 // 基本的なHTMLを許可するサニタイズ（リッチテキスト用）
+// 注意: サーバーサイドでは安全のためHTMLを除去
 export function sanitizeHtml(input: string | null | undefined): string {
   if (!input) return ''
 
-  return DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    ALLOW_DATA_ATTR: false,
-    ADD_ATTR: ['target'], // リンクにtarget属性を許可
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
-    FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover', 'onfocus', 'onblur'],
-  })
+  // サーバーサイドでは安全のためHTMLタグを除去
+  return stripHtmlTags(input)
 }
 
 // URLのサニタイズ
@@ -61,7 +83,7 @@ export function sanitizeNickname(input: string | null | undefined): string {
   if (!input) return ''
 
   // HTMLタグを除去
-  const withoutHtml = sanitizeText(input)
+  const withoutHtml = stripHtmlTags(input)
 
   // 制御文字を除去
   const withoutControl = withoutHtml.replace(/[\x00-\x1F\x7F]/g, '')
@@ -75,7 +97,7 @@ export function sanitizeSearchQuery(input: string | null | undefined): string {
   if (!input) return ''
 
   // HTMLタグを除去
-  const withoutHtml = sanitizeText(input)
+  const withoutHtml = stripHtmlTags(input)
 
   // SQLインジェクション対策（基本的なパターン）
   // 注: Prismaは既にパラメータ化クエリを使用しているため、これは追加の安全対策
@@ -105,11 +127,8 @@ export function sanitizeFilename(input: string | null | undefined): string {
 export function sanitizePostContent(input: string | null | undefined): string {
   if (!input) return ''
 
-  // HTMLタグを除去し、テキストのみを返す
-  const withoutHtml = DOMPurify.sanitize(input, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-  })
+  // HTMLタグを除去
+  const withoutHtml = stripHtmlTags(input)
 
   // 過度な改行を制限（連続3つ以上の改行を2つに）
   const normalizedNewlines = withoutHtml.replace(/\n{3,}/g, '\n\n')
@@ -123,7 +142,7 @@ export function sanitizeInput(input: string | null | undefined): string {
   if (!input) return ''
 
   // HTMLタグを除去
-  const withoutHtml = sanitizeText(input)
+  const withoutHtml = stripHtmlTags(input)
 
   // 制御文字を除去（改行・タブは許可）
   const withoutControl = withoutHtml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
