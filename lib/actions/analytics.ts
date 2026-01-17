@@ -456,7 +456,7 @@ export async function getDetailedAnalytics(days: number = 30) {
     )
 
     // 日別データを配列に変換
-    const dailyData = analyticsData.map((data) => ({
+    const dailyData = analyticsData.map((data: typeof analyticsData[number]) => ({
       date: data.date.toISOString().split('T')[0],
       profileViews: data.profileViews,
       postViews: data.postViews,
