@@ -1,7 +1,8 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
+
+type TransactionClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 import { auth } from '@/lib/auth'
 import { isPremiumUser, getMembershipLimits } from '@/lib/premium'
 import { revalidatePath } from 'next/cache'
@@ -264,7 +265,7 @@ export async function updateScheduledPost(id: string, formData: FormData) {
   }
 
   // トランザクションで更新
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  await prisma.$transaction(async (tx: TransactionClient) => {
     // 既存のメディアとジャンルを削除
     await tx.scheduledPostMedia.deleteMany({ where: { scheduledPostId: id } })
     await tx.scheduledPostGenre.deleteMany({ where: { scheduledPostId: id } })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
+
+type TransactionClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
 // Vercel Cron Job用 - 予約投稿の自動公開
 // cron: */5 * * * * (5分ごとに実行)
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
         }
 
         // トランザクションで投稿作成と予約投稿の更新を行う
-        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        await prisma.$transaction(async (tx: TransactionClient) => {
           // 投稿を作成
           const post = await tx.post.create({
             data: {
