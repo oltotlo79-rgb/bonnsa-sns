@@ -52,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     orderBy: { updatedAt: 'desc' },
   })
 
-  const userPages: MetadataRoute.Sitemap = users.map((user) => ({
+  const userPages: MetadataRoute.Sitemap = users.map((user: typeof users[number]) => ({
     url: `${baseUrl}/users/${user.id}`,
     lastModified: user.updatedAt,
     changeFrequency: 'weekly' as const,
@@ -70,7 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     orderBy: { createdAt: 'desc' },
   })
 
-  const postPages: MetadataRoute.Sitemap = posts.map((post) => ({
+  const postPages: MetadataRoute.Sitemap = posts.map((post: typeof posts[number]) => ({
     url: `${baseUrl}/posts/${post.id}`,
     lastModified: post.createdAt,
     changeFrequency: 'monthly' as const,
@@ -84,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     orderBy: { updatedAt: 'desc' },
   })
 
-  const shopPages: MetadataRoute.Sitemap = shops.map((shop) => ({
+  const shopPages: MetadataRoute.Sitemap = shops.map((shop: typeof shops[number]) => ({
     url: `${baseUrl}/shops/${shop.id}`,
     lastModified: shop.updatedAt,
     changeFrequency: 'weekly' as const,
@@ -104,7 +104,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     orderBy: { startDate: 'asc' },
   })
 
-  const eventPages: MetadataRoute.Sitemap = events.map((event) => ({
+  const eventPages: MetadataRoute.Sitemap = events.map((event: typeof events[number]) => ({
     url: `${baseUrl}/events/${event.id}`,
     lastModified: event.createdAt,
     changeFrequency: 'weekly' as const,
