@@ -48,7 +48,7 @@ export default async function UserLikesPage({ params }: Props) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const posts = likes.map((l) => l.post).filter(Boolean)
+  const posts = likes.map((l: typeof likes[number]) => l.post).filter(Boolean)
 
   return (
     <div className="max-w-2xl mx-auto">

@@ -204,7 +204,7 @@ export default async function UserProfilePage({ params }: Props) {
   let bookmarkedPostIds: Set<string> = new Set()
 
   if (currentUserId && posts.length > 0) {
-    const postIds = posts.map(p => p.id)
+    const postIds = posts.map((p: { id: string }) => p.id)
 
     const [userLikes, userBookmarks] = await Promise.all([
       prisma.like.findMany({
@@ -224,16 +224,16 @@ export default async function UserProfilePage({ params }: Props) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id): id is string => id !== null))
-    bookmarkedPostIds = new Set(userBookmarks.map(b => b.postId))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
   // 投稿データを整形
-  const formattedPosts = posts.map((post) => ({
+  const formattedPosts = posts.map((post: typeof posts[number]) => ({
     ...post,
     likeCount: post._count.likes,
     commentCount: post._count.comments,
-    genres: post.genres.map((pg) => pg.genre),
+    genres: post.genres.map((pg: { genre: typeof post.genres[number]['genre'] }) => pg.genre),
     isLiked: likedPostIds.has(post.id),
     isBookmarked: bookmarkedPostIds.has(post.id),
   }))

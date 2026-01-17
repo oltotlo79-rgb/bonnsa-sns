@@ -42,7 +42,7 @@ export default async function FollowersPage({ params }: Props) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const users = followers.map((f) => ({
+  const users = followers.map((f: typeof followers[number]) => ({
     ...f.follower,
     avatar_url: f.follower.avatarUrl,
   }))
