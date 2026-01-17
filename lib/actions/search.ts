@@ -32,9 +32,9 @@ export async function searchPosts(
       }),
     ])
     excludedUserIds = [
-      ...blocks.flatMap((b) => [b.blockerId, b.blockedId]),
-      ...mutes.map((m) => m.mutedId),
-    ].filter((id) => id !== currentUserId)
+      ...blocks.flatMap((b: typeof blocks[number]) => [b.blockerId, b.blockedId]),
+      ...mutes.map((m: typeof mutes[number]) => m.mutedId),
+    ].filter((id: string) => id !== currentUserId)
   }
 
   const searchMode = getSearchMode()
@@ -79,7 +79,7 @@ export async function searchPosts(
 
     // 元の順序を維持
     const posts = postIds
-      .map(id => fetchedPosts.find(p => p.id === id))
+      .map((id: string) => fetchedPosts.find((p: typeof fetchedPosts[number]) => p.id === id))
       .filter((p: typeof fetchedPosts[number] | undefined): p is typeof fetchedPosts[number] => p !== undefined)
 
     // 現在のユーザーがいいね/ブックマークしているかチェック
@@ -87,7 +87,7 @@ export async function searchPosts(
     let bookmarkedPostIds: Set<string> = new Set()
 
     if (currentUserId && posts.length > 0) {
-      const ids = posts.map((p) => p.id)
+      const ids = posts.map((p: typeof posts[number]) => p.id)
 
       const [userLikes, userBookmarks] = await Promise.all([
         prisma.like.findMany({
@@ -107,15 +107,15 @@ export async function searchPosts(
         }),
       ])
 
-      likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
-      bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+      likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
+      bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
     }
 
-    const formattedPosts = posts.map((post) => ({
+    const formattedPosts = posts.map((post: typeof posts[number]) => ({
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
-      genres: post.genres.map((pg) => pg.genre),
+      genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
       isLiked: likedPostIds.has(post.id),
       isBookmarked: bookmarkedPostIds.has(post.id),
     }))
@@ -171,7 +171,7 @@ export async function searchPosts(
   let bookmarkedPostIds: Set<string> = new Set()
 
   if (currentUserId && posts.length > 0) {
-    const postIds = posts.map((p) => p.id)
+    const postIds = posts.map((p: typeof posts[number]) => p.id)
 
     const [userLikes, userBookmarks] = await Promise.all([
       prisma.like.findMany({
@@ -191,15 +191,15 @@ export async function searchPosts(
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
-    bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
-  const formattedPosts = posts.map((post) => ({
+  const formattedPosts = posts.map((post: typeof posts[number]) => ({
     ...post,
     likeCount: post._count.likes,
     commentCount: post._count.comments,
-    genres: post.genres.map((pg) => pg.genre),
+    genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
     isLiked: likedPostIds.has(post.id),
     isBookmarked: bookmarkedPostIds.has(post.id),
   }))
@@ -227,8 +227,8 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
       select: { blockerId: true, blockedId: true },
     })
     excludedUserIds = blocks
-      .flatMap((b) => [b.blockerId, b.blockedId])
-      .filter((id) => id !== currentUserId)
+      .flatMap((b: typeof blocks[number]) => [b.blockerId, b.blockedId])
+      .filter((id: string) => id !== currentUserId)
   }
 
   const searchMode = getSearchMode()
@@ -268,11 +268,11 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
 
     // 元の順序を維持
     const users = userIds
-      .map(id => fetchedUsers.find(u => u.id === id))
+      .map((id: string) => fetchedUsers.find((u: typeof fetchedUsers[number]) => u.id === id))
       .filter((u: typeof fetchedUsers[number] | undefined): u is typeof fetchedUsers[number] => u !== undefined)
 
     return {
-      users: users.map((user) => ({
+      users: users.map((user: typeof users[number]) => ({
         ...user,
         followersCount: user._count.followers,
         followingCount: user._count.following,
@@ -328,7 +328,7 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
   })
 
   return {
-    users: users.map((user) => ({
+    users: users.map((user: typeof users[number]) => ({
       ...user,
       followersCount: user._count.followers,
       followingCount: user._count.following,
@@ -360,9 +360,9 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
       }),
     ])
     excludedUserIds = [
-      ...blocks.flatMap((b) => [b.blockerId, b.blockedId]),
-      ...mutes.map((m) => m.mutedId),
-    ].filter((id) => id !== currentUserId)
+      ...blocks.flatMap((b: typeof blocks[number]) => [b.blockerId, b.blockedId]),
+      ...mutes.map((m: typeof mutes[number]) => m.mutedId),
+    ].filter((id: string) => id !== currentUserId)
   }
 
   // ハッシュタグを含む投稿を検索
@@ -411,7 +411,7 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
   let bookmarkedPostIds: Set<string> = new Set()
 
   if (currentUserId && posts.length > 0) {
-    const postIds = posts.map((p) => p.id)
+    const postIds = posts.map((p: typeof posts[number]) => p.id)
 
     const [userLikes, userBookmarks] = await Promise.all([
       prisma.like.findMany({
@@ -431,16 +431,16 @@ export async function searchByTag(tag: string, cursor?: string, limit = 20) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
-    bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
   return {
-    posts: posts.map((post) => ({
+    posts: posts.map((post: typeof posts[number]) => ({
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
-      genres: post.genres.map((pg) => pg.genre),
+      genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
       isLiked: likedPostIds.has(post.id),
       isBookmarked: bookmarkedPostIds.has(post.id),
     })),
@@ -481,9 +481,9 @@ export async function getPopularTags(limit = 10) {
 
   // カウント順にソートしてトップN件を返す
   const sortedTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
     .slice(0, limit)
-    .map(([tag, count]) => ({ tag, count }))
+    .map(([tag, count]: [string, number]) => ({ tag, count }))
 
   return { tags: sortedTags }
 }

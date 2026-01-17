@@ -156,7 +156,7 @@ export async function getRecommendedUsers(limit = 5) {
     },
     select: { blockerId: true, blockedId: true },
   })
-  const blockedIds = blocks.flatMap((b) => [b.blockerId, b.blockedId])
+  const blockedIds = blocks.flatMap((b: typeof blocks[number]) => [b.blockerId, b.blockedId])
 
   // おすすめユーザー取得（フォロワーが多い順）
   const users = await prisma.user.findMany({
