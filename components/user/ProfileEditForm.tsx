@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { updateProfile } from '@/lib/actions/user'
 import { AvatarUploader } from './AvatarUploader'
 import { HeaderUploader } from './HeaderUploader'
+import { LOCATION_GROUPS } from '@/lib/constants/locations'
 
 type ProfileEditFormProps = {
   user: {
@@ -77,13 +78,23 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="location">居住地域</Label>
-          <Input
+          <select
             id="location"
             name="location"
             defaultValue={user.location || ''}
-            maxLength={100}
-            placeholder="例: 東京都"
-          />
+            className="w-full h-10 px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">選択してください</option>
+            {LOCATION_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((option) => (
+                  <option key={`${group.label}-${option.value}`} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
