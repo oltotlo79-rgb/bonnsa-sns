@@ -182,7 +182,7 @@ export default async function AdminDashboardPage() {
             <div className="mt-4 pt-4 border-t">
               <h3 className="text-sm font-medium mb-2">種別ごとの通報</h3>
               <div className="flex flex-wrap gap-2">
-                {Object.entries(reportResult.stats.byType).map(([type, count]) => (
+                {(Object.entries(reportResult.stats.byType) as [string, number][]).map(([type, count]) => (
                   <span key={type} className="px-3 py-1 bg-muted rounded-full text-sm">
                     {type === 'post' && '投稿'}
                     {type === 'comment' && 'コメント'}
