@@ -256,7 +256,7 @@ export async function getConversation(conversationId: string) {
   }
 
   const otherParticipant = conversation.participants.find(
-    (p) => p.userId !== session.user.id
+    (p: typeof conversation.participants[number]) => p.userId !== session.user.id
   )
 
   return {
