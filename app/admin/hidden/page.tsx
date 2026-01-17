@@ -44,7 +44,7 @@ export default async function HiddenContentPage() {
       {/* 統計 */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {(['post', 'comment', 'event', 'shop', 'review'] as const).map((type) => {
-          const count = items.filter((item) => item.type === type).length
+          const count = items.filter((item: typeof items[number]) => item.type === type).length
           const label = {
             post: '投稿',
             comment: 'コメント',

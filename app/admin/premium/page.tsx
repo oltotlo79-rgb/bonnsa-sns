@@ -125,7 +125,7 @@ export default async function AdminPremiumPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {users.map((user) => {
+            {users.map((user: typeof users[number]) => {
               const isExpiringSoon = user.premiumExpiresAt &&
                 new Date(user.premiumExpiresAt) < sevenDaysFromNow
               const isExpired = user.premiumExpiresAt &&

@@ -97,7 +97,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {users.map((user) => (
+            {users.map((user: typeof users[number]) => (
               <tr key={user.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3">
                   <Link

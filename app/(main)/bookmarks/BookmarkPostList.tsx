@@ -92,7 +92,7 @@ export function BookmarkPostList({
   return (
     <div>
       <div className="divide-y">
-        {posts.map((post) => (
+        {posts.map((post: Post) => (
           <PostCard
             key={post.id}
             post={post}

@@ -64,7 +64,7 @@ export function AdminNotificationBanner({
 
       {isExpanded && (
         <div className="mt-4 space-y-2">
-          {notifications.slice(0, 5).map((notification) => (
+          {notifications.slice(0, 5).map((notification: AdminNotification) => (
             <div
               key={notification.id}
               className="bg-white p-3 rounded border border-amber-100"

@@ -48,7 +48,7 @@ export default async function UserPostsPage({ params }: Props) {
 
         {posts && posts.length > 0 ? (
           <div className="divide-y">
-            {posts.map((post) => (
+            {posts.map((post: typeof posts[number]) => (
               <div key={post.id} className="p-4">
                 <p className="whitespace-pre-wrap">{post.content}</p>
                 <p className="text-xs text-muted-foreground mt-2">

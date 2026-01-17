@@ -98,7 +98,7 @@ export default async function AdminPostsPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {posts.map((post) => (
+            {posts.map((post: typeof posts[number]) => (
               <tr key={post.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3">
                   <Link

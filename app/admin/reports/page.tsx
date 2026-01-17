@@ -119,7 +119,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {reports.map((report) => {
+            {reports.map((report: typeof reports[number]) => {
               const reasonLabel = REPORT_REASONS.find(r => r.value === report.reason)?.label || report.reason
 
               return (

@@ -24,7 +24,7 @@ export function HiddenContentList({ items }: { items: HiddenItem[] }) {
 
   const filteredItems = filter === 'all'
     ? items
-    : items.filter((item) => item.type === filter)
+    : items.filter((item: HiddenItem) => item.type === filter)
 
   async function handleRestore(type: ContentType, id: string) {
     if (!confirm('このコンテンツを再表示しますか？')) return
@@ -66,7 +66,7 @@ export function HiddenContentList({ items }: { items: HiddenItem[] }) {
           すべて ({items.length})
         </Button>
         {(['post', 'comment', 'event', 'shop', 'review'] as const).map((type) => {
-          const count = items.filter((item) => item.type === type).length
+          const count = items.filter((item: HiddenItem) => item.type === type).length
           if (count === 0) return null
           return (
             <Button
@@ -83,7 +83,7 @@ export function HiddenContentList({ items }: { items: HiddenItem[] }) {
 
       {/* リスト */}
       <div className="space-y-4">
-        {filteredItems.map((item) => (
+        {filteredItems.map((item: HiddenItem) => (
           <div key={`${item.type}-${item.id}`} className="bg-card border rounded-lg p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">

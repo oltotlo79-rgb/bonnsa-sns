@@ -100,7 +100,7 @@ export default async function AdminUserDetailPage({ params }: Props) {
                 where: { userId: id },
                 select: { id: true },
               })
-            ).map((p) => p.id),
+            ).map((p: { id: string }) => p.id),
           },
         },
       ],
@@ -210,7 +210,7 @@ export default async function AdminUserDetailPage({ params }: Props) {
             <h3 className="px-4 py-3 font-semibold border-b">最近の投稿</h3>
             {recentPosts.length > 0 ? (
               <div className="divide-y">
-                {recentPosts.map((post) => (
+                {recentPosts.map((post: typeof recentPosts[number]) => (
                   <div key={post.id} className="p-4">
                     <p className="text-sm line-clamp-2">{post.content || '（テキストなし）'}</p>
                     <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
@@ -240,7 +240,7 @@ export default async function AdminUserDetailPage({ params }: Props) {
                 このユーザーへの通報 ({reportCount}件)
               </h3>
               <div className="divide-y">
-                {reportsAgainstUser.map((report) => (
+                {reportsAgainstUser.map((report: typeof reportsAgainstUser[number]) => (
                   <div key={report.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div>

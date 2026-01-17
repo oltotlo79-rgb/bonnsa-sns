@@ -39,7 +39,7 @@ export function StatsCharts({ data }: StatsChartsProps) {
   const filteredData = data.slice(-parseInt(period))
 
   // 日付をフォーマット
-  const formattedData = filteredData.map((item) => ({
+  const formattedData = filteredData.map((item: StatsData) => ({
     ...item,
     date: new Date(item.date).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
   }))

@@ -48,7 +48,7 @@ export default async function UserLikesPage({ params }: Props) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const posts = likes.map((l: typeof likes[number]) => l.post).filter(Boolean)
+  const posts = likes.map((l: typeof likes[number]) => l.post).filter((p): p is NonNullable<typeof p> => Boolean(p))
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -62,14 +62,14 @@ export default async function UserLikesPage({ params }: Props) {
 
         {posts.length > 0 ? (
           <div className="divide-y">
-            {posts.map((post) => (
-              <div key={post!.id} className="p-4">
+            {posts.map((post: typeof posts[number]) => (
+              <div key={post.id} className="p-4">
                 <p className="text-sm text-muted-foreground mb-1">
-                  {post!.user.nickname}
+                  {post.user.nickname}
                 </p>
-                <p className="whitespace-pre-wrap">{post!.content}</p>
+                <p className="whitespace-pre-wrap">{post.content}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {new Date(post!.createdAt).toLocaleDateString('ja-JP')}
+                  {new Date(post.createdAt).toLocaleDateString('ja-JP')}
                 </p>
               </div>
             ))}

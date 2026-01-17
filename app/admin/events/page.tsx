@@ -93,7 +93,7 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {events.map((event) => (
+            {events.map((event: typeof events[number]) => (
               <tr key={event.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3">
                   <Link

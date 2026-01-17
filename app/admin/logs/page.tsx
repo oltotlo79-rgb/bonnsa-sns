@@ -91,7 +91,7 @@ export default async function AdminLogsPage({ searchParams }: PageProps) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {logs.map((log) => {
+            {logs.map((log: typeof logs[number]) => {
               let details: Record<string, unknown> = {}
               if (log.details && typeof log.details === 'object' && !Array.isArray(log.details)) {
                 details = log.details as Record<string, unknown>
