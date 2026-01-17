@@ -173,7 +173,7 @@ export async function getAdminUserDetail(userId: string) {
                 where: { userId },
                 select: { id: true },
               })
-            ).map((p) => p.id),
+            ).map((p: { id: string }) => p.id),
           },
         },
       ],
