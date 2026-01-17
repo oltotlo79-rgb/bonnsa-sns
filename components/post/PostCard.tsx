@@ -151,7 +151,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
     >
       {/* リポスト表示 */}
       {isRepost && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 ml-12">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
           <RepeatIcon className="w-3 h-3" />
           <Link
             href={`/users/${post.user.id}`}
@@ -164,20 +164,20 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
         </div>
       )}
 
-      <div className="flex gap-3">
-        {/* アバター */}
+      {/* ヘッダー: アバター + ユーザー名 + 時間 */}
+      <div className="flex items-center gap-3 mb-2">
         <Link
           href={`/users/${displayPost.user.id}`}
           className="flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-11 h-11 rounded-full bg-muted overflow-hidden ring-2 ring-border/50 hover:ring-primary/50 transition-all duration-200">
+          <div className="w-10 h-10 rounded-full bg-muted overflow-hidden ring-2 ring-border/50 hover:ring-primary/50 transition-all duration-200">
             {displayPost.user.avatarUrl ? (
               <Image
                 src={displayPost.user.avatarUrl}
                 alt={displayPost.user.nickname}
-                width={44}
-                height={44}
+                width={40}
+                height={40}
                 className="object-cover w-full h-full"
               />
             ) : (
@@ -188,129 +188,127 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
           </div>
         </Link>
 
-        <div className="flex-1 min-w-0">
-          {/* ヘッダー */}
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Link
+            href={`/users/${displayPost.user.id}`}
+            className="font-medium hover:underline truncate"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayPost.user.nickname}
+          </Link>
+          <span className="text-sm text-muted-foreground flex-shrink-0">{timeAgo}</span>
+        </div>
+
+        <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-1 hover:bg-muted rounded-lg transition-colors"
+          >
+            <MoreHorizontalIcon className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {showMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-card border rounded-lg shadow-lg py-1 min-w-[140px]">
+                {isOwner && !isRepost && (
+                  <DeletePostButton postId={post.id} variant="menu" onDeleted={() => setShowMenu(false)} />
+                )}
+                {currentUserId && !isOwner && (
+                  <ReportButton
+                    targetType="post"
+                    targetId={displayPost.id}
+                    variant="menu"
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 本文 */}
+      {displayPost.content && (
+        <p className="whitespace-pre-wrap break-words mb-3">
+          {renderContent(displayPost.content)}
+        </p>
+      )}
+
+      {/* メディア（全幅表示） */}
+      {'media' in displayPost && displayPost.media && displayPost.media.length > 0 && (
+        <div className="mb-3 -mx-4">
+          <ImageGallery
+            images={displayPost.media}
+            onMediaClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
+          />
+        </div>
+      )}
+
+      {/* 引用投稿 */}
+      {post.quotePost && (
+        <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+          <QuotedPost post={post.quotePost} />
+        </div>
+      )}
+
+      {/* ジャンルタグ */}
+      {post.genres && post.genres.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {post.genres.map((genre) => (
             <Link
-              href={`/users/${displayPost.user.id}`}
-              className="font-medium hover:underline truncate"
+              key={genre.id}
+              href={`/search?genre=${genre.id}`}
+              className="tag-washi"
               onClick={(e) => e.stopPropagation()}
             >
-              {displayPost.user.nickname}
+              {genre.name}
             </Link>
-            <span className="text-sm text-muted-foreground">{timeAgo}</span>
-            <div className="ml-auto relative" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-1 hover:bg-muted rounded-lg transition-colors"
-              >
-                <MoreHorizontalIcon className="w-4 h-4 text-muted-foreground" />
-              </button>
-              {showMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-card border rounded-lg shadow-lg py-1 min-w-[140px]">
-                    {isOwner && !isRepost && (
-                      <DeletePostButton postId={post.id} variant="menu" onDeleted={() => setShowMenu(false)} />
-                    )}
-                    {currentUserId && !isOwner && (
-                      <ReportButton
-                        targetType="post"
-                        targetId={displayPost.id}
-                        variant="menu"
-                      />
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* 本文 */}
-          {displayPost.content && (
-            <p className="mt-1 whitespace-pre-wrap break-words">
-              {renderContent(displayPost.content)}
-            </p>
-          )}
-
-          {/* メディア */}
-          {'media' in displayPost && displayPost.media && displayPost.media.length > 0 && (
-            <div className="mt-3">
-              <ImageGallery
-                images={displayPost.media}
-                onMediaClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
-              />
-            </div>
-          )}
-
-          {/* 引用投稿 */}
-          {post.quotePost && (
-            <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-              <QuotedPost post={post.quotePost} />
-            </div>
-          )}
-
-          {/* ジャンルタグ */}
-          {post.genres && post.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {post.genres.map((genre) => (
-                <Link
-                  key={genre.id}
-                  href={`/search?genre=${genre.id}`}
-                  className="tag-washi"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {genre.name}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* アクションボタン */}
-          <div className="flex items-center gap-4 mt-3 -ml-2" onClick={(e) => e.stopPropagation()}>
-            {currentUserId ? (
-              <LikeButton
-                postId={displayPost.id}
-                initialLiked={isLiked}
-                initialCount={likesCount}
-              />
-            ) : (
-              <Button variant="ghost" size="sm" className="text-muted-foreground gap-1" asChild>
-                <Link href="/login">
-                  <HeartIcon className="w-4 h-4" />
-                  <span className="text-xs">{likesCount > 0 && likesCount}</span>
-                </Link>
-              </Button>
-            )}
-
-            <Link href={`/posts/${displayPost.id}`}>
-              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-blue-500 gap-1">
-                <MessageCircleIcon className="w-4 h-4" />
-                <span className="text-xs">{commentsCount > 0 && commentsCount}</span>
-              </Button>
-            </Link>
-
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-green-500">
-              <RepeatIcon className="w-4 h-4" />
-            </Button>
-
-            {currentUserId ? (
-              <BookmarkButton
-                postId={displayPost.id}
-                initialBookmarked={isBookmarked}
-              />
-            ) : (
-              <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                <Link href="/login">
-                  <BookmarkIcon className="w-4 h-4" />
-                </Link>
-              </Button>
-            )}
-          </div>
+          ))}
         </div>
+      )}
+
+      {/* アクションボタン */}
+      <div className="flex items-center gap-4 -ml-2" onClick={(e) => e.stopPropagation()}>
+        {currentUserId ? (
+          <LikeButton
+            postId={displayPost.id}
+            initialLiked={isLiked}
+            initialCount={likesCount}
+          />
+        ) : (
+          <Button variant="ghost" size="sm" className="text-muted-foreground gap-1" asChild>
+            <Link href="/login">
+              <HeartIcon className="w-4 h-4" />
+              <span className="text-xs">{likesCount > 0 && likesCount}</span>
+            </Link>
+          </Button>
+        )}
+
+        <Link href={`/posts/${displayPost.id}`}>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-blue-500 gap-1">
+            <MessageCircleIcon className="w-4 h-4" />
+            <span className="text-xs">{commentsCount > 0 && commentsCount}</span>
+          </Button>
+        </Link>
+
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-green-500">
+          <RepeatIcon className="w-4 h-4" />
+        </Button>
+
+        {currentUserId ? (
+          <BookmarkButton
+            postId={displayPost.id}
+            initialBookmarked={isBookmarked}
+          />
+        ) : (
+          <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+            <Link href="/login">
+              <BookmarkIcon className="w-4 h-4" />
+            </Link>
+          </Button>
+        )}
       </div>
     </article>
   )
