@@ -48,7 +48,10 @@ export default async function UserLikesPage({ params }: Props) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const posts = likes.map((l: typeof likes[number]) => l.post).filter((p): p is NonNullable<typeof p> => Boolean(p))
+  type PostType = typeof likes[number]['post']
+  const posts = likes
+    .map((l: typeof likes[number]) => l.post)
+    .filter((p: PostType): p is NonNullable<PostType> => Boolean(p))
 
   return (
     <div className="max-w-2xl mx-auto">
