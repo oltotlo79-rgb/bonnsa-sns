@@ -194,7 +194,7 @@ export async function addBonsaiRecord(data: {
         recordAt: data.recordAt || new Date(),
         images: data.imageUrls?.length
           ? {
-              create: data.imageUrls.map((url, index) => ({
+              create: data.imageUrls.map((url: string, index: number) => ({
                 url,
                 sortOrder: index,
               })),
@@ -251,7 +251,7 @@ export async function updateBonsaiRecord(
         recordAt: data.recordAt,
         images: data.imageUrls?.length
           ? {
-              create: data.imageUrls.map((url, index) => ({
+              create: data.imageUrls.map((url: string, index: number) => ({
                 url,
                 sortOrder: index,
               })),

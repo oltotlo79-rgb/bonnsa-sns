@@ -27,13 +27,13 @@ export async function getTimeline(cursor?: string, limit = 20) {
     }),
   ])
 
-  const followingIds = following.map((f) => f.followingId)
+  const followingIds = following.map((f: typeof following[number]) => f.followingId)
   // 自分の投稿も含める
   followingIds.push(currentUserId)
 
   const excludeIds = [
-    ...blocks.map((b) => b.blockedId),
-    ...mutes.map((m) => m.mutedId),
+    ...blocks.map((b: typeof blocks[number]) => b.blockedId),
+    ...mutes.map((m: typeof mutes[number]) => m.mutedId),
   ]
 
   // タイムライン取得
@@ -91,7 +91,7 @@ export async function getTimeline(cursor?: string, limit = 20) {
   let bookmarkedPostIds: Set<string> = new Set()
 
   if (posts.length > 0) {
-    const postIds = posts.map((p) => p.id)
+    const postIds = posts.map((p: typeof posts[number]) => p.id)
 
     const [userLikes, userBookmarks] = await Promise.all([
       prisma.like.findMany({
@@ -111,15 +111,15 @@ export async function getTimeline(cursor?: string, limit = 20) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map((l) => l.postId).filter((id: string | null): id is string => id !== null))
-    bookmarkedPostIds = new Set(userBookmarks.map((b) => b.postId))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
-  const formattedPosts = posts.map((post) => ({
+  const formattedPosts = posts.map((post: typeof posts[number]) => ({
     ...post,
     likeCount: post._count.likes,
     commentCount: post._count.comments,
-    genres: post.genres.map((pg) => pg.genre),
+    genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
     isLiked: likedPostIds.has(post.id),
     isBookmarked: bookmarkedPostIds.has(post.id),
   }))
@@ -143,7 +143,7 @@ export async function getRecommendedUsers(limit = 5) {
     where: { followerId: currentUserId },
     select: { followingId: true },
   })
-  const followingIds = following.map((f) => f.followingId)
+  const followingIds = following.map((f: typeof following[number]) => f.followingId)
   followingIds.push(currentUserId) // 自分自身を除外
 
   // ブロックしているユーザー
@@ -182,7 +182,7 @@ export async function getRecommendedUsers(limit = 5) {
   })
 
   return {
-    users: users.map((user) => ({
+    users: users.map((user: typeof users[number]) => ({
       ...user,
       followersCount: user._count.followers,
     })),
@@ -213,7 +213,7 @@ export async function getTrendingGenres(limit = 5) {
   })
 
   // ジャンル詳細を取得
-  const genreIds = trendingGenres.map((g) => g.genreId)
+  const genreIds = trendingGenres.map((g: typeof trendingGenres[number]) => g.genreId)
   const genres = await prisma.genre.findMany({
     where: {
       id: { in: genreIds },
@@ -221,12 +221,12 @@ export async function getTrendingGenres(limit = 5) {
   })
 
   return {
-    genres: trendingGenres.map((g) => {
-      const genre = genres.find((gen) => gen.id === g.genreId)
+    genres: trendingGenres.map((g: typeof trendingGenres[number]) => {
+      const genre = genres.find((gen: typeof genres[number]) => gen.id === g.genreId)
       return {
         ...genre,
         postCount: g._count.genreId,
       }
-    }).filter((g) => g.id),
+    }).filter((g: { id?: string }) => g.id),
   }
 }

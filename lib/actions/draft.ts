@@ -63,7 +63,7 @@ export async function saveDraft(data: {
           content: data.content,
           media: data.mediaUrls?.length
             ? {
-                create: data.mediaUrls.map((url, index) => ({
+                create: data.mediaUrls.map((url: string, index: number) => ({
                   url,
                   type: 'image',
                   sortOrder: index,
@@ -72,7 +72,7 @@ export async function saveDraft(data: {
             : undefined,
           genres: data.genreIds?.length
             ? {
-                create: data.genreIds.map((genreId) => ({ genreId })),
+                create: data.genreIds.map((genreId: string) => ({ genreId })),
               }
             : undefined,
         },
@@ -92,7 +92,7 @@ export async function saveDraft(data: {
         content: data.content,
         media: data.mediaUrls?.length
           ? {
-              create: data.mediaUrls.map((url, index) => ({
+              create: data.mediaUrls.map((url: string, index: number) => ({
                 url,
                 type: 'image',
                 sortOrder: index,
@@ -101,7 +101,7 @@ export async function saveDraft(data: {
           : undefined,
         genres: data.genreIds?.length
           ? {
-              create: data.genreIds.map((genreId) => ({ genreId })),
+              create: data.genreIds.map((genreId: string) => ({ genreId })),
             }
           : undefined,
       },
@@ -145,7 +145,7 @@ export async function publishDraft(draftId: string) {
         content: draft.content,
         media: draft.media.length
           ? {
-              create: draft.media.map((m) => ({
+              create: draft.media.map((m: typeof draft.media[number]) => ({
                 url: m.url,
                 type: m.type,
                 sortOrder: m.sortOrder,
@@ -154,7 +154,7 @@ export async function publishDraft(draftId: string) {
           : undefined,
         genres: draft.genres.length
           ? {
-              create: draft.genres.map((g) => ({ genreId: g.genreId })),
+              create: draft.genres.map((g: typeof draft.genres[number]) => ({ genreId: g.genreId })),
             }
           : undefined,
       },

@@ -16,7 +16,7 @@ function extractHashtags(text: string): string[] {
   if (!matches) return []
 
   // #を除去してユニークな配列を返す
-  const hashtags = matches.map((tag) => tag.slice(1).toLowerCase())
+  const hashtags = matches.map((tag: string) => tag.slice(1).toLowerCase())
   return [...new Set(hashtags)]
 }
 

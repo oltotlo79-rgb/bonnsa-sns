@@ -33,15 +33,16 @@ export async function getPostAnalytics(days = 30) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const totalLikes = posts.reduce((sum, p) => sum + p._count.likes, 0)
-  const totalComments = posts.reduce((sum, p) => sum + p._count.comments, 0)
+  const totalLikes = posts.reduce((sum: number, p: typeof posts[number]) => sum + p._count.likes, 0)
+  const totalComments = posts.reduce((sum: number, p: typeof posts[number]) => sum + p._count.comments, 0)
   const avgEngagement = posts.length > 0
     ? (totalLikes + totalComments) / posts.length
     : 0
 
   // ベストパフォーマンス投稿
+  type PostWithCount = typeof posts[number]
   const topPosts = [...posts]
-    .sort((a, b) => (b._count.likes + b._count.comments) - (a._count.likes + a._count.comments))
+    .sort((a: PostWithCount, b: PostWithCount) => (b._count.likes + b._count.comments) - (a._count.likes + a._count.comments))
     .slice(0, 5)
 
   return {
@@ -49,14 +50,14 @@ export async function getPostAnalytics(days = 30) {
     totalLikes,
     totalComments,
     avgEngagement: Math.round(avgEngagement * 10) / 10,
-    topPosts: topPosts.map(p => ({
+    topPosts: topPosts.map((p: PostWithCount) => ({
       id: p.id,
       content: p.content?.slice(0, 100) ?? null,
       createdAt: p.createdAt,
       likeCount: p._count.likes,
       commentCount: p._count.comments,
     })),
-    posts: posts.map(p => ({
+    posts: posts.map((p: PostWithCount) => ({
       id: p.id,
       content: p.content?.slice(0, 100) ?? null,
       createdAt: p.createdAt,
@@ -99,7 +100,7 @@ export async function getLikeAnalytics(days = 30) {
   // 日別集計
   const dailyData: Record<string, number> = {}
 
-  likes.forEach(like => {
+  likes.forEach((like: typeof likes[number]) => {
     const date = new Date(like.createdAt)
     hourlyData[date.getHours()]++
     weekdayData[date.getDay()]++
@@ -110,8 +111,8 @@ export async function getLikeAnalytics(days = 30) {
 
   // 日別データを配列に変換
   const dailyArray = Object.entries(dailyData)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(([date, count]: [string, number]) => ({ date, count }))
+    .sort((a: { date: string }, b: { date: string }) => a.date.localeCompare(b.date))
 
   return {
     totalLikes: likes.length,
@@ -163,7 +164,7 @@ export async function getQuoteAnalytics() {
   return {
     totalQuotes: quotes.length,
     totalReposts: repostCount,
-    quotes: quotes.map(q => ({
+    quotes: quotes.map((q: typeof quotes[number]) => ({
       id: q.id,
       content: q.content?.slice(0, 200) ?? null,
       user: q.user,
@@ -213,7 +214,7 @@ export async function getKeywordAnalytics(days = 30) {
     'という', 'これ', 'それ', 'あれ', 'どれ',
   ])
 
-  posts.forEach(post => {
+  posts.forEach((post: typeof posts[number]) => {
     if (!post.content) return
 
     // 簡易的なトークン化（実際はMeCabやkuromojiを推奨）
@@ -222,22 +223,22 @@ export async function getKeywordAnalytics(days = 30) {
       .replace(/https?:\/\/[^\s]+/g, '') // URL削除
       .replace(/[、。！？「」『』【】（）\s\n]/g, ' ')
       .split(' ')
-      .filter(w => w.length >= 2 && !stopWords.has(w))
+      .filter((w: string) => w.length >= 2 && !stopWords.has(w))
 
-    words.forEach(word => {
+    words.forEach((word: string) => {
       wordCount[word] = (wordCount[word] || 0) + 1
     })
   })
 
   // 上位キーワードを抽出
   const keywords = Object.entries(wordCount)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
     .slice(0, 30)
-    .map(([word, count]) => ({ word, count }))
+    .map(([word, count]: [string, number]) => ({ word, count }))
 
   return {
     keywords,
-    totalWords: Object.values(wordCount).reduce((a, b) => a + b, 0),
+    totalWords: Object.values(wordCount).reduce((a: number, b: number) => a + b, 0),
     uniqueWords: Object.keys(wordCount).length,
   }
 }
@@ -283,7 +284,7 @@ export async function getEngagementTrend(days = 30) {
   }
 
   // 投稿データを集計
-  posts.forEach(post => {
+  posts.forEach((post: typeof posts[number]) => {
     const dateKey = post.createdAt.toISOString().split('T')[0]
     if (dailyStats[dateKey]) {
       dailyStats[dateKey].posts++
@@ -292,13 +293,14 @@ export async function getEngagementTrend(days = 30) {
     }
   })
 
+  type DailyStatsEntry = { posts: number; likes: number; comments: number }
   const trend = Object.entries(dailyStats)
-    .map(([date, stats]) => ({
+    .map(([date, stats]: [string, DailyStatsEntry]) => ({
       date,
       ...stats,
       engagement: stats.likes + stats.comments,
     }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a: { date: string }, b: { date: string }) => a.date.localeCompare(b.date))
 
   return { trend }
 }
@@ -442,8 +444,9 @@ export async function getDetailedAnalytics(days: number = 30) {
     })
 
     // 集計
+    type TotalsType = { profileViews: number; postViews: number; likesReceived: number; newFollowers: number }
     const totals = analyticsData.reduce(
-      (acc, data) => ({
+      (acc: TotalsType, data: typeof analyticsData[number]) => ({
         profileViews: acc.profileViews + data.profileViews,
         postViews: acc.postViews + data.postViews,
         likesReceived: acc.likesReceived + data.likesReceived,

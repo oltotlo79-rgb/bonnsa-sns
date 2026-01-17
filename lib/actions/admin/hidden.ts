@@ -202,7 +202,7 @@ export async function getHiddenContent(options?: {
   }
 
   // 非表示日時でソート
-  results.sort((a, b) => {
+  results.sort((a: typeof results[number], b: typeof results[number]) => {
     if (!a.hiddenAt || !b.hiddenAt) return 0
     return b.hiddenAt.getTime() - a.hiddenAt.getTime()
   })

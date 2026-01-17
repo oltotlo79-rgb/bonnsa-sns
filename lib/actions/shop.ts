@@ -46,9 +46,9 @@ export async function getShops(options?: {
       : { createdAt: 'desc' },
   })
 
-  const shopsWithRating = shops.map((shop) => {
+  const shopsWithRating = shops.map((shop: typeof shops[number]) => {
     const averageRating = shop.reviews.length > 0
-      ? shop.reviews.reduce((sum, r) => sum + r.rating, 0) / shop.reviews.length
+      ? shop.reviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / shop.reviews.length
       : null
 
     // Prisma DecimalからJavaScript numberへ明示的に変換
@@ -59,7 +59,7 @@ export async function getShops(options?: {
       ...shop,
       latitude: lat,
       longitude: lng,
-      genres: shop.genres.map((sg) => sg.genre),
+      genres: shop.genres.map((sg: typeof shop.genres[number]) => sg.genre),
       averageRating,
       reviewCount: shop.reviews.length,
     }
@@ -67,7 +67,7 @@ export async function getShops(options?: {
 
   // 評価順ソート
   if (sortBy === 'rating') {
-    shopsWithRating.sort((a, b) => {
+    shopsWithRating.sort((a: typeof shopsWithRating[number], b: typeof shopsWithRating[number]) => {
       if (a.averageRating === null && b.averageRating === null) return 0
       if (a.averageRating === null) return 1
       if (b.averageRating === null) return -1
@@ -110,7 +110,7 @@ export async function getShop(shopId: string) {
   }
 
   const averageRating = shop.reviews.length > 0
-    ? shop.reviews.reduce((sum, r) => sum + r.rating, 0) / shop.reviews.length
+    ? shop.reviews.reduce((sum: number, r: typeof shop.reviews[number]) => sum + r.rating, 0) / shop.reviews.length
     : null
 
   // Prisma DecimalからJavaScript numberへ明示的に変換
@@ -122,7 +122,7 @@ export async function getShop(shopId: string) {
       ...shop,
       latitude: lat,
       longitude: lng,
-      genres: shop.genres.map((sg) => sg.genre),
+      genres: shop.genres.map((sg: typeof shop.genres[number]) => sg.genre),
       averageRating,
       reviewCount: shop.reviews.length,
       isOwner: currentUserId === shop.createdBy,
@@ -184,7 +184,7 @@ export async function createShop(formData: FormData) {
       createdBy: session.user.id,
       genres: genreIds.length > 0
         ? {
-            create: genreIds.map((genreId) => ({ genreId })),
+            create: genreIds.map((genreId: string) => ({ genreId })),
           }
         : undefined,
     },
@@ -255,7 +255,7 @@ export async function updateShop(shopId: string, formData: FormData) {
       closedDays: closedDays?.trim() || null,
       genres: genreIds.length > 0
         ? {
-            create: genreIds.map((genreId) => ({ genreId })),
+            create: genreIds.map((genreId: string) => ({ genreId })),
           }
         : undefined,
     },

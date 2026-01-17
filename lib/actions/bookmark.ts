@@ -92,8 +92,10 @@ export async function getBookmarkedPosts(cursor?: string, limit = 20) {
     }),
   })
 
-  const validBookmarks = bookmarks.filter((bookmark) => bookmark.post)
-  const postIds = validBookmarks.map(b => b.post.id)
+  type BookmarkType = typeof bookmarks[number]
+  type ValidBookmarkType = BookmarkType & { post: NonNullable<BookmarkType['post']> }
+  const validBookmarks = bookmarks.filter((bookmark: BookmarkType): bookmark is ValidBookmarkType => Boolean(bookmark.post))
+  const postIds = validBookmarks.map((b: ValidBookmarkType) => b.post.id)
 
   // 現在のユーザーのいいね状態をチェック
   let likedPostIds: Set<string> = new Set()
@@ -107,14 +109,14 @@ export async function getBookmarkedPosts(cursor?: string, limit = 20) {
       },
       select: { postId: true },
     })
-    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id: string | null): id is string => id !== null))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
   }
 
-  const posts = validBookmarks.map((bookmark) => ({
+  const posts = validBookmarks.map((bookmark: ValidBookmarkType) => ({
     ...bookmark.post,
     likeCount: bookmark.post._count.likes,
     commentCount: bookmark.post._count.comments,
-    genres: bookmark.post.genres.map((pg) => pg.genre),
+    genres: bookmark.post.genres.map((pg: typeof bookmark.post.genres[number]) => pg.genre),
     isLiked: likedPostIds.has(bookmark.post.id),
     isBookmarked: true, // ブックマーク一覧なので必ずtrue
   }))

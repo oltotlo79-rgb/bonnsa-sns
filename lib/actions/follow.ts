@@ -111,7 +111,7 @@ export async function getFollowers(userId: string, cursor?: string, limit = 20) 
   const hasMore = followers.length === limit
 
   return {
-    users: followers.map((f) => f.follower),
+    users: followers.map((f: typeof followers[number]) => f.follower),
     nextCursor: hasMore ? followers[followers.length - 1]?.followerId : undefined,
   }
 }
@@ -146,7 +146,7 @@ export async function getFollowing(userId: string, cursor?: string, limit = 20) 
   const hasMore = following.length === limit
 
   return {
-    users: following.map((f) => f.following),
+    users: following.map((f: typeof following[number]) => f.following),
     nextCursor: hasMore ? following[following.length - 1]?.followingId : undefined,
   }
 }

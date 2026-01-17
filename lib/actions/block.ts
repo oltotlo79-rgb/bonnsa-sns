@@ -98,7 +98,7 @@ export async function getBlockedUsers(cursor?: string, limit = 20) {
     })
 
     return {
-      users: blocks.map((b) => b.blocked),
+      users: blocks.map((b: typeof blocks[number]) => b.blocked),
       nextCursor: blocks.length === limit ? blocks[blocks.length - 1]?.blockedId : undefined,
     }
   } catch (error) {

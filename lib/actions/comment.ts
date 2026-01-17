@@ -29,8 +29,8 @@ export async function createComment(formData: FormData) {
   }
 
   // メディアバリデーション（画像2枚まで、動画1本まで、混在OK）
-  const imageCount = mediaTypes.filter(t => t === 'image').length
-  const videoCount = mediaTypes.filter(t => t === 'video').length
+  const imageCount = mediaTypes.filter((t: string) => t === 'image').length
+  const videoCount = mediaTypes.filter((t: string) => t === 'video').length
   if (imageCount > 2) {
     return { error: '画像は2枚までです' }
   }
@@ -60,7 +60,7 @@ export async function createComment(formData: FormData) {
       parentId: parentId || null,
       content: content?.trim() || '',
       media: mediaUrls.length > 0 ? {
-        create: mediaUrls.map((url, index) => ({
+        create: mediaUrls.map((url: string, index: number) => ({
           url,
           type: mediaTypes[index] || 'image',
           sortOrder: index,
@@ -154,7 +154,7 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
       where: { blockerId: currentUserId },
       select: { blockedId: true },
     })
-    blockedUserIds = blockedUsers.map(b => b.blockedId)
+    blockedUserIds = blockedUsers.map((b: { blockedId: string }) => b.blockedId)
   }
 
   const comments = await prisma.comment.findMany({
@@ -192,17 +192,17 @@ export async function getComments(postId: string, cursor?: string, limit = 20) {
     const userLikes = await prisma.like.findMany({
       where: {
         userId: currentUserId,
-        commentId: { in: comments.map(c => c.id) },
+        commentId: { in: comments.map((c: typeof comments[number]) => c.id) },
       },
       select: { commentId: true },
     })
-    likedCommentIds = new Set(userLikes.map(l => l.commentId).filter((id: string | null): id is string => id !== null))
+    likedCommentIds = new Set(userLikes.map((l: { commentId: string | null }) => l.commentId).filter((id: string | null): id is string => id !== null))
   }
 
   const hasMore = comments.length === limit
 
   return {
-    comments: comments.map((comment) => ({
+    comments: comments.map((comment: typeof comments[number]) => ({
       ...comment,
       likeCount: comment._count.likes,
       replyCount: comment._count.replies,
@@ -224,7 +224,7 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
       where: { blockerId: currentUserId },
       select: { blockedId: true },
     })
-    blockedUserIds = blockedUsers.map(b => b.blockedId)
+    blockedUserIds = blockedUsers.map((b: { blockedId: string }) => b.blockedId)
   }
 
   const replies = await prisma.comment.findMany({
@@ -261,17 +261,17 @@ export async function getReplies(commentId: string, cursor?: string, limit = 10)
     const userLikes = await prisma.like.findMany({
       where: {
         userId: currentUserId,
-        commentId: { in: replies.map(r => r.id) },
+        commentId: { in: replies.map((r: typeof replies[number]) => r.id) },
       },
       select: { commentId: true },
     })
-    likedReplyIds = new Set(userLikes.map(l => l.commentId).filter((id: string | null): id is string => id !== null))
+    likedReplyIds = new Set(userLikes.map((l: { commentId: string | null }) => l.commentId).filter((id: string | null): id is string => id !== null))
   }
 
   const hasMore = replies.length === limit
 
   return {
-    replies: replies.map((reply) => ({
+    replies: replies.map((reply: typeof replies[number]) => ({
       ...reply,
       likeCount: reply._count.likes,
       replyCount: reply._count.replies,
