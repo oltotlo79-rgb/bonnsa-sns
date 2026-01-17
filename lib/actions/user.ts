@@ -235,7 +235,7 @@ export async function getFollowers(userId: string, cursor?: string) {
     }),
   })
 
-  return { followers: follows.map((f) => f.follower) }
+  return { followers: follows.map((f: typeof follows[number]) => f.follower) }
 }
 
 export async function getFollowing(userId: string, cursor?: string) {
@@ -264,5 +264,5 @@ export async function getFollowing(userId: string, cursor?: string) {
     }),
   })
 
-  return { following: follows.map((f) => f.following) }
+  return { following: follows.map((f: typeof follows[number]) => f.following) }
 }

@@ -17,7 +17,7 @@ export async function getNotifications(cursor?: string, limit = 20) {
     where: { muterId: session.user.id },
     select: { mutedId: true },
   })
-  const mutedUserIds = mutes.map((m) => m.mutedId)
+  const mutedUserIds = mutes.map((m: { mutedId: string }) => m.mutedId)
 
   const notifications = await prisma.notification.findMany({
     where: {
@@ -101,7 +101,7 @@ export async function getUnreadCount() {
     where: { muterId: session.user.id },
     select: { mutedId: true },
   })
-  const mutedUserIds = mutes.map((m) => m.mutedId)
+  const mutedUserIds = mutes.map((m: { mutedId: string }) => m.mutedId)
 
   const count = await prisma.notification.count({
     where: {

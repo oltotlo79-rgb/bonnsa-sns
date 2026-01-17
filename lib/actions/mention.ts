@@ -17,7 +17,7 @@ function extractMentions(text: string): string[] {
   if (!matches) return []
 
   // @を除去してユニークな配列を返す
-  const mentions = matches.map((m) => m.slice(1).toLowerCase())
+  const mentions = matches.map((m: string) => m.slice(1).toLowerCase())
   return [...new Set(mentions)]
 }
 
@@ -38,7 +38,7 @@ export async function searchMentionUsers(query: string, limit: number = 10) {
     select: { followingId: true },
   })
 
-  const followingIdSet = new Set(followingIds.map((f) => f.followingId))
+  const followingIdSet = new Set(followingIds.map((f: typeof followingIds[number]) => f.followingId))
 
   // ユーザーを検索
   const users = await prisma.user.findMany({
@@ -60,11 +60,11 @@ export async function searchMentionUsers(query: string, limit: number = 10) {
 
   // フォローしているユーザーを優先してソート
   const sortedUsers = users
-    .map((user) => ({
+    .map((user: typeof users[number]) => ({
       ...user,
       isFollowing: followingIdSet.has(user.id),
     }))
-    .sort((a, b) => {
+    .sort((a: { isFollowing: boolean }, b: { isFollowing: boolean }) => {
       // フォロー中を優先
       if (a.isFollowing && !b.isFollowing) return -1
       if (!a.isFollowing && b.isFollowing) return 1
@@ -104,7 +104,7 @@ export async function notifyMentionedUsers(
     // 通知を作成
     if (users.length > 0) {
       await prisma.notification.createMany({
-        data: users.map((user) => ({
+        data: users.map((user: typeof users[number]) => ({
           userId: user.id,
           actorId: authorId,
           type: 'mention',
@@ -124,7 +124,7 @@ export async function notifyMentionedUsers(
 function formatMentionsToLinks(text: string): string {
   if (!text) return ''
 
-  return text.replace(MENTION_REGEX, (match, username) => {
+  return text.replace(MENTION_REGEX, (match: string, username: string) => {
     return `<a href="/users/search?q=${encodeURIComponent(username)}" class="text-primary hover:underline">${match}</a>`
   })
 }

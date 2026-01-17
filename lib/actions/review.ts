@@ -60,7 +60,7 @@ export async function createReview(formData: FormData) {
       content: content?.trim() || null,
       images: imageUrls.length > 0
         ? {
-            create: imageUrls.map((url) => ({ url })),
+            create: imageUrls.map((url: string) => ({ url })),
           }
         : undefined,
     },

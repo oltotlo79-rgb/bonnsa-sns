@@ -39,8 +39,8 @@ export async function createPost(formData: FormData) {
   }
 
   // メディアバリデーション（会員種別で分岐）
-  const imageCount = mediaTypes.filter(t => t === 'image').length
-  const videoCount = mediaTypes.filter(t => t === 'video').length
+  const imageCount = mediaTypes.filter((t: string) => t === 'image').length
+  const videoCount = mediaTypes.filter((t: string) => t === 'video').length
   if (imageCount > limits.maxImages) {
     return { error: `画像は${limits.maxImages}枚までです` }
   }
@@ -68,14 +68,14 @@ export async function createPost(formData: FormData) {
       userId: session.user.id,
       content: content || null,
       media: mediaUrls.length > 0 ? {
-        create: mediaUrls.map((url, index) => ({
+        create: mediaUrls.map((url: string, index: number) => ({
           url,
           type: mediaTypes[index] || 'image',
           sortOrder: index,
         })),
       } : undefined,
       genres: genreIds.length > 0 ? {
-        create: genreIds.map((genreId) => ({
+        create: genreIds.map((genreId: string) => ({
           genreId,
         })),
       } : undefined,
@@ -335,7 +335,7 @@ export async function getPost(postId: string) {
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
-      genres: post.genres.map((pg) => pg.genre),
+      genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
       isLiked,
       isBookmarked,
     },
@@ -366,9 +366,9 @@ export async function getPosts(cursor?: string, limit = 20) {
         select: { mutedId: true },
       }),
     ])
-    followingUserIds = following.map(f => f.followingId)
-    blockedUserIds = blocks.map(b => b.blockedId)
-    mutedUserIds = mutes.map(m => m.mutedId)
+    followingUserIds = following.map((f: { followingId: string }) => f.followingId)
+    blockedUserIds = blocks.map((b: { blockedId: string }) => b.blockedId)
+    mutedUserIds = mutes.map((m: { mutedId: string }) => m.mutedId)
   }
 
   // 自分 + フォローしているユーザーの投稿を取得
@@ -435,7 +435,7 @@ export async function getPosts(cursor?: string, limit = 20) {
   let bookmarkedPostIds: Set<string> = new Set()
 
   if (currentUserId && posts.length > 0) {
-    const postIds = posts.map(p => p.id)
+    const postIds = posts.map((p: typeof posts[number]) => p.id)
 
     const [userLikes, userBookmarks] = await Promise.all([
       prisma.like.findMany({
@@ -455,16 +455,16 @@ export async function getPosts(cursor?: string, limit = 20) {
       }),
     ])
 
-    likedPostIds = new Set(userLikes.map(l => l.postId).filter((id: string | null): id is string => id !== null))
-    bookmarkedPostIds = new Set(userBookmarks.map(b => b.postId))
+    likedPostIds = new Set(userLikes.map((l: { postId: string | null }) => l.postId).filter((id: string | null): id is string => id !== null))
+    bookmarkedPostIds = new Set(userBookmarks.map((b: { postId: string }) => b.postId))
   }
 
   return {
-    posts: posts.map((post) => ({
+    posts: posts.map((post: typeof posts[number]) => ({
       ...post,
       likeCount: post._count.likes,
       commentCount: post._count.comments,
-      genres: post.genres.map((pg) => pg.genre),
+      genres: post.genres.map((pg: typeof post.genres[number]) => pg.genre),
       isLiked: likedPostIds.has(post.id),
       isBookmarked: bookmarkedPostIds.has(post.id),
     })),

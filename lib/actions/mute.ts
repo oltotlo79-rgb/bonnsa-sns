@@ -85,7 +85,7 @@ export async function getMutedUsers(cursor?: string, limit = 20) {
     })
 
     return {
-      users: mutes.map((m) => m.muted),
+      users: mutes.map((m: typeof mutes[number]) => m.muted),
       nextCursor: mutes.length === limit ? mutes[mutes.length - 1]?.mutedId : undefined,
     }
   } catch (error) {

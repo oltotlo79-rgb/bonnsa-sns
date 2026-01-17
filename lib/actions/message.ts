@@ -192,12 +192,12 @@ export async function getConversations() {
   })
 
   // 現在のユーザーの参加者情報と相手の情報を整理
-  const conversationsWithDetails = conversations.map((conv) => {
+  const conversationsWithDetails = conversations.map((conv: typeof conversations[number]) => {
     const currentUserParticipant = conv.participants.find(
-      (p) => p.userId === session.user.id
+      (p: typeof conv.participants[number]) => p.userId === session.user.id
     )
     const otherParticipant = conv.participants.find(
-      (p) => p.userId !== session.user.id
+      (p: typeof conv.participants[number]) => p.userId !== session.user.id
     )
 
     const lastMessage = conv.messages[0]

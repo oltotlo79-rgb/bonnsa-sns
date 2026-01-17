@@ -64,12 +64,12 @@ export async function createScheduledPost(formData: FormData) {
     return { error: 'ジャンルは3つまで選択できます' }
   }
 
-  const imageCount = mediaTypes.filter(t => t === 'image').length
+  const imageCount = mediaTypes.filter((t: string) => t === 'image').length
   if (imageCount > limits.maxImages) {
     return { error: `画像は${limits.maxImages}枚までです` }
   }
 
-  const videoCount = mediaTypes.filter(t => t === 'video').length
+  const videoCount = mediaTypes.filter((t: string) => t === 'video').length
   if (videoCount > limits.maxVideos) {
     return { error: `動画は${limits.maxVideos}本までです` }
   }
@@ -93,14 +93,14 @@ export async function createScheduledPost(formData: FormData) {
       content: content || null,
       scheduledAt,
       media: mediaUrls.length > 0 ? {
-        create: mediaUrls.map((url, index) => ({
+        create: mediaUrls.map((url: string, index: number) => ({
           url,
           type: mediaTypes[index] || 'image',
           sortOrder: index,
         })),
       } : undefined,
       genres: genreIds.length > 0 ? {
-        create: genreIds.map((genreId) => ({
+        create: genreIds.map((genreId: string) => ({
           genreId,
         })),
       } : undefined,
@@ -254,12 +254,12 @@ export async function updateScheduledPost(id: string, formData: FormData) {
     return { error: 'ジャンルは3つまで選択できます' }
   }
 
-  const imageCount = mediaTypes.filter(t => t === 'image').length
+  const imageCount = mediaTypes.filter((t: string) => t === 'image').length
   if (imageCount > limits.maxImages) {
     return { error: `画像は${limits.maxImages}枚までです` }
   }
 
-  const videoCount = mediaTypes.filter(t => t === 'video').length
+  const videoCount = mediaTypes.filter((t: string) => t === 'video').length
   if (videoCount > limits.maxVideos) {
     return { error: `動画は${limits.maxVideos}本までです` }
   }
@@ -277,14 +277,14 @@ export async function updateScheduledPost(id: string, formData: FormData) {
         content: content || null,
         scheduledAt,
         media: mediaUrls.length > 0 ? {
-          create: mediaUrls.map((url, index) => ({
+          create: mediaUrls.map((url: string, index: number) => ({
             url,
             type: mediaTypes[index] || 'image',
             sortOrder: index,
           })),
         } : undefined,
         genres: genreIds.length > 0 ? {
-          create: genreIds.map((genreId) => ({
+          create: genreIds.map((genreId: string) => ({
             genreId,
           })),
         } : undefined,
@@ -392,14 +392,14 @@ export async function publishScheduledPosts() {
           userId: scheduled.userId,
           content: scheduled.content,
           media: scheduled.media.length > 0 ? {
-            create: scheduled.media.map((m) => ({
+            create: scheduled.media.map((m: typeof scheduled.media[number]) => ({
               url: m.url,
               type: m.type,
               sortOrder: m.sortOrder,
             })),
           } : undefined,
           genres: scheduled.genres.length > 0 ? {
-            create: scheduled.genres.map((g) => ({
+            create: scheduled.genres.map((g: typeof scheduled.genres[number]) => ({
               genreId: g.genreId,
             })),
           } : undefined,
