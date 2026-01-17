@@ -63,6 +63,16 @@ export function NotificationList({ initialNotifications }: NotificationListProps
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  // ページを開いたときに自動で全て既読にする
+  useEffect(() => {
+    const autoMarkAsRead = async () => {
+      await markAllAsRead()
+      // UIを更新して既読状態を反映
+      refetch()
+    }
+    autoMarkAsRead()
+  }, [refetch])
+
   const handleMarkAllAsRead = async () => {
     await markAllAsRead()
     refetch()
