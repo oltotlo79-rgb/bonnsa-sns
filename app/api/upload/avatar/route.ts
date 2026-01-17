@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // 古い画像を削除（ローカルまたはAzureのファイル）
     if (currentUser?.avatarUrl && !currentUser.avatarUrl.includes('placeholder')) {
-      await deleteFile(currentUser.avatarUrl).catch((err) => {
+      await deleteFile(currentUser.avatarUrl).catch((err: unknown) => {
         console.warn('Failed to delete old avatar:', err)
       })
     }

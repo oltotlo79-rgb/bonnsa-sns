@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
             actorId: user.id, // システム通知は自身のIDを使用
             type: 'subscription_expiring',
           },
-        }).catch((err) => {
+        }).catch((err: unknown) => {
           console.error('Failed to create in-app notification:', err)
         })
       }

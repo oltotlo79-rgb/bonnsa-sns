@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // 古い画像を削除（ローカルまたはAzureのファイル）
     if (currentUser?.headerUrl && !currentUser.headerUrl.includes('placeholder')) {
-      await deleteFile(currentUser.headerUrl).catch((err) => {
+      await deleteFile(currentUser.headerUrl).catch((err: unknown) => {
         console.warn('Failed to delete old header:', err)
       })
     }
