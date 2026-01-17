@@ -17,7 +17,7 @@ export async function GET() {
       where: { muterId: userId },
       select: { mutedId: true },
     })
-    const mutedUserIds = mutedUsers.map((m) => m.mutedId)
+    const mutedUserIds = mutedUsers.map((m: typeof mutedUsers[number]) => m.mutedId)
 
     // 未読通知数（ミュートユーザーからの通知を除外）
     const unreadNotifications = await prisma.notification.count({

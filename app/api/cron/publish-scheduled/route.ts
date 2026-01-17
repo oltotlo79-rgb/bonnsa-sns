@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           // メディアを作成
           if (scheduledPost.media.length > 0) {
             await tx.postMedia.createMany({
-              data: scheduledPost.media.map((m) => ({
+              data: scheduledPost.media.map((m: typeof scheduledPost.media[number]) => ({
                 postId: post.id,
                 url: m.url,
                 type: m.type,
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           // ジャンルを作成
           if (scheduledPost.genres.length > 0) {
             await tx.postGenre.createMany({
-              data: scheduledPost.genres.map((g) => ({
+              data: scheduledPost.genres.map((g: typeof scheduledPost.genres[number]) => ({
                 postId: post.id,
                 genreId: g.genreId,
               })),

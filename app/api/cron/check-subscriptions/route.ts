@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // プレミアムステータスをリセット
     const result = await prisma.user.updateMany({
       where: {
-        id: { in: expiredUsers.map((u) => u.id) },
+        id: { in: expiredUsers.map((u: typeof expiredUsers[number]) => u.id) },
       },
       data: {
         isPremium: false,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     // 期限切れユーザーの予約投稿をキャンセル（pending状態のもののみ）
     const cancelledPosts = await prisma.scheduledPost.updateMany({
       where: {
-        userId: { in: expiredUsers.map((u) => u.id) },
+        userId: { in: expiredUsers.map((u: typeof expiredUsers[number]) => u.id) },
         status: 'pending',
       },
       data: {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // 期限切れユーザーにメール通知を送信
     const emailResults = await Promise.allSettled(
-      expiredUsers.map((user) =>
+      expiredUsers.map((user: typeof expiredUsers[number]) =>
         sendSubscriptionExpiredEmail(user.email, user.nickname)
       )
     )
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       cancelledPostsCount: cancelledPosts.count,
       emailsSent,
       emailsFailed,
-      expiredUsers: expiredUsers.map((u) => ({
+      expiredUsers: expiredUsers.map((u: typeof expiredUsers[number]) => ({
         id: u.id,
         nickname: u.nickname,
         expiredAt: u.premiumExpiresAt,
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // 期限切れ間近のユーザーにメール通知を送信
     const emailResults = await Promise.allSettled(
-      expiringUsers.map((user) =>
+      expiringUsers.map((user: typeof expiringUsers[number]) =>
         sendSubscriptionExpiringEmail(
           user.email,
           user.nickname,
