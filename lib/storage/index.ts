@@ -2,7 +2,8 @@
  * ストレージ抽象化レイヤー
  * 環境変数に応じて適切なプロバイダーを自動選択
  *
- * - 本番環境 (STORAGE_PROVIDER=r2): Cloudflare R2（推奨）
+ * - 本番環境 (STORAGE_PROVIDER=supabase): Supabase Storage（Supabase利用時に推奨）
+ * - 本番環境 (STORAGE_PROVIDER=r2): Cloudflare R2
  * - 本番環境 (STORAGE_PROVIDER=azure): Azure Blob Storage
  * - 開発環境 (STORAGE_PROVIDER=local または未設定): ローカルファイル保存
  */
@@ -166,6 +167,95 @@ class AzureBlobStorageProvider implements StorageProvider {
   }
 }
 
+// Supabase Storage Provider（Supabase利用時に推奨）
+class SupabaseStorageProvider implements StorageProvider {
+  private supabaseUrl: string
+  private supabaseKey: string
+  private bucket: string
+
+  constructor() {
+    this.supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    this.supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    this.bucket = process.env.SUPABASE_STORAGE_BUCKET || 'uploads'
+    console.log('Storage provider initialized: supabase')
+  }
+
+  async upload(file: Buffer, filename: string, contentType: string, folder: string): Promise<UploadResult> {
+    try {
+      if (!this.supabaseUrl || !this.supabaseKey) {
+        throw new Error('Supabase credentials not configured')
+      }
+
+      // ユニークなファイル名を生成
+      const ext = getExtension(contentType)
+      const uniqueName = `${folder}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`
+
+      const response = await fetch(
+        `${this.supabaseUrl}/storage/v1/object/${this.bucket}/${uniqueName}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.supabaseKey}`,
+            'Content-Type': contentType,
+          },
+          body: new Uint8Array(file),
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Supabase upload failed: ${error}`)
+      }
+
+      // 公開URLを生成
+      const url = `${this.supabaseUrl}/storage/v1/object/public/${this.bucket}/${uniqueName}`
+
+      console.log('Supabase storage upload success:', url)
+      return { success: true, url }
+    } catch (err) {
+      console.error('Supabase storage upload error:', err)
+      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    }
+  }
+
+  async delete(url: string): Promise<DeleteResult> {
+    try {
+      if (!this.supabaseUrl || !this.supabaseKey) {
+        throw new Error('Supabase credentials not configured')
+      }
+
+      // URLからパスを取得
+      const urlObj = new URL(url)
+      const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)/)
+      if (!pathMatch) {
+        throw new Error('Invalid Supabase storage URL')
+      }
+      const filePath = pathMatch[1]
+
+      const response = await fetch(
+        `${this.supabaseUrl}/storage/v1/object/${this.bucket}/${filePath}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${this.supabaseKey}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Supabase delete failed: ${error}`)
+      }
+
+      console.log('Supabase storage delete success:', url)
+      return { success: true }
+    } catch (err) {
+      console.error('Supabase storage delete error:', err)
+      return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    }
+  }
+}
+
 // Cloudflare R2 Storage Provider（本番環境推奨・S3互換API）
 class CloudflareR2StorageProvider implements StorageProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -270,6 +360,9 @@ function getStorageProvider(): StorageProvider {
   const provider = process.env.STORAGE_PROVIDER || 'local'
 
   switch (provider) {
+    case 'supabase':
+      storageProvider = new SupabaseStorageProvider()
+      break
     case 'r2':
       storageProvider = new CloudflareR2StorageProvider()
       break
