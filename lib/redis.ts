@@ -77,21 +77,35 @@ class UpstashRedisStore implements RedisLikeStore {
   }
 
   private async command<T>(cmd: string[]): Promise<T> {
-    const response = await fetch(`${this.baseUrl}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(cmd),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5秒タイムアウト
 
-    if (!response.ok) {
-      throw new Error(`Redis command failed: ${response.statusText}`)
+    try {
+      const response = await fetch(`${this.baseUrl}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cmd),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`Redis command failed: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data.result as T
+    } catch (error) {
+      clearTimeout(timeoutId)
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Redis request timed out')
+      }
+      throw error
     }
-
-    const data = await response.json()
-    return data.result as T
   }
 
   async get(key: string): Promise<string | null> {

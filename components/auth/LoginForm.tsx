@@ -62,37 +62,56 @@ export function LoginForm() {
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    // ログイン試行チェック
-    const checkResult = await checkLoginAllowed(email)
-    if (!checkResult.allowed) {
-      setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
-      setLoading(false)
-      return
-    }
-
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    })
-
-    if (result?.error) {
-      // ログイン失敗を記録
-      const failureResult = await recordLoginFailure(email)
-      if (failureResult.locked) {
-        setError(failureResult.message || 'アカウントが一時的にロックされました。しばらく待ってから再試行してください。')
-      } else {
-        setError(`メールアドレスまたはパスワードが間違っています${failureResult.remainingAttempts > 0 ? `（残り${failureResult.remainingAttempts}回）` : ''}`)
+    try {
+      // ログイン試行チェック（エラー時はスキップ）
+      try {
+        const checkResult = await checkLoginAllowed(email)
+        if (!checkResult.allowed) {
+          setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
+          setLoading(false)
+          return
+        }
+      } catch (checkError) {
+        console.error('Login check error:', checkError)
+        // チェックに失敗してもログイン処理は続行
       }
+
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // ログイン失敗を記録（エラー時はスキップ）
+        try {
+          const failureResult = await recordLoginFailure(email)
+          if (failureResult.locked) {
+            setError(failureResult.message || 'アカウントが一時的にロックされました。しばらく待ってから再試行してください。')
+          } else {
+            setError(`メールアドレスまたはパスワードが間違っています${failureResult.remainingAttempts > 0 ? `（残り${failureResult.remainingAttempts}回）` : ''}`)
+          }
+        } catch {
+          setError('メールアドレスまたはパスワードが間違っています')
+        }
+        setLoading(false)
+        return
+      }
+
+      // ログイン成功時にカウンターをリセット（エラー時はスキップ）
+      try {
+        await clearLoginAttempts(email)
+      } catch {
+        // リセット失敗は無視
+      }
+
+      router.push('/feed')
+      router.refresh()
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('ログイン中にエラーが発生しました。再度お試しください。')
       setLoading(false)
-      return
     }
-
-    // ログイン成功時にカウンターをリセット
-    await clearLoginAttempts(email)
-
-    router.push('/feed')
-    router.refresh()
   }
 
   return (
