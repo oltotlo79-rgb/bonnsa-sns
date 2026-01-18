@@ -215,6 +215,34 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             </div>
           )}
 
+          {/* メディア追加・文字数 */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleMediaButtonClick}
+                disabled={uploading || mediaFiles.length >= (limits.maxImages + limits.maxVideos)}
+              >
+                <ImageIcon className="w-5 h-5" />
+                <span className="ml-1 text-sm">画像/動画</span>
+              </Button>
+              {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+            </div>
+
+            <span className={`text-sm ${remainingChars < 0 ? 'text-destructive' : remainingChars < 50 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+              {remainingChars}
+            </span>
+          </div>
+
           {/* ジャンル選択 */}
           <div className="mt-4">
             <GenreSelector
@@ -228,35 +256,6 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             <p className="text-sm text-destructive mt-4">{error}</p>
           )}
         </form>
-      </div>
-
-      {/* フッター（メディア追加・文字数） */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t">
-        <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto">
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleMediaButtonClick}
-              disabled={uploading || mediaFiles.length >= (limits.maxImages + limits.maxVideos)}
-            >
-              <ImageIcon className="w-5 h-5" />
-            </Button>
-            {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
-          </div>
-
-          <span className={`text-sm ${remainingChars < 0 ? 'text-destructive' : remainingChars < 50 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
-            {remainingChars}
-          </span>
-        </div>
       </div>
     </div>
   )
