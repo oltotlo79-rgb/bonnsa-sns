@@ -6,6 +6,11 @@
  */
 import * as Sentry from '@sentry/nextjs'
 
+// グローバルにSentryを公開（デバッグ・テスト用）
+if (typeof window !== 'undefined') {
+  (window as typeof window & { Sentry: typeof Sentry }).Sentry = Sentry
+}
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 

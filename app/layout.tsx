@@ -3,6 +3,9 @@ import { Noto_Sans_JP, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
+// Sentryクライアント初期化（本番環境でエラー監視）
+import "../sentry.client.config";
+
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
   subsets: ["latin"],
