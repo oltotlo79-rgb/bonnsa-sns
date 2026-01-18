@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 
+// Sentryクライアント初期化（本番環境でエラー監視）
+import '../sentry.client.config'
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
