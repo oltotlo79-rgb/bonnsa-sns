@@ -51,10 +51,12 @@ export function MessageForm({ conversationId }: MessageFormProps) {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Ctrl+Enter または Cmd+Enter で送信
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleSubmit(e)
     }
+    // Enterのみは改行（デフォルト動作）
   }
 
   return (
@@ -87,7 +89,7 @@ export function MessageForm({ conversationId }: MessageFormProps) {
         </button>
       </form>
       <p className="text-xs text-muted-foreground mt-2">
-        {content.length}/1000文字 | Enterで送信、Shift+Enterで改行
+        {content.length}/1000文字 | Ctrl+Enterで送信
       </p>
     </div>
   )
