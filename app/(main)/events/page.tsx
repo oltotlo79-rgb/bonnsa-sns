@@ -5,6 +5,7 @@ import { EventCalendarWrapper } from '@/components/event/EventCalendarWrapper'
 import { EventList } from '@/components/event/EventList'
 import { RegionFilter } from '@/components/event/RegionFilter'
 import { ShowPastToggle } from '@/components/event/ShowPastToggle'
+import { EventFilterPersistence } from '@/components/event/EventFilterPersistence'
 
 export const metadata = {
   title: 'イベント - BON-LOG',
@@ -65,6 +66,11 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
 
   return (
     <div className="space-y-6">
+      {/* フィルター設定の永続化 */}
+      <Suspense fallback={null}>
+        <EventFilterPersistence />
+      </Suspense>
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">イベント</h1>
