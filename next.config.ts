@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Vercelではstandalone出力は不要（Dockerを使う場合はコメントを解除）
@@ -45,4 +46,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry組織とプロジェクト設定（環境変数で上書き可能）
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // ソースマップのアップロード設定
+  silent: !process.env.CI, // CI以外ではログを抑制
+  widenClientFileUpload: true,
+
+  // パフォーマンス最適化
+  tunnelRoute: '/monitoring', // Ad blockerを回避するトンネルルート
+});

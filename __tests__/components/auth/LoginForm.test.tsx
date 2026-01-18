@@ -21,6 +21,13 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
+// レート制限Server Actionsモック
+jest.mock('@/lib/actions/auth', () => ({
+  checkLoginAllowed: jest.fn().mockResolvedValue({ allowed: true }),
+  recordLoginFailure: jest.fn().mockResolvedValue(undefined),
+  clearLoginAttempts: jest.fn().mockResolvedValue(undefined),
+}))
+
 describe('LoginForm', () => {
   beforeEach(() => {
     jest.clearAllMocks()

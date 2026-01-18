@@ -57,7 +57,7 @@ import { Label } from '@/components/ui/label'
  */
 import Link from 'next/link'
 
-// import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
+import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
 
 // ============================================================
 // アイコンコンポーネント
@@ -189,18 +189,18 @@ export function LoginForm() {
     const password = formData.get('password') as string
 
     try {
-      // 注意: Server Actionによるレート制限チェックは一時的に無効化
-      // TODO: 後で有効化する
-      // try {
-      //   const checkResult = await checkLoginAllowed(email)
-      //   if (!checkResult.allowed) {
-      //     setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
-      //     setLoading(false)
-      //     return
-      //   }
-      // } catch (checkError) {
-      //   console.error('Login check error:', checkError)
-      // }
+      // レート制限チェック（ブルートフォース攻撃対策）
+      try {
+        const checkResult = await checkLoginAllowed(email)
+        if (!checkResult.allowed) {
+          setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
+          setLoading(false)
+          return
+        }
+      } catch (checkError) {
+        console.error('Login check error:', checkError)
+        // レート制限チェックに失敗しても認証処理は続行
+      }
 
       /**
        * NextAuth.jsによる認証
@@ -218,9 +218,22 @@ export function LoginForm() {
        * 認証失敗時のエラー処理
        */
       if (result?.error) {
+        // ログイン失敗を記録（レート制限用）
+        try {
+          await recordLoginFailure(email)
+        } catch (recordError) {
+          console.error('Failed to record login failure:', recordError)
+        }
         setError('メールアドレスまたはパスワードが間違っています')
         setLoading(false)
         return
+      }
+
+      // ログイン成功時は失敗カウントをクリア
+      try {
+        await clearLoginAttempts(email)
+      } catch (clearError) {
+        console.error('Failed to clear login attempts:', clearError)
       }
 
       /**
