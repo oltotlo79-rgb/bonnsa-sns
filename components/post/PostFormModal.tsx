@@ -66,8 +66,6 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
   const maxChars = limits.maxPostLength
   const remainingChars = maxChars - content.length
 
-  if (!isOpen) return null
-
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -153,6 +151,12 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     setError(null)
     onClose()
   }
+
+  function handleMediaButtonClick() {
+    fileInputRef.current?.click()
+  }
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 bg-background">
@@ -241,7 +245,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleMediaButtonClick}
               disabled={uploading || mediaFiles.length >= (limits.maxImages + limits.maxVideos)}
             >
               <ImageIcon className="w-5 h-5" />
