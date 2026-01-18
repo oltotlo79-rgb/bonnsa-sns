@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -35,12 +36,17 @@ export function DeletePostButton({ postId, variant = 'icon', onDeleted }: Delete
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   async function handleDelete() {
     setLoading(true)
     const result = await deletePost(postId)
 
     if (result.success) {
+      // React Queryのキャッシュを無効化して投稿一覧を更新
+      await queryClient.invalidateQueries({ queryKey: ['timeline'] })
+      await queryClient.invalidateQueries({ queryKey: ['posts'] })
+      await queryClient.invalidateQueries({ queryKey: ['userPosts'] })
       router.refresh()
       onDeleted?.()
     }
