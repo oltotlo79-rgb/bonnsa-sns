@@ -84,7 +84,7 @@ export default async function SubscriptionPage({
       {!isPremium && (
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4">料金プラン</h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2 pt-4">
             <PricingCard
               isPremium={isPremium}
               priceId={monthlyPriceId}

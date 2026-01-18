@@ -52,10 +52,10 @@ export function PricingCard({
   }
 
   return (
-    <Card className={`relative ${popular ? 'border-primary shadow-lg' : ''}`}>
+    <Card className={`relative overflow-visible ${popular ? 'border-primary shadow-lg' : ''}`}>
       {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
             おすすめ
           </span>
         </div>

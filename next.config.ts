@@ -11,10 +11,20 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.blob.core.windows.net',
       },
-      // Cloudflare R2
+      // Cloudflare R2（パブリックバケット）
       {
         protocol: 'https',
         hostname: '*.r2.dev',
+      },
+      // Cloudflare R2（カスタムドメイン使用時）
+      {
+        protocol: 'https',
+        hostname: '*.r2.cloudflarestorage.com',
+      },
+      // Supabase Storage
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
       },
       // Unsplash (ランディングページ用)
       {
