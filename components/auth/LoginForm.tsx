@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
-import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
+// import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -63,18 +63,18 @@ export function LoginForm() {
     const password = formData.get('password') as string
 
     try {
-      // ログイン試行チェック（エラー時はスキップ）
-      try {
-        const checkResult = await checkLoginAllowed(email)
-        if (!checkResult.allowed) {
-          setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
-          setLoading(false)
-          return
-        }
-      } catch (checkError) {
-        console.error('Login check error:', checkError)
-        // チェックに失敗してもログイン処理は続行
-      }
+      // 注意: Server Actionによるレート制限チェックは一時的に無効化
+      // TODO: 後で有効化する
+      // try {
+      //   const checkResult = await checkLoginAllowed(email)
+      //   if (!checkResult.allowed) {
+      //     setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
+      //     setLoading(false)
+      //     return
+      //   }
+      // } catch (checkError) {
+      //   console.error('Login check error:', checkError)
+      // }
 
       const result = await signIn('credentials', {
         email,
@@ -83,26 +83,9 @@ export function LoginForm() {
       })
 
       if (result?.error) {
-        // ログイン失敗を記録（エラー時はスキップ）
-        try {
-          const failureResult = await recordLoginFailure(email)
-          if (failureResult.locked) {
-            setError(failureResult.message || 'アカウントが一時的にロックされました。しばらく待ってから再試行してください。')
-          } else {
-            setError(`メールアドレスまたはパスワードが間違っています${failureResult.remainingAttempts > 0 ? `（残り${failureResult.remainingAttempts}回）` : ''}`)
-          }
-        } catch {
-          setError('メールアドレスまたはパスワードが間違っています')
-        }
+        setError('メールアドレスまたはパスワードが間違っています')
         setLoading(false)
         return
-      }
-
-      // ログイン成功時にカウンターをリセット（エラー時はスキップ）
-      try {
-        await clearLoginAttempts(email)
-      } catch {
-        // リセット失敗は無視
       }
 
       router.push('/feed')
