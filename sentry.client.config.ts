@@ -15,27 +15,13 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // 本番環境でのみサンプリングを有効化
-  // 開発環境では全てのエラーをキャプチャ
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
   // 本番環境でのみ有効化
   enabled: process.env.NODE_ENV === 'production',
 
-  // デバッグモード（開発時のみ）
+  // デバッグモード
   debug: false,
-
-  // リプレイセッションのサンプリング
-  replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-
-  // 統合設定
-  integrations: [
-    Sentry.replayIntegration({
-      // プライバシー保護: マスキング設定
-      maskAllText: true,
-      blockAllMedia: true,
-    }),
-  ],
 
   // エラーフィルタリング
   beforeSend(event) {
@@ -58,8 +44,6 @@ Sentry.init({
     'top.GLOBALS',
     'originalCreateNotification',
     'canvas.contentDocument',
-    'MyApp_RemoveAllHighlights',
-    'http://tt.telecomfactory.com',
     // Chrome拡張機能
     /extensions\//i,
     /^chrome:\/\//i,
