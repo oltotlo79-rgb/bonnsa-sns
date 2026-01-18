@@ -40,21 +40,25 @@ export function FeedWithCompose({ initialPosts, currentUserId, genres, limits }:
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
-    <>
+    <div className="relative min-h-screen">
       {/* タイムライン */}
       <div>
         <h2 className="text-lg font-bold mb-4">タイムライン</h2>
         <Timeline initialPosts={initialPosts} currentUserId={currentUserId} />
       </div>
 
-      {/* フローティング投稿ボタン */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-14 h-14 bg-bonsai-green hover:bg-bonsai-green/90 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105 z-40"
-        aria-label="新規投稿"
-      >
-        <PenIcon className="w-6 h-6" />
-      </button>
+      {/* フローティング投稿ボタン（タイムライン列の右下に固定） */}
+      <div className="sticky bottom-20 md:bottom-6 pointer-events-none z-40">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="pointer-events-auto w-14 h-14 bg-bonsai-green hover:bg-bonsai-green/90 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
+            aria-label="新規投稿"
+          >
+            <PenIcon className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
 
       {/* 投稿モーダル */}
       <PostFormModal
@@ -63,6 +67,6 @@ export function FeedWithCompose({ initialPosts, currentUserId, genres, limits }:
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-    </>
+    </div>
   )
 }
