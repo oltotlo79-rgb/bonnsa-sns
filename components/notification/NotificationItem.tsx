@@ -1,11 +1,77 @@
+/**
+ * 通知アイテムコンポーネント
+ *
+ * このファイルは、個別の通知を表示するコンポーネントを提供します。
+ * 通知ページや通知ドロップダウンで使用されます。
+ *
+ * ## 機能概要
+ * - 通知種別に応じたアイコン表示
+ * - 通知メッセージの生成
+ * - リンク先の決定（投稿、コメント、ユーザーページ）
+ * - 未読/既読状態の表示
+ * - クリック時の既読処理
+ *
+ * ## 対応する通知種別
+ * - like: 投稿へのいいね
+ * - comment_like: コメントへのいいね
+ * - comment: 投稿へのコメント
+ * - follow: フォロー
+ * - quote: 引用投稿
+ * - repost: リポスト
+ * - reply: コメントへの返信
+ *
+ * @module components/notification/NotificationItem
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * Next.js Linkコンポーネント
+ * 通知クリック時の遷移先リンク
+ */
 import Link from 'next/link'
+
+/**
+ * Next.js Imageコンポーネント
+ * ユーザーアバターの表示
+ */
 import Image from 'next/image'
+
+/**
+ * date-fns 相対時間フォーマット
+ * 「3分前」「2時間前」などの表示に使用
+ */
 import { formatDistanceToNow } from 'date-fns'
+
+/**
+ * date-fns 日本語ロケール
+ */
 import { ja } from 'date-fns/locale'
+
+/**
+ * 既読処理用Server Action
+ */
 import { markAsRead } from '@/lib/actions/notification'
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * 通知の型
+ *
+ * @property id - 通知ID
+ * @property type - 通知種別（like, comment, follow等）
+ * @property isRead - 既読フラグ
+ * @property createdAt - 作成日時
+ * @property actor - 通知を発生させたユーザー
+ * @property post - 関連する投稿（オプション）
+ * @property comment - 関連するコメント（オプション）
+ */
 type Notification = {
   id: string
   type: string
@@ -26,10 +92,22 @@ type Notification = {
   } | null
 }
 
+/**
+ * NotificationItemコンポーネントのprops型
+ */
 type NotificationItemProps = {
   notification: Notification
 }
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * ハートアイコン（いいね通知用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function HeartIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -38,6 +116,11 @@ function HeartIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * メッセージアイコン（コメント通知用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function MessageCircleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -46,6 +129,11 @@ function MessageCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザー追加アイコン（フォロー通知用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function UserPlusIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -57,6 +145,11 @@ function UserPlusIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * リピートアイコン（リポスト・引用通知用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function RepeatIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -66,6 +159,11 @@ function RepeatIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 返信アイコン（返信通知用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function ReplyIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -75,6 +173,23 @@ function ReplyIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// ヘルパー関数
+// ============================================================
+
+/**
+ * 通知種別に応じたアイコンを取得
+ *
+ * ## カラーコード
+ * - いいね: 赤
+ * - コメント: 青
+ * - フォロー: 緑
+ * - 引用/リポスト: 紫
+ * - 返信: オレンジ
+ *
+ * @param type - 通知種別
+ * @returns アイコンコンポーネント
+ */
 function getNotificationIcon(type: string) {
   switch (type) {
     case 'like':
@@ -94,6 +209,13 @@ function getNotificationIcon(type: string) {
   }
 }
 
+/**
+ * 通知種別に応じたメッセージを生成
+ *
+ * @param type - 通知種別
+ * @param actorName - 通知発生者の名前
+ * @returns メッセージのJSX
+ */
 function getNotificationMessage(type: string, actorName: string) {
   switch (type) {
     case 'like':
@@ -115,23 +237,77 @@ function getNotificationMessage(type: string, actorName: string) {
   }
 }
 
+/**
+ * 通知のリンク先を決定
+ *
+ * ## リンク先ロジック
+ * - フォロー通知: ユーザーページ
+ * - コメント関連: 投稿ページ#コメントID
+ * - 投稿関連: 投稿ページ
+ * - その他: ユーザーページ
+ *
+ * @param notification - 通知オブジェクト
+ * @returns リンク先URL
+ */
 function getNotificationLink(notification: Notification) {
   const { type, post, comment, actor } = notification
 
+  /**
+   * フォロー通知はユーザーページへ
+   */
   if (type === 'follow') {
     return `/users/${actor.id}`
   }
 
+  /**
+   * 投稿がある場合
+   */
   if (post) {
+    /**
+     * コメントがある場合はコメント位置へアンカーリンク
+     */
     if (comment) {
       return `/posts/${post.id}#comment-${comment.id}`
     }
     return `/posts/${post.id}`
   }
 
+  /**
+   * デフォルトはユーザーページ
+   */
   return `/users/${actor.id}`
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * 通知アイテムコンポーネント
+ *
+ * ## 機能
+ * - アバター画像とアイコンの表示
+ * - 通知メッセージと投稿プレビュー
+ * - 相対時間の表示
+ * - 未読インジケーター
+ * - クリック時の既読処理
+ *
+ * @param notification - 通知データ
+ *
+ * @example
+ * ```tsx
+ * <NotificationItem
+ *   notification={{
+ *     id: 'notif1',
+ *     type: 'like',
+ *     isRead: false,
+ *     createdAt: new Date(),
+ *     actor: { id: 'user1', nickname: 'ユーザー1', avatarUrl: null },
+ *     post: { id: 'post1', content: '投稿内容...' },
+ *   }}
+ * />
+ * ```
+ */
 export function NotificationItem({ notification }: NotificationItemProps) {
   const timeAgo = formatDistanceToNow(new Date(notification.createdAt), {
     addSuffix: true,

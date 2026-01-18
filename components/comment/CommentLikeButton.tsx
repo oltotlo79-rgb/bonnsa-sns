@@ -24,10 +24,12 @@ export function CommentLikeButton({
   const [isPending, startTransition] = useTransition()
   const queryClient = useQueryClient()
 
-  // propsが更新されたら状態を同期
+  // propsが更新されたら状態を同期（値が変わった場合のみ）
+  // 親コンポーネントからのデータ更新を反映するための必要なパターン
   useEffect(() => {
-    setLiked(initialLiked)
-    setCount(initialCount)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- props同期のための必要な処理
+    setLiked((prev) => (prev !== initialLiked ? initialLiked : prev))
+    setCount((prev) => (prev !== initialCount ? initialCount : prev))
   }, [initialLiked, initialCount])
 
   async function handleToggle() {

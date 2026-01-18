@@ -1,12 +1,81 @@
+/**
+ * サイドバーナビゲーションコンポーネント
+ *
+ * このファイルは、デスクトップ版のサイドバーナビゲーションを提供します。
+ * 画面左側に固定表示され、主要なページへのナビゲーションリンクを含みます。
+ *
+ * ## 機能概要
+ * - ロゴとキャッチコピーの表示
+ * - メインナビゲーションメニュー
+ * - 通知・メッセージのバッジ表示
+ * - プレミアム会員専用メニュー
+ * - ログアウトボタン
+ *
+ * ## レスポンシブ対応
+ * - lg（1024px）以上: サイドバーを表示
+ * - lg未満: 非表示（MobileNavを使用）
+ *
+ * ## スタイリング
+ * - 和風デザイン（shadow-washi、落ち着いた色調）
+ * - アクティブ状態のハイライト
+ * - ホバー時のアニメーション
+ *
+ * @module components/layout/Sidebar
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * Next.js Linkコンポーネント
+ * クライアントサイドナビゲーションを提供
+ */
 import Link from 'next/link'
+
+/**
+ * Next.js Imageコンポーネント
+ * ロゴ画像の最適化表示
+ */
 import Image from 'next/image'
+
+/**
+ * 現在のパスを取得するHook
+ * アクティブなナビゲーション項目のハイライトに使用
+ */
 import { usePathname } from 'next/navigation'
+
+/**
+ * NextAuth.jsのサインアウト関数
+ * ログアウト機能を提供
+ */
 import { signOut } from 'next-auth/react'
+
+/**
+ * 通知バッジコンポーネント
+ * 未読通知数を表示
+ */
 import { NotificationBadge } from '@/components/notification/NotificationBadge'
+
+/**
+ * メッセージバッジコンポーネント
+ * 未読メッセージ数を表示
+ */
 import { MessageBadge } from '@/components/message/MessageBadge'
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * ログアウトアイコン
+ *
+ * ドアから出る矢印のデザイン
+ *
+ * @param className - 追加のCSSクラス
+ */
 function LogOutIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -17,6 +86,14 @@ function LogOutIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ホームアイコン
+ *
+ * 家の形をしたナビゲーションアイコン
+ * タイムラインへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function HomeIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -26,6 +103,14 @@ function HomeIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 検索アイコン
+ *
+ * 虫眼鏡の形をしたアイコン
+ * 検索ページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -35,6 +120,14 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 通知アイコン
+ *
+ * ベルの形をしたアイコン
+ * 通知ページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function BellIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -44,6 +137,14 @@ function BellIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ブックマークアイコン
+ *
+ * しおりの形をしたアイコン
+ * ブックマークページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function BookmarkIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -52,6 +153,14 @@ function BookmarkIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * マップピンアイコン
+ *
+ * 地図上の位置マーカーの形をしたアイコン
+ * 盆栽園マップへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function MapPinIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -61,6 +170,14 @@ function MapPinIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * カレンダーアイコン
+ *
+ * カレンダーの形をしたアイコン
+ * イベントページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -72,6 +189,14 @@ function CalendarIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザーアイコン
+ *
+ * 人のシルエットの形をしたアイコン
+ * プロフィールページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function UserIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -81,6 +206,14 @@ function UserIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 設定アイコン
+ *
+ * 歯車の形をしたアイコン
+ * 設定ページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -90,6 +223,14 @@ function SettingsIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * メッセージアイコン
+ *
+ * 吹き出しの形をしたアイコン
+ * メッセージページへのリンクに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function MessageIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -98,6 +239,14 @@ function MessageIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * カレンダープラスアイコン
+ *
+ * カレンダーにプラス記号が付いた形のアイコン
+ * 予約投稿ページへのリンクに使用（プレミアム機能）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function CalendarPlusIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -111,6 +260,14 @@ function CalendarPlusIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 棒グラフアイコン
+ *
+ * 3本の棒グラフの形をしたアイコン
+ * 投稿分析ページへのリンクに使用（プレミアム機能）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function BarChartIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -121,6 +278,14 @@ function BarChartIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 王冠アイコン
+ *
+ * 王冠の形をしたアイコン
+ * プレミアム機能の識別に使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function CrownIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -130,6 +295,18 @@ function CrownIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * ナビゲーション項目の型
+ *
+ * @property href - リンク先のURL
+ * @property icon - アイコンコンポーネント
+ * @property label - 表示テキスト
+ * @property premium - プレミアム機能かどうか（オプション）
+ */
 type NavItem = {
   href: string
   icon: React.FC<{ className?: string }>
@@ -137,6 +314,15 @@ type NavItem = {
   premium?: boolean
 }
 
+// ============================================================
+// 定数
+// ============================================================
+
+/**
+ * 基本ナビゲーション項目
+ *
+ * 全ユーザーが利用可能なナビゲーションリンク
+ */
 const navItems: NavItem[] = [
   { href: '/feed', icon: HomeIcon, label: 'ホーム' },
   { href: '/search', icon: SearchIcon, label: '検索' },
@@ -147,25 +333,90 @@ const navItems: NavItem[] = [
   { href: '/events', icon: CalendarIcon, label: 'イベント' },
 ]
 
+/**
+ * プレミアム会員専用ナビゲーション項目
+ *
+ * プレミアム会員のみ表示されるリンク
+ * 各項目には王冠アイコンが付与される
+ */
 const premiumNavItems: NavItem[] = [
   { href: '/posts/scheduled', icon: CalendarPlusIcon, label: '予約投稿', premium: true },
   { href: '/analytics', icon: BarChartIcon, label: '投稿分析', premium: true },
 ]
 
+/**
+ * Sidebarコンポーネントのprops型
+ *
+ * @property userId - ユーザーID（プロフィールリンクに使用）
+ * @property isPremium - プレミアム会員かどうか
+ */
 type SidebarProps = {
   userId?: string
   isPremium?: boolean
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * サイドバーナビゲーションコンポーネント
+ *
+ * ## 機能
+ * - ロゴとキャッチコピーの表示
+ * - メインナビゲーションメニュー
+ * - プレミアム会員専用メニュー（isPremium=trueの場合）
+ * - ユーザープロフィールへのリンク
+ * - ログアウトボタン
+ *
+ * ## アクティブ状態の判定
+ * - 完全一致: パスが完全に一致
+ * - 前方一致: パスで始まる（子ルートも含む）
+ *
+ * ## レスポンシブ
+ * - lg以上で表示、lg未満では非表示
+ *
+ * @param userId - ユーザーID（プロフィールリンク用）
+ * @param isPremium - プレミアム会員フラグ
+ *
+ * @example
+ * ```tsx
+ * <Sidebar userId="user123" isPremium={true} />
+ * ```
+ */
 export function Sidebar({ userId, isPremium }: SidebarProps) {
+  // ------------------------------------------------------------
+  // Hooks
+  // ------------------------------------------------------------
+
+  /**
+   * 現在のパス名を取得
+   * アクティブなナビゲーション項目を判定するために使用
+   */
   const pathname = usePathname()
 
+  // ------------------------------------------------------------
+  // ナビゲーション項目の構築
+  // ------------------------------------------------------------
+
+  /**
+   * 全ナビゲーション項目を動的に構築
+   *
+   * 1. 基本ナビゲーション
+   * 2. プレミアム会員専用（isPremiumの場合）
+   * 3. プロフィールリンク（userIdがある場合）
+   * 4. 設定リンク
+   */
   const allNavItems: NavItem[] = [
     ...navItems,
     ...(isPremium ? premiumNavItems : []),
     ...(userId ? [{ href: `/users/${userId}`, icon: UserIcon, label: 'プロフィール' }] : []),
     { href: '/settings', icon: SettingsIcon, label: '設定' },
   ]
+
+  // ------------------------------------------------------------
+  // レンダリング
+  // ------------------------------------------------------------
 
   return (
     <aside className="sticky top-0 h-screen w-64 border-r bg-card/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">

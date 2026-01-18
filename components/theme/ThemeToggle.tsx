@@ -1,7 +1,42 @@
+/**
+ * テーマ切り替えコンポーネント
+ *
+ * このファイルは、ライト/ダーク/システムのテーマを切り替える
+ * ボタンとセレクターを提供します。
+ *
+ * ## 機能概要
+ * - ThemeToggle: クリックでテーマを順番に切り替え
+ * - ThemeSelect: 3つのボタンで直接テーマを選択
+ *
+ * ## テーマ種類
+ * - light: ライトモード
+ * - dark: ダークモード
+ * - system: OSの設定に従う
+ *
+ * @module components/theme/ThemeToggle
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * テーマコンテキストのカスタムHook
+ * 現在のテーマ取得と変更に使用
+ */
 import { useTheme } from './ThemeProvider'
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * 太陽アイコン（ライトモード用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function SunIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -27,6 +62,11 @@ function SunIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 月アイコン（ダークモード用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function MoonIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -44,6 +84,11 @@ function MoonIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * モニターアイコン（システム設定用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function MonitorIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -63,14 +108,61 @@ function MonitorIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * ThemeToggleコンポーネントのprops型
+ *
+ * @property showLabel - ラベルを表示するか
+ * @property className - 追加のCSSクラス
+ */
 interface ThemeToggleProps {
   showLabel?: boolean
   className?: string
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * テーマトグルボタンコンポーネント
+ *
+ * ## 機能
+ * - クリックでテーマを順番に切り替え
+ * - light → dark → system → light の順
+ * - 現在のテーマに応じたアイコンを表示
+ *
+ * @param showLabel - ラベル表示フラグ
+ * @param className - 追加のCSSクラス
+ *
+ * @example
+ * ```tsx
+ * <ThemeToggle />
+ * <ThemeToggle showLabel />
+ * ```
+ */
 export function ThemeToggle({ showLabel = false, className = '' }: ThemeToggleProps) {
+  // ------------------------------------------------------------
+  // Hooks
+  // ------------------------------------------------------------
+
+  /**
+   * テーマコンテキストから現在のテーマと設定関数を取得
+   */
   const { theme, setTheme } = useTheme()
 
+  // ------------------------------------------------------------
+  // イベントハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * テーマを順番に切り替え
+   *
+   * light → dark → system → light の順で循環
+   */
   const cycleTheme = () => {
     if (theme === 'light') {
       setTheme('dark')
@@ -81,6 +173,13 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
     }
   }
 
+  // ------------------------------------------------------------
+  // ヘルパー関数
+  // ------------------------------------------------------------
+
+  /**
+   * 現在のテーマに対応する日本語ラベルを取得
+   */
   const getLabel = () => {
     switch (theme) {
       case 'light':
@@ -92,7 +191,14 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
     }
   }
 
+  /**
+   * 現在のテーマに対応するアイコンコンポーネントを選択
+   */
   const Icon = theme === 'light' ? SunIcon : theme === 'dark' ? MoonIcon : MonitorIcon
+
+  // ------------------------------------------------------------
+  // レンダリング
+  // ------------------------------------------------------------
 
   return (
     <button
@@ -106,18 +212,52 @@ export function ThemeToggle({ showLabel = false, className = '' }: ThemeTogglePr
   )
 }
 
-// ドロップダウンメニュー用
+// ============================================================
+// テーマ選択コンポーネント
+// ============================================================
+
+/**
+ * ThemeSelectコンポーネントのprops型
+ *
+ * @property className - 追加のCSSクラス
+ */
 interface ThemeSelectProps {
   className?: string
 }
 
+/**
+ * テーマ選択コンポーネント
+ *
+ * ## 機能
+ * - 3つのボタンで直接テーマを選択
+ * - 設定画面などで使用
+ *
+ * ## 表示
+ * - ライト（太陽アイコン）
+ * - ダーク（月アイコン）
+ * - 自動（モニターアイコン）
+ *
+ * @param className - 追加のCSSクラス
+ *
+ * @example
+ * ```tsx
+ * <ThemeSelect />
+ * ```
+ */
 export function ThemeSelect({ className = '' }: ThemeSelectProps) {
+  /**
+   * テーマコンテキストから現在のテーマと設定関数を取得
+   */
   const { theme, setTheme } = useTheme()
 
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
+      {/* ラベル */}
       <label className="text-sm font-medium text-muted-foreground">テーマ</label>
+
+      {/* テーマ選択ボタン群 */}
       <div className="flex gap-2">
+        {/* ライトモードボタン */}
         <button
           onClick={() => setTheme('light')}
           className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
@@ -129,6 +269,8 @@ export function ThemeSelect({ className = '' }: ThemeSelectProps) {
           <SunIcon className="w-4 h-4" />
           <span className="text-sm">ライト</span>
         </button>
+
+        {/* ダークモードボタン */}
         <button
           onClick={() => setTheme('dark')}
           className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
@@ -140,6 +282,8 @@ export function ThemeSelect({ className = '' }: ThemeSelectProps) {
           <MoonIcon className="w-4 h-4" />
           <span className="text-sm">ダーク</span>
         </button>
+
+        {/* システム設定に従うボタン */}
         <button
           onClick={() => setTheme('system')}
           className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${

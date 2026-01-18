@@ -23,6 +23,52 @@ jest.mock('@/lib/search/fulltext', () => ({
   fulltextSearchUsers: jest.fn().mockResolvedValue([]),
 }))
 
+// キャッシュモック（unstable_cacheはテスト環境で動作しないため）
+jest.mock('@/lib/cache', () => ({
+  getCachedGenres: jest.fn().mockImplementation(async () => {
+    // テストではモックされたPrismaデータを使用
+    const genres = await mockPrisma.genre.findMany({ orderBy: [{ sortOrder: 'asc' }] })
+    type GenreType = typeof genres[number]
+    const groupedMap = genres.reduce((acc: Record<string, GenreType[]>, genre: GenreType) => {
+      if (!acc[genre.category]) {
+        acc[genre.category] = []
+      }
+      acc[genre.category].push(genre)
+      return acc
+    }, {})
+    const categoryOrder = ['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント', 'その他']
+    const grouped: Record<string, typeof genres> = {}
+    for (const category of categoryOrder) {
+      if (groupedMap[category]) {
+        grouped[category] = groupedMap[category]
+      }
+    }
+    return { genres: grouped, allGenres: genres }
+  }),
+  getCachedPopularTags: jest.fn().mockImplementation(async () => {
+    // テストではモックされたPrismaデータを使用
+    const posts = await mockPrisma.post.findMany({
+      where: { content: { contains: '#' } },
+      select: { content: true },
+    })
+    const tagCounts: Record<string, number> = {}
+    const hashtagRegex = /#[\w\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]+/g
+    for (const post of posts) {
+      if (!post.content) continue
+      const tags = post.content.match(hashtagRegex) || []
+      for (const tag of tags) {
+        const normalizedTag = tag.slice(1).toLowerCase()
+        tagCounts[normalizedTag] = (tagCounts[normalizedTag] || 0) + 1
+      }
+    }
+    const sortedTags = Object.entries(tagCounts)
+      .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
+      .slice(0, 10)
+      .map(([tag, count]: [string, number]) => ({ tag, count }))
+    return { tags: sortedTags }
+  }),
+}))
+
 describe('Search Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()

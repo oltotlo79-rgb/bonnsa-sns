@@ -1,14 +1,77 @@
+/**
+ * ユーザー登録フォームコンポーネント
+ *
+ * このファイルは、新規ユーザー登録のためのフォームを提供します。
+ * 登録ページ (/register) で使用されます。
+ *
+ * ## 機能概要
+ * - ニックネーム入力
+ * - メールアドレス入力
+ * - パスワード入力（表示/非表示切り替え）
+ * - パスワード確認
+ * - 利用規約・プライバシーポリシーへの同意
+ * - バリデーション（クライアント側）
+ * - 登録成功後の自動ログイン
+ *
+ * ## パスワード要件
+ * - 8文字以上
+ * - 英字を含む
+ * - 数字を含む
+ *
+ * @module components/auth/RegisterForm
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * NextAuth.jsのサインイン関数
+ * 登録成功後の自動ログインに使用
+ */
 import { signIn } from 'next-auth/react'
+
+/**
+ * Next.jsルーター
+ * 登録成功後のリダイレクトに使用
+ */
 import { useRouter } from 'next/navigation'
+
+/**
+ * React useState Hook
+ * フォームの状態管理
+ */
 import { useState } from 'react'
+
+/**
+ * UIコンポーネント
+ */
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
+/**
+ * Next.js Linkコンポーネント
+ * ログインページへのリンク
+ */
 import Link from 'next/link'
+
+/**
+ * ユーザー登録用Server Action
+ */
 import { registerUser } from '@/lib/actions/auth'
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * 目のアイコン（パスワード表示状態）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function EyeIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -27,6 +90,11 @@ function EyeIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 目を閉じたアイコン（パスワード非表示状態）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function EyeOffIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -47,14 +115,80 @@ function EyeOffIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * ユーザー登録フォームコンポーネント
+ *
+ * ## 機能
+ * - 必須入力フィールド（ニックネーム、メール、パスワード）
+ * - パスワード表示/非表示トグル
+ * - クライアント側バリデーション
+ * - 利用規約への同意チェック
+ * - 登録成功後の自動ログイン
+ *
+ * ## バリデーション
+ * - パスワード一致確認
+ * - パスワード強度チェック（8文字以上、英数字必須）
+ * - 利用規約同意チェック
+ *
+ * @example
+ * ```tsx
+ * <RegisterForm />
+ * ```
+ */
 export function RegisterForm() {
+  // ------------------------------------------------------------
+  // 状態管理
+  // ------------------------------------------------------------
+
+  /**
+   * Next.jsルーター
+   */
   const router = useRouter()
+
+  /**
+   * エラーメッセージ
+   */
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * ローディング状態
+   */
   const [loading, setLoading] = useState(false)
+
+  /**
+   * パスワード表示状態
+   */
   const [showPassword, setShowPassword] = useState(false)
+
+  /**
+   * 確認用パスワード表示状態
+   */
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  /**
+   * 利用規約同意状態
+   */
   const [agreedToTerms, setAgreedToTerms] = useState(false)
 
+  // ------------------------------------------------------------
+  // イベントハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * フォーム送信ハンドラ
+   *
+   * ## 処理フロー
+   * 1. クライアント側バリデーション
+   * 2. Server Actionでユーザー登録
+   * 3. 登録成功後、自動ログイン
+   * 4. フィードページへリダイレクト
+   *
+   * @param e - フォームイベント
+   */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)

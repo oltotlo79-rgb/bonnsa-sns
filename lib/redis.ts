@@ -1,19 +1,147 @@
-// Redis クライアント設定
-// 本番環境では Redis を使用、開発環境ではインメモリフォールバック
+/**
+ * Redisクライアント設定
+ *
+ * このファイルは、Redis（またはインメモリフォールバック）へのアクセスを提供します。
+ * 本番環境ではUpstash Redisを使用し、開発環境ではインメモリストアを使用します。
+ *
+ * ## Redisとは？
+ * 高速なインメモリデータストア。以下の用途で使用：
+ * - セッション管理
+ * - キャッシュ
+ * - レート制限
+ * - リアルタイム機能
+ *
+ * ## Upstash Redisとは？
+ * サーバーレス環境向けのRedisサービス
+ * - HTTP REST APIでアクセス（WebSocket不要）
+ * - 従量課金制
+ * - Vercel、Cloudflare Workersと相性が良い
+ *
+ * ## このファイルの設計
+ * 1. インターフェースで統一されたAPI定義
+ * 2. インメモリ実装（開発/テスト用）
+ * 3. Upstash実装（本番用）
+ * 4. 環境変数に基づく自動切り替え
+ *
+ * @module lib/redis
+ */
 
+// ============================================================
+// インポート部分
+// ============================================================
+
+/**
+ * logger: 環境対応ロギングユーティリティ
+ *
+ * どのストア実装が使用されているかをログ出力
+ */
+import logger from '@/lib/logger'
+
+// ============================================================
+// インターフェース定義
+// ============================================================
+
+/**
+ * Redis互換ストアのインターフェース
+ *
+ * ## なぜインターフェースを定義するか？
+ * - 異なる実装（インメモリ/Upstash）を同じ方法で使用可能
+ * - テスト時にモックに置き換えやすい
+ * - 将来的に別のRedisクライアントに切り替えやすい
+ *
+ * ## 定義されているメソッド
+ * - get: キーに対応する値を取得
+ * - set: キーと値をセット（TTL指定可能）
+ * - del: キーを削除
+ * - incr: 値をインクリメント（1増やす）
+ * - expire: 有効期限を設定
+ * - ttl: 残りの有効期限を取得
+ */
 interface RedisLikeStore {
+  /**
+   * キーに対応する値を取得
+   * @param key - 取得するキー
+   * @returns 値（存在しない場合はnull）
+   */
   get(key: string): Promise<string | null>
+
+  /**
+   * キーと値をセット
+   * @param key - キー
+   * @param value - 値
+   * @param options - オプション（ex: 有効期限秒数）
+   */
   set(key: string, value: string, options?: { ex?: number }): Promise<void>
+
+  /**
+   * キーを削除
+   * @param key - 削除するキー
+   */
   del(key: string): Promise<void>
+
+  /**
+   * 値を1増やす（カウンターに使用）
+   * @param key - インクリメントするキー
+   * @returns インクリメント後の値
+   */
   incr(key: string): Promise<number>
+
+  /**
+   * 有効期限を設定
+   * @param key - キー
+   * @param seconds - 有効期限（秒）
+   */
   expire(key: string, seconds: number): Promise<void>
+
+  /**
+   * 残りの有効期限を取得
+   * @param key - キー
+   * @returns 残り秒数（-1: 無期限、-2: キーなし）
+   */
   ttl(key: string): Promise<number>
 }
 
-// インメモリストア（開発/テスト用フォールバック）
+// ============================================================
+// インメモリストア実装
+// ============================================================
+
+/**
+ * インメモリストア（開発/テスト用フォールバック）
+ *
+ * ## 用途
+ * - ローカル開発環境
+ * - テスト実行時
+ * - Redis未設定時のフォールバック
+ *
+ * ## 制限事項
+ * - サーバー再起動でデータが消える
+ * - 複数インスタンス間で共有されない
+ * - メモリ使用量に注意が必要
+ *
+ * ## 実装の詳細
+ * JavaScriptのMapを使用してキー・値を保存
+ * 各エントリは値と有効期限のタイムスタンプを持つ
+ */
 class InMemoryStore implements RedisLikeStore {
+  /**
+   * データストア
+   *
+   * Map<key, { value, expiresAt }>
+   * - value: 保存された文字列値
+   * - expiresAt: 有効期限のタイムスタンプ（nullは無期限）
+   */
   private store = new Map<string, { value: string; expiresAt: number | null }>()
 
+  /**
+   * 期限切れエントリを削除
+   *
+   * ## なぜ必要か？
+   * - メモリリークを防ぐ
+   * - 期限切れデータが返されないことを保証
+   *
+   * ## 呼び出しタイミング
+   * get()の前に呼び出して、期限切れエントリをクリーンアップ
+   */
   private cleanExpired() {
     const now = Date.now()
     for (const [key, entry] of this.store.entries()) {
@@ -23,10 +151,21 @@ class InMemoryStore implements RedisLikeStore {
     }
   }
 
+  /**
+   * 値を取得
+   *
+   * ## 処理フロー
+   * 1. 期限切れエントリをクリーンアップ
+   * 2. キーに対応するエントリを取得
+   * 3. 期限切れチェック（個別に再確認）
+   * 4. 値を返す
+   */
   async get(key: string): Promise<string | null> {
     this.cleanExpired()
     const entry = this.store.get(key)
     if (!entry) return null
+
+    // 期限切れの場合は削除してnullを返す
     if (entry.expiresAt && entry.expiresAt < Date.now()) {
       this.store.delete(key)
       return null
@@ -34,15 +173,40 @@ class InMemoryStore implements RedisLikeStore {
     return entry.value
   }
 
+  /**
+   * 値をセット
+   *
+   * ## options.ex について
+   * - 有効期限を秒数で指定
+   * - 省略時は無期限
+   *
+   * ## 有効期限の計算
+   * Date.now() + ex * 1000
+   * - Date.now(): 現在のタイムスタンプ（ミリ秒）
+   * - ex * 1000: 秒をミリ秒に変換
+   */
   async set(key: string, value: string, options?: { ex?: number }): Promise<void> {
     const expiresAt = options?.ex ? Date.now() + options.ex * 1000 : null
     this.store.set(key, { value, expiresAt })
   }
 
+  /**
+   * キーを削除
+   */
   async del(key: string): Promise<void> {
     this.store.delete(key)
   }
 
+  /**
+   * 値をインクリメント
+   *
+   * ## 動作
+   * - キーが存在しない場合: 0から開始して1を返す
+   * - キーが存在する場合: 現在の値+1を返す
+   *
+   * ## 注意
+   * 有効期限は維持される（既存エントリの場合）
+   */
   async incr(key: string): Promise<number> {
     const entry = this.store.get(key)
     const currentValue = entry ? parseInt(entry.value, 10) || 0 : 0
@@ -51,6 +215,11 @@ class InMemoryStore implements RedisLikeStore {
     return newValue
   }
 
+  /**
+   * 有効期限を設定
+   *
+   * キーが存在する場合のみ有効期限を更新
+   */
   async expire(key: string, seconds: number): Promise<void> {
     const entry = this.store.get(key)
     if (entry) {
@@ -58,6 +227,14 @@ class InMemoryStore implements RedisLikeStore {
     }
   }
 
+  /**
+   * 残りの有効期限を取得
+   *
+   * ## 戻り値
+   * - 正の数: 残り秒数
+   * - -1: 無期限（expiresAtがnull）
+   * - -2: キーが存在しない、または期限切れ
+   */
   async ttl(key: string): Promise<number> {
     const entry = this.store.get(key)
     if (!entry || !entry.expiresAt) return -1
@@ -66,21 +243,90 @@ class InMemoryStore implements RedisLikeStore {
   }
 }
 
-// Upstash Redis クライアント（本番用）
+// ============================================================
+// Upstash Redis実装
+// ============================================================
+
+/**
+ * Upstash Redisクライアント（本番用）
+ *
+ * ## Upstashの特徴
+ * - HTTP REST APIでRedisコマンドを実行
+ * - サーバーレス環境に最適化
+ * - 従量課金制（無料枠あり）
+ *
+ * ## 認証方法
+ * - REST URL: Upstashダッシュボードから取得
+ * - トークン: Bearer認証に使用
+ *
+ * ## 使用するRedisコマンド
+ * - GET: 値の取得
+ * - SET: 値の設定（EXオプションで有効期限）
+ * - DEL: キーの削除
+ * - INCR: インクリメント
+ * - EXPIRE: 有効期限設定
+ * - TTL: 残り有効期限取得
+ */
 class UpstashRedisStore implements RedisLikeStore {
+  /**
+   * Upstash REST APIのベースURL
+   * 例: https://xxx.upstash.io
+   */
   private baseUrl: string
+
+  /**
+   * 認証トークン
+   * Upstashダッシュボードで発行
+   */
   private token: string
 
+  /**
+   * コンストラクタ
+   * @param url - Upstash REST URL
+   * @param token - 認証トークン
+   */
   constructor(url: string, token: string) {
     this.baseUrl = url
     this.token = token
   }
 
+  /**
+   * Redisコマンドを実行
+   *
+   * ## ジェネリック型 <T>
+   * 戻り値の型を呼び出し側で指定可能
+   *
+   * ## 処理フロー
+   * 1. AbortControllerでタイムアウト設定
+   * 2. POSTリクエストでコマンド送信
+   * 3. レスポンスのresultフィールドを返す
+   *
+   * ## タイムアウト
+   * 5秒でタイムアウト（ネットワーク障害対策）
+   *
+   * @param cmd - Redisコマンドの配列（例: ['GET', 'key']）
+   * @returns コマンドの結果
+   */
   private async command<T>(cmd: string[]): Promise<T> {
+    /**
+     * AbortController: リクエストのキャンセルに使用
+     * setTimeout: 5秒後にabort()を呼び出し
+     */
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5秒タイムアウト
 
     try {
+      /**
+       * Upstash REST APIにPOSTリクエスト
+       *
+       * ## ヘッダー
+       * - Authorization: Bearer トークン認証
+       * - Content-Type: JSON形式
+       *
+       * ## ボディ
+       * コマンド配列をJSON形式で送信
+       * 例: ['SET', 'key', 'value', 'EX', '60']
+       */
       const response = await fetch(`${this.baseUrl}`, {
         method: 'POST',
         headers: {
@@ -88,7 +334,7 @@ class UpstashRedisStore implements RedisLikeStore {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(cmd),
-        signal: controller.signal,
+        signal: controller.signal,  // タイムアウト用
       })
 
       clearTimeout(timeoutId)
@@ -97,10 +343,16 @@ class UpstashRedisStore implements RedisLikeStore {
         throw new Error(`Redis command failed: ${response.statusText}`)
       }
 
+      /**
+       * レスポンス形式
+       * { result: <コマンドの結果> }
+       */
       const data = await response.json()
       return data.result as T
     } catch (error) {
       clearTimeout(timeoutId)
+
+      // タイムアウトエラーの判定
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Redis request timed out')
       }
@@ -108,10 +360,20 @@ class UpstashRedisStore implements RedisLikeStore {
     }
   }
 
+  /**
+   * 値を取得（GETコマンド）
+   */
   async get(key: string): Promise<string | null> {
     return this.command<string | null>(['GET', key])
   }
 
+  /**
+   * 値をセット（SETコマンド）
+   *
+   * ## EXオプション
+   * 有効期限を秒数で指定
+   * SET key value EX 60 → 60秒後に期限切れ
+   */
   async set(key: string, value: string, options?: { ex?: number }): Promise<void> {
     if (options?.ex) {
       await this.command(['SET', key, value, 'EX', options.ex.toString()])
@@ -120,44 +382,107 @@ class UpstashRedisStore implements RedisLikeStore {
     }
   }
 
+  /**
+   * キーを削除（DELコマンド）
+   */
   async del(key: string): Promise<void> {
     await this.command(['DEL', key])
   }
 
+  /**
+   * 値をインクリメント（INCRコマンド）
+   * キーが存在しない場合は0から開始
+   */
   async incr(key: string): Promise<number> {
     return this.command<number>(['INCR', key])
   }
 
+  /**
+   * 有効期限を設定（EXPIREコマンド）
+   */
   async expire(key: string, seconds: number): Promise<void> {
     await this.command(['EXPIRE', key, seconds.toString()])
   }
 
+  /**
+   * 残り有効期限を取得（TTLコマンド）
+   */
   async ttl(key: string): Promise<number> {
     return this.command<number>(['TTL', key])
   }
 }
 
-// シングルトンインスタンス
+// ============================================================
+// シングルトンとエクスポート
+// ============================================================
+
+/**
+ * シングルトンインスタンス
+ *
+ * ## シングルトンパターン
+ * - アプリケーション全体で1つのインスタンスを共有
+ * - 接続の重複を防ぐ
+ * - リソースの効率的な使用
+ */
 let redisClient: RedisLikeStore | null = null
 
+/**
+ * Redisクライアントを取得
+ *
+ * ## 動作
+ * 1. 既存インスタンスがあれば返す
+ * 2. 環境変数をチェック
+ * 3. 設定に応じてUpstash/インメモリを初期化
+ *
+ * ## 環境変数
+ * - UPSTASH_REDIS_REST_URL: Upstash REST URL
+ * - UPSTASH_REDIS_REST_TOKEN: 認証トークン
+ *
+ * 両方が設定されている場合のみUpstashを使用
+ *
+ * @returns RedisLikeStoreインスタンス
+ *
+ * ## 使用例
+ * ```typescript
+ * const redis = getRedisClient()
+ * await redis.set('key', 'value', { ex: 60 })
+ * const value = await redis.get('key')
+ * ```
+ */
 export function getRedisClient(): RedisLikeStore {
+  // 既存インスタンスがあれば返す
   if (redisClient) return redisClient
 
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN
 
   if (redisUrl && redisToken) {
-    console.log('Using Upstash Redis')
+    // Upstash Redisを使用
+    logger.log('Using Upstash Redis')
     redisClient = new UpstashRedisStore(redisUrl, redisToken)
   } else {
-    console.log('Using in-memory store (Redis not configured)')
+    // インメモリフォールバック
+    logger.log('Using in-memory store (Redis not configured)')
     redisClient = new InMemoryStore()
   }
 
   return redisClient
 }
 
-// 便利なエクスポート
+/**
+ * 便利なエクスポート
+ *
+ * ## getterを使う理由
+ * - 遅延初期化（初めてアクセスした時に初期化）
+ * - シングルトンパターンのカプセル化
+ *
+ * ## 使用例
+ * ```typescript
+ * import { redis } from '@/lib/redis'
+ *
+ * await redis.client.set('key', 'value')
+ * ```
+ */
 export const redis = {
   get client() {
     return getRedisClient()

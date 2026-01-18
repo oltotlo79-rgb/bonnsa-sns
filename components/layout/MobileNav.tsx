@@ -1,11 +1,69 @@
+/**
+ * モバイルナビゲーションコンポーネント
+ *
+ * このファイルは、モバイル画面（lg未満）で表示される
+ * 画面下部のナビゲーションバーを提供します。
+ *
+ * ## 機能概要
+ * - 主要ページへのナビゲーション（ホーム、検索、通知、メッセージ）
+ * - 「もっと見る」メニューで追加のページにアクセス
+ * - 通知/メッセージの未読バッジ表示
+ * - 現在のページをハイライト表示
+ *
+ * ## レスポンシブ対応
+ * - lg未満: このコンポーネントを表示
+ * - lg以上: 非表示（サイドバーナビゲーションを使用）
+ *
+ * ## 使用例
+ * ```tsx
+ * <MobileNav userId={session?.user?.id} />
+ * ```
+ *
+ * @module components/layout/MobileNav
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * React hooks
+ * - useState: コンポーネント内の状態管理
+ * - useEffect: 副作用の処理（イベントリスナーなど）
+ * - useRef: DOM要素への参照
+ */
 import { useState, useEffect, useRef } from 'react'
+
+/**
+ * Next.js リンクコンポーネント
+ * クライアントサイドナビゲーションを提供
+ */
 import Link from 'next/link'
+
+/**
+ * Next.js 現在のパス取得フック
+ * アクティブなナビゲーション項目の判定に使用
+ */
 import { usePathname } from 'next/navigation'
+
+/**
+ * 通知/メッセージバッジコンポーネント
+ * 未読数を表示
+ */
 import { NotificationBadge } from '@/components/notification/NotificationBadge'
 import { MessageBadge } from '@/components/message/MessageBadge'
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * ホームアイコン
+ *
+ * タイムライン/ホームページへのナビゲーションに使用
+ */
 function HomeIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -15,6 +73,7 @@ function HomeIcon({ className }: { className?: string }) {
   )
 }
 
+/** 検索アイコン */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -24,6 +83,7 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/** ベルアイコン（通知用） */
 function BellIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -33,6 +93,7 @@ function BellIcon({ className }: { className?: string }) {
   )
 }
 
+/** メッセージアイコン（DM用） */
 function MessageIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -41,6 +102,7 @@ function MessageIcon({ className }: { className?: string }) {
   )
 }
 
+/** もっと見るアイコン（縦三点リーダー） */
 function MoreIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -51,6 +113,7 @@ function MoreIcon({ className }: { className?: string }) {
   )
 }
 
+/** ユーザーアイコン（プロフィール用） */
 function UserIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -60,6 +123,7 @@ function UserIcon({ className }: { className?: string }) {
   )
 }
 
+/** マップピンアイコン（盆栽園マップ用） */
 function MapPinIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -69,6 +133,7 @@ function MapPinIcon({ className }: { className?: string }) {
   )
 }
 
+/** カレンダーアイコン（イベント用） */
 function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -80,6 +145,7 @@ function CalendarIcon({ className }: { className?: string }) {
   )
 }
 
+/** ブックマークアイコン */
 function BookmarkIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -88,6 +154,7 @@ function BookmarkIcon({ className }: { className?: string }) {
   )
 }
 
+/** 設定アイコン */
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -97,12 +164,66 @@ function SettingsIcon({ className }: { className?: string }) {
   )
 }
 
+/** ファイルテキストアイコン（利用規約用） */
+function FileTextIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" x2="8" y1="13" y2="13" />
+      <line x1="16" x2="8" y1="17" y2="17" />
+      <line x1="10" x2="8" y1="9" y2="9" />
+    </svg>
+  )
+}
+
+/** シールドアイコン（プライバシー用） */
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+    </svg>
+  )
+}
+
+/** ヘルプアイコン */
+function HelpCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  )
+}
+
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * ナビゲーション項目の型
+ *
+ * 各ナビゲーションリンクの情報を定義
+ */
 type NavItem = {
+  /** リンク先のパス */
   href: string
+  /** アイコンコンポーネント */
   icon: React.FC<{ className?: string }>
+  /** 表示ラベル */
   label: string
 }
 
+// ============================================================
+// 定数
+// ============================================================
+
+/**
+ * 基本ナビゲーション項目
+ *
+ * ナビゲーションバーに直接表示される主要な項目
+ */
 const baseNavItems: NavItem[] = [
   { href: '/feed', icon: HomeIcon, label: 'ホーム' },
   { href: '/search', icon: SearchIcon, label: '検索' },
@@ -110,7 +231,11 @@ const baseNavItems: NavItem[] = [
   { href: '/messages', icon: MessageIcon, label: 'メッセージ' },
 ]
 
-// もっと見るメニュー内の項目
+/**
+ * もっと見るメニュー内の項目
+ *
+ * 「もっと見る」ボタンをタップすると表示される追加メニュー
+ */
 const moreMenuItems: NavItem[] = [
   { href: '/shops', icon: MapPinIcon, label: '盆栽園マップ' },
   { href: '/events', icon: CalendarIcon, label: 'イベント' },
@@ -118,10 +243,45 @@ const moreMenuItems: NavItem[] = [
   { href: '/settings', icon: SettingsIcon, label: '設定' },
 ]
 
+/**
+ * フッターリンク
+ *
+ * もっと見るメニューの下部に表示される法的リンクなど
+ */
+const footerLinks: NavItem[] = [
+  { href: '/terms', icon: FileTextIcon, label: '利用規約' },
+  { href: '/privacy', icon: ShieldIcon, label: 'プライバシー' },
+  { href: '/help', icon: HelpCircleIcon, label: 'ヘルプ' },
+]
+
+/**
+ * MobileNavコンポーネントのProps
+ */
 type MobileNavProps = {
+  /** 現在ログイン中のユーザーID（プロフィールリンクに使用） */
   userId?: string
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * モバイルナビゲーションコンポーネント
+ *
+ * ## 機能
+ * - 主要ページへのナビゲーションリンク
+ * - 「もっと見る」ドロップダウンメニュー
+ * - 通知/メッセージの未読バッジ
+ * - 現在ページのハイライト表示
+ *
+ * ## 状態管理
+ * - showMoreMenu: ドロップダウンメニューの表示状態
+ *
+ * ## 副作用
+ * - メニュー外クリックで閉じる処理
+ * - ページ遷移時にメニューを閉じる処理
+ */
 export function MobileNav({ userId }: MobileNavProps) {
   const pathname = usePathname()
   const [showMoreMenu, setShowMoreMenu] = useState(false)
@@ -142,9 +302,10 @@ export function MobileNav({ userId }: MobileNavProps) {
     }
   }, [showMoreMenu])
 
-  // ページ遷移時にメニューを閉じる
+  // ページ遷移時にメニューを閉じる（開いている場合のみ）
   useEffect(() => {
-    setShowMoreMenu(false)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ナビゲーション時のメニュー閉じ処理
+    setShowMoreMenu((prev) => (prev ? false : prev))
   }, [pathname])
 
   // もっと見るメニュー内のいずれかがアクティブかどうか
@@ -242,6 +403,24 @@ export function MobileNav({ userId }: MobileNavProps) {
                     }`}
                   >
                     <Icon className="w-5 h-5" />
+                    <span className="text-sm">{item.label}</span>
+                  </Link>
+                )
+              })}
+
+              <div className="border-t" />
+
+              {/* フッターリンク */}
+              {footerLinks.map((item) => {
+                const Icon = item.icon
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-muted-foreground"
+                  >
+                    <Icon className="w-4 h-4" />
                     <span className="text-sm">{item.label}</span>
                   </Link>
                 )

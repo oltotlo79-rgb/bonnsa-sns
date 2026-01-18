@@ -38,13 +38,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.colorScheme = resolved
   }, [])
 
-  // 初期化
+  // 初期化（localStorageはクライアントサイドのみで利用可能）
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
     const initial = stored || 'system'
-    setThemeState(initial)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- クライアントサイドでの初期化処理
+    setThemeState((prev) => (prev !== initial ? initial : prev))
     applyTheme(initial)
-    setMounted(true)
+    setMounted((prev) => (prev ? prev : true))
   }, [applyTheme])
 
   // システムテーマの変更を監視

@@ -1,12 +1,91 @@
+/**
+ * 投稿カードコンポーネント
+ *
+ * このファイルは、タイムラインや検索結果で表示される
+ * 個別の投稿カードを提供します。
+ *
+ * ## 機能概要
+ * - 投稿の表示（テキスト、画像、動画）
+ * - リポスト/引用投稿の表示
+ * - いいね・コメント・ブックマーク機能
+ * - ハッシュタグのリンク化
+ * - 投稿の削除・通報
+ *
+ * ## コンポーネント構造
+ * ```
+ * PostCard
+ * ├── リポスト表示（リポストの場合）
+ * ├── ヘッダー（アバター、ユーザー名、時間、メニュー）
+ * ├── 本文（ハッシュタグはリンク化）
+ * ├── メディアギャラリー
+ * ├── 引用投稿（引用の場合）
+ * ├── ジャンルタグ
+ * └── アクションボタン（いいね、コメント、リポスト、ブックマーク）
+ * ```
+ *
+ * ## 使用例
+ * ```tsx
+ * <PostCard
+ *   post={post}
+ *   currentUserId={session?.user?.id}
+ *   initialLiked={post.isLiked}
+ *   initialBookmarked={post.isBookmarked}
+ * />
+ * ```
+ *
+ * @module components/post/PostCard
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * React hooks
+ * - useState: コンポーネント内の状態管理
+ */
 import { useState } from 'react'
+
+/**
+ * Next.js 画像最適化コンポーネント
+ * 自動的にWebP変換、遅延読み込みなどを行う
+ */
 import Image from 'next/image'
+
+/**
+ * Next.js リンクコンポーネント
+ * クライアントサイドナビゲーションを提供
+ */
 import Link from 'next/link'
+
+/**
+ * Next.js ルーター
+ * プログラムによるページ遷移に使用
+ */
 import { useRouter } from 'next/navigation'
+
+/**
+ * date-fns: 日付操作ライブラリ
+ * formatDistanceToNow: 「3時間前」のような相対時間表示を生成
+ */
 import { formatDistanceToNow } from 'date-fns'
+
+/**
+ * date-fns 日本語ロケール
+ * 「3 hours ago」→「3時間前」のように日本語化
+ */
 import { ja } from 'date-fns/locale'
+
+/**
+ * UIコンポーネント
+ */
 import { Button } from '@/components/ui/button'
+
+/**
+ * 投稿関連の子コンポーネント
+ */
 import { ImageGallery } from './ImageGallery'
 import { QuotedPost } from './QuotedPost'
 import { DeletePostButton } from './DeletePostButton'
@@ -14,55 +93,128 @@ import { LikeButton } from './LikeButton'
 import { BookmarkButton } from './BookmarkButton'
 import { ReportButton } from '@/components/report/ReportButton'
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * 投稿ユーザーの型
+ *
+ * 投稿者の基本情報を表す。
+ * 完全なUser型ではなく、表示に必要な最小限のフィールドのみ。
+ */
 type PostUser = {
+  /** ユーザーID */
   id: string
+  /** 表示名（ニックネーム） */
   nickname: string
+  /** アバター画像URL（未設定の場合null） */
   avatarUrl: string | null
 }
 
+/**
+ * 投稿メディアの型
+ *
+ * 投稿に添付された画像や動画の情報。
+ */
 type PostMedia = {
+  /** メディアID */
   id: string
+  /** メディアのURL */
   url: string
+  /** メディアタイプ（'image' または 'video'） */
   type: string
+  /** 表示順序（0から開始） */
   sortOrder: number
 }
 
+/**
+ * 投稿ジャンルの型
+ *
+ * 投稿に付けられたジャンルタグ。
+ */
 type PostGenre = {
+  /** ジャンルID */
   id: string
+  /** ジャンル名 */
   name: string
+  /** カテゴリ（'shouhin', 'dougu' など） */
   category: string
 }
 
+/**
+ * 引用投稿の型
+ *
+ * 引用された元の投稿の情報。
+ */
 type QuotePost = {
+  /** 投稿ID */
   id: string
+  /** 投稿本文 */
   content: string | null
+  /** 作成日時 */
   createdAt: string | Date
+  /** 投稿者情報 */
   user: PostUser
 }
 
+/**
+ * 投稿の完全な型
+ *
+ * PostCardで表示する投稿のすべての情報を含む。
+ */
 type Post = {
+  /** 投稿ID */
   id: string
+  /** 投稿本文 */
   content: string | null
+  /** 作成日時 */
   createdAt: string | Date
+  /** 投稿者情報 */
   user: PostUser
+  /** 添付メディア */
   media: PostMedia[]
+  /** ジャンルタグ */
   genres: PostGenre[]
+  /** いいね数 */
   likeCount: number
+  /** コメント数 */
   commentCount: number
+  /** 引用元投稿（引用投稿の場合） */
   quotePost?: QuotePost | null
+  /** リポスト元投稿（リポストの場合） */
   repostPost?: (QuotePost & { media: PostMedia[] }) | null
+  /** 現在のユーザーがいいね済みか */
   isLiked?: boolean
+  /** 現在のユーザーがブックマーク済みか */
   isBookmarked?: boolean
 }
 
+/**
+ * PostCardコンポーネントのProps
+ */
 type PostCardProps = {
+  /** 表示する投稿 */
   post: Post
+  /** 現在ログイン中のユーザーID（未ログインの場合undefined） */
   currentUserId?: string
+  /** 初期状態でいいね済みか */
   initialLiked?: boolean
+  /** 初期状態でブックマーク済みか */
   initialBookmarked?: boolean
+  /** クリックによるナビゲーションを無効化（モーダル内などで使用） */
   disableNavigation?: boolean
 }
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * ハートアイコン
+ *
+ * いいねボタンに使用。filled=trueで塗りつぶし表示。
+ */
 function HeartIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -71,6 +223,11 @@ function HeartIcon({ className, filled }: { className?: string; filled?: boolean
   )
 }
 
+/**
+ * メッセージアイコン
+ *
+ * コメント数の表示に使用。
+ */
 function MessageCircleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -79,6 +236,11 @@ function MessageCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * リピートアイコン
+ *
+ * リポスト機能に使用。
+ */
 function RepeatIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -88,6 +250,11 @@ function RepeatIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ブックマークアイコン
+ *
+ * ブックマークボタンに使用。filled=trueで塗りつぶし表示。
+ */
 function BookmarkIcon({ className, filled }: { className?: string; filled?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -96,6 +263,11 @@ function BookmarkIcon({ className, filled }: { className?: string; filled?: bool
   )
 }
 
+/**
+ * 三点リーダーアイコン（横）
+ *
+ * メニューボタンに使用。
+ */
 function MoreHorizontalIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -106,25 +278,117 @@ function MoreHorizontalIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// 定数
+// ============================================================
+
+/**
+ * 本文の省略表示閾値
+ *
+ * 本文がこの文字数を超える場合、「続きを表示」リンクを表示して省略する。
+ */
+const CONTENT_TRUNCATE_LENGTH = 150
+
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * 投稿カードコンポーネント
+ *
+ * ## 機能
+ * - 投稿の表示（ユーザー情報、本文、メディア、ジャンル）
+ * - いいね・コメント・ブックマーク機能
+ * - リポスト・引用投稿の表示
+ * - 投稿削除・通報メニュー
+ *
+ * ## 状態管理
+ * - showMenu: ドロップダウンメニューの表示状態
+ * - isExpanded: 長い本文を展開しているかどうか
+ *
+ * ## イベント処理
+ * - カード全体のクリック: 投稿詳細ページへ遷移
+ * - リンク/ボタンのクリック: e.stopPropagation()でバブリング停止
+ */
 export function PostCard({ post, currentUserId, initialLiked, initialBookmarked, disableNavigation = false }: PostCardProps) {
+  // ------------------------------------------------------------
+  // フックとステート
+  // ------------------------------------------------------------
+
+  /** ルーター: プログラムによるページ遷移に使用 */
   const router = useRouter()
+
+  /** ドロップダウンメニューの表示状態 */
   const [showMenu, setShowMenu] = useState(false)
+
+  /** 長い本文を展開しているかどうか */
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  // ------------------------------------------------------------
+  // 算出プロパティ
+  // ------------------------------------------------------------
+
+  /** 現在のユーザーが投稿の所有者かどうか */
   const isOwner = currentUserId === post.user.id
+
+  /** いいね数（nullの場合は0） */
   const likesCount = post.likeCount ?? 0
+
+  /** コメント数（nullの場合は0） */
   const commentsCount = post.commentCount ?? 0
+
+  /** いいね済みかどうか（初期値 → props → デフォルトの優先順） */
   const isLiked = initialLiked ?? post.isLiked ?? false
+
+  /** ブックマーク済みかどうか */
   const isBookmarked = initialBookmarked ?? post.isBookmarked ?? false
 
-  // リポストの場合は元の投稿を表示
+  /**
+   * 表示する投稿
+   *
+   * リポストの場合は元の投稿を表示し、
+   * 通常の投稿の場合はそのまま表示する。
+   */
   const displayPost = post.repostPost || post
+
+  /** リポストかどうか */
   const isRepost = !!post.repostPost
 
+  /**
+   * 相対時間表示
+   *
+   * formatDistanceToNow: 現在時刻からの経過時間を計算
+   * addSuffix: 「前」を付加（「3時間前」のように）
+   * locale: ja を指定して日本語化
+   */
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
     addSuffix: true,
     locale: ja,
   })
 
-  // ハッシュタグをリンク化
+  // ------------------------------------------------------------
+  // ヘルパー関数
+  // ------------------------------------------------------------
+
+  /**
+   * ハッシュタグをリンク化する関数
+   *
+   * ## 処理内容
+   * 1. 正規表現でハッシュタグを分割
+   * 2. ハッシュタグ部分はLinkコンポーネントに変換
+   * 3. それ以外はそのままテキストとして表示
+   *
+   * ## 正規表現の解説
+   * /(#[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+)/g
+   * - #: ハッシュ記号
+   * - \w: 英数字とアンダースコア
+   * - \u3040-\u309F: ひらがな
+   * - \u30A0-\u30FF: カタカナ
+   * - \u4E00-\u9FAF: 漢字
+   *
+   * @param content - 本文
+   * @returns React要素の配列
+   */
   function renderContent(content: string) {
     const parts = content.split(/(#[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+)/g)
     return parts.map((part, i) => {
@@ -231,9 +495,24 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
 
       {/* 本文 */}
       {displayPost.content && (
-        <p className="whitespace-pre-wrap break-words mb-3">
-          {renderContent(displayPost.content)}
-        </p>
+        <div className="mb-3">
+          <p className="whitespace-pre-wrap break-words">
+            {displayPost.content.length > CONTENT_TRUNCATE_LENGTH && !isExpanded
+              ? renderContent(displayPost.content.slice(0, CONTENT_TRUNCATE_LENGTH) + '...')
+              : renderContent(displayPost.content)}
+          </p>
+          {displayPost.content.length > CONTENT_TRUNCATE_LENGTH && !isExpanded && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsExpanded(true)
+              }}
+              className="text-primary hover:underline text-sm mt-1"
+            >
+              続きを表示
+            </button>
+          )}
+        </div>
       )}
 
       {/* メディア（全幅表示） */}

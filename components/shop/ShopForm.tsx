@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { createShop, updateShop, geocodeAddress, searchAddressSuggestions } from '@/lib/actions/shop'
+import { createShop, updateShop, searchAddressSuggestions } from '@/lib/actions/shop'
 import { BusinessHoursInput } from '@/components/shop/BusinessHoursInput'
 
 // 住所候補の型

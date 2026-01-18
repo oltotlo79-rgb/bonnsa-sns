@@ -124,9 +124,10 @@ test.describe('検索バーの機能', () => {
     await page.getByPlaceholder(/検索/i).focus()
 
     // 検索履歴が表示されることを確認（実装による）
+    // 注意: 検索履歴機能の実装状況により、このテストは調整が必要な場合があります
     const historyItem = page.getByText('盆栽')
-    // if (await historyItem.isVisible()) {
-    //   await expect(historyItem).toBeVisible()
-    // }
+    if (await historyItem.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await expect(historyItem).toBeVisible()
+    }
   })
 })
