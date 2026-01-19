@@ -20,7 +20,7 @@
  * ## このファイルの設計
  * 1. インターフェースで統一されたAPI定義
  * 2. インメモリ実装（開発/テスト用）
- * 3. Upstash実装（本番用）
+ * 3. Upstash実装（本番用）- 公式SDKを使用
  * 4. 環境変数に基づく自動切り替え
  *
  * @module lib/redis
@@ -29,6 +29,13 @@
 // ============================================================
 // インポート部分
 // ============================================================
+
+/**
+ * Upstash Redis公式SDK
+ *
+ * HTTP REST APIを内部で使用するサーバーレス対応のRedisクライアント
+ */
+import { Redis } from '@upstash/redis'
 
 /**
  * logger: 環境対応ロギングユーティリティ
@@ -244,41 +251,27 @@ class InMemoryStore implements RedisLikeStore {
 }
 
 // ============================================================
-// Upstash Redis実装
+// Upstash Redis実装（公式SDK使用）
 // ============================================================
 
 /**
  * Upstash Redisクライアント（本番用）
  *
- * ## Upstashの特徴
- * - HTTP REST APIでRedisコマンドを実行
+ * ## Upstash公式SDKの特徴
+ * - HTTP REST APIを内部で使用
+ * - 自動リトライ機能
+ * - 型安全なAPI
  * - サーバーレス環境に最適化
- * - 従量課金制（無料枠あり）
  *
  * ## 認証方法
- * - REST URL: Upstashダッシュボードから取得
- * - トークン: Bearer認証に使用
- *
- * ## 使用するRedisコマンド
- * - GET: 値の取得
- * - SET: 値の設定（EXオプションで有効期限）
- * - DEL: キーの削除
- * - INCR: インクリメント
- * - EXPIRE: 有効期限設定
- * - TTL: 残り有効期限取得
+ * - UPSTASH_REDIS_REST_URL: Upstashダッシュボードから取得
+ * - UPSTASH_REDIS_REST_TOKEN: 認証トークン
  */
 class UpstashRedisStore implements RedisLikeStore {
   /**
-   * Upstash REST APIのベースURL
-   * 例: https://xxx.upstash.io
+   * Upstash Redis公式クライアント
    */
-  private baseUrl: string
-
-  /**
-   * 認証トークン
-   * Upstashダッシュボードで発行
-   */
-  private token: string
+  private client: Redis
 
   /**
    * コンストラクタ
@@ -286,85 +279,18 @@ class UpstashRedisStore implements RedisLikeStore {
    * @param token - 認証トークン
    */
   constructor(url: string, token: string) {
-    this.baseUrl = url
-    this.token = token
-  }
-
-  /**
-   * Redisコマンドを実行
-   *
-   * ## ジェネリック型 <T>
-   * 戻り値の型を呼び出し側で指定可能
-   *
-   * ## 処理フロー
-   * 1. AbortControllerでタイムアウト設定
-   * 2. POSTリクエストでコマンド送信
-   * 3. レスポンスのresultフィールドを返す
-   *
-   * ## タイムアウト
-   * 5秒でタイムアウト（ネットワーク障害対策）
-   *
-   * @param cmd - Redisコマンドの配列（例: ['GET', 'key']）
-   * @returns コマンドの結果
-   */
-  private async command<T>(cmd: string[]): Promise<T> {
-    /**
-     * AbortController: リクエストのキャンセルに使用
-     * setTimeout: 5秒後にabort()を呼び出し
-     */
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5秒タイムアウト
-
-    try {
-      /**
-       * Upstash REST APIにPOSTリクエスト
-       *
-       * ## ヘッダー
-       * - Authorization: Bearer トークン認証
-       * - Content-Type: JSON形式
-       *
-       * ## ボディ
-       * コマンド配列をJSON形式で送信
-       * 例: ['SET', 'key', 'value', 'EX', '60']
-       */
-      const response = await fetch(`${this.baseUrl}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cmd),
-        signal: controller.signal,  // タイムアウト用
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        throw new Error(`Redis command failed: ${response.statusText}`)
-      }
-
-      /**
-       * レスポンス形式
-       * { result: <コマンドの結果> }
-       */
-      const data = await response.json()
-      return data.result as T
-    } catch (error) {
-      clearTimeout(timeoutId)
-
-      // タイムアウトエラーの判定
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Redis request timed out')
-      }
-      throw error
-    }
+    this.client = new Redis({
+      url,
+      token,
+    })
   }
 
   /**
    * 値を取得（GETコマンド）
    */
   async get(key: string): Promise<string | null> {
-    return this.command<string | null>(['GET', key])
+    const result = await this.client.get<string>(key)
+    return result
   }
 
   /**
@@ -376,9 +302,9 @@ class UpstashRedisStore implements RedisLikeStore {
    */
   async set(key: string, value: string, options?: { ex?: number }): Promise<void> {
     if (options?.ex) {
-      await this.command(['SET', key, value, 'EX', options.ex.toString()])
+      await this.client.set(key, value, { ex: options.ex })
     } else {
-      await this.command(['SET', key, value])
+      await this.client.set(key, value)
     }
   }
 
@@ -386,7 +312,7 @@ class UpstashRedisStore implements RedisLikeStore {
    * キーを削除（DELコマンド）
    */
   async del(key: string): Promise<void> {
-    await this.command(['DEL', key])
+    await this.client.del(key)
   }
 
   /**
@@ -394,21 +320,21 @@ class UpstashRedisStore implements RedisLikeStore {
    * キーが存在しない場合は0から開始
    */
   async incr(key: string): Promise<number> {
-    return this.command<number>(['INCR', key])
+    return await this.client.incr(key)
   }
 
   /**
    * 有効期限を設定（EXPIREコマンド）
    */
   async expire(key: string, seconds: number): Promise<void> {
-    await this.command(['EXPIRE', key, seconds.toString()])
+    await this.client.expire(key, seconds)
   }
 
   /**
    * 残り有効期限を取得（TTLコマンド）
    */
   async ttl(key: string): Promise<number> {
-    return this.command<number>(['TTL', key])
+    return await this.client.ttl(key)
   }
 }
 
