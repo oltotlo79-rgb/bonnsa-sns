@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { deleteReview, updateReview } from '@/lib/actions/review'
 import { StarRatingDisplay, StarRatingInput } from './StarRating'
+import { ReportButton } from '@/components/report/ReportButton'
 
 interface ReviewCardProps {
   review: {
@@ -130,42 +131,51 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
           </div>
           <StarRatingDisplay rating={review.rating} size="sm" />
         </div>
-        {isOwner && !isEditing && (
+        {!isEditing && (
           <div className="flex items-center gap-1">
-            {showDeleteConfirm ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="text-xs text-destructive hover:underline disabled:opacity-50"
-                >
-                  {isPending ? '削除中...' : '削除する'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={handleEdit}
-                  className="p-1 text-muted-foreground hover:text-primary"
-                  title="編集"
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="p-1 text-muted-foreground hover:text-destructive"
-                  title="削除"
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              </>
-            )}
+            {isOwner ? (
+              showDeleteConfirm ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isPending}
+                    className="text-xs text-destructive hover:underline disabled:opacity-50"
+                  >
+                    {isPending ? '削除中...' : '削除する'}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={handleEdit}
+                    className="p-1 text-muted-foreground hover:text-primary"
+                    title="編集"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="p-1 text-muted-foreground hover:text-destructive"
+                    title="削除"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                </>
+              )
+            ) : currentUserId ? (
+              // 非オーナーのログインユーザーには通報ボタン
+              <ReportButton
+                targetType="review"
+                targetId={review.id}
+                variant="icon"
+              />
+            ) : null}
           </div>
         )}
       </div>

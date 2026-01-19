@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ShopChangeRequestForm } from './ShopChangeRequestForm'
+import { ReportButton } from '@/components/report/ReportButton'
 
 interface ShopInfo {
   id: string
@@ -53,14 +54,22 @@ export function ShopActions({ shop, isOwner, isLoggedIn }: ShopActionsProps) {
             <span>編集</span>
           </Link>
         ) : isLoggedIn ? (
-          // 非オーナーのログインユーザーには変更リクエストボタン
-          <button
-            onClick={() => setShowChangeRequestForm(true)}
-            className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-muted"
-          >
-            <MessageSquareIcon className="w-4 h-4" />
-            <span>情報の修正をリクエスト</span>
-          </button>
+          // 非オーナーのログインユーザーには変更リクエストボタンと通報ボタン
+          <>
+            <button
+              onClick={() => setShowChangeRequestForm(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-muted"
+            >
+              <MessageSquareIcon className="w-4 h-4" />
+              <span>情報の修正をリクエスト</span>
+            </button>
+            <ReportButton
+              targetType="shop"
+              targetId={shop.id}
+              variant="text"
+              className="px-3 py-2 border rounded-lg hover:bg-red-50 dark:hover:bg-red-950"
+            />
+          </>
         ) : null}
       </div>
 
