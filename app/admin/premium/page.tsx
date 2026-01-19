@@ -112,7 +112,7 @@ export default async function AdminPremiumPage({ searchParams }: PageProps) {
       </div>
 
       {/* ユーザーテーブル */}
-      <div className="bg-card rounded-lg border overflow-hidden">
+      <div className="bg-card rounded-lg border">
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>

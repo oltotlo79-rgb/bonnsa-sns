@@ -100,11 +100,11 @@ export function ReportActionsDropdown({
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[100]"
             onClick={() => setIsOpen(false)}
           />
           <div
-            className="fixed bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[180px]"
+            className="fixed bg-card border rounded-lg shadow-lg py-1 z-[101] min-w-[180px]"
             style={menuStyle}
           >
             {targetLink && (
