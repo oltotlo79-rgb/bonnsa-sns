@@ -1153,6 +1153,136 @@ export async function getStatsHistory(days: number = 30) {
   return results
 }
 
+// ============================================================
+// レビュー管理
+// ============================================================
+
+/**
+ * レビュー一覧を取得（管理者用）
+ *
+ * ## 機能概要
+ * 管理者がレビューを監視するための一覧を取得します。
+ * 検索、通報フィルター、ソート、ページネーションに対応。
+ *
+ * @param options - 検索・フィルターオプション
+ * @returns レビュー配列と総件数
+ */
+export async function getAdminReviews(options?: {
+  search?: string
+  hasReports?: boolean
+  sortBy?: 'createdAt' | 'rating' | 'reportCount'
+  sortOrder?: 'asc' | 'desc'
+  limit?: number
+  offset?: number
+}) {
+  await checkAdminPermission()
+
+  const {
+    search,
+    hasReports = false,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    limit = 20,
+    offset = 0,
+  } = options || {}
+
+  // 通報されたレビューIDを取得（hasReportsがtrueの場合）
+  let reportedReviewIds: string[] = []
+  if (hasReports) {
+    const reports = await prisma.report.findMany({
+      where: { targetType: 'review' },
+      select: { targetId: true },
+      distinct: ['targetId'],
+    })
+    reportedReviewIds = reports.map((r: typeof reports[number]) => r.targetId)
+  }
+
+  // 検索条件の構築
+  const where = {
+    ...(search && {
+      content: { contains: search },
+    }),
+    ...(hasReports && {
+      id: { in: reportedReviewIds },
+    }),
+  }
+
+  const [reviews, total] = await Promise.all([
+    prisma.shopReview.findMany({
+      where,
+      select: {
+        id: true,
+        content: true,
+        rating: true,
+        isHidden: true,
+        createdAt: true,
+        user: {
+          select: { id: true, nickname: true, avatarUrl: true },
+        },
+        shop: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy:
+        sortBy === 'rating'
+          ? { rating: sortOrder }
+          : { [sortBy]: sortOrder },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.shopReview.count({ where }),
+  ])
+
+  // 各レビューの通報件数を追加
+  const reviewsWithReportCount = await Promise.all(
+    reviews.map(async (review: typeof reviews[number]) => {
+      const reportCount = await prisma.report.count({
+        where: { targetType: 'review', targetId: review.id },
+      })
+      return { ...review, reportCount }
+    })
+  )
+
+  return { reviews: reviewsWithReportCount, total }
+}
+
+/**
+ * レビューを削除（管理者権限）
+ *
+ * @param reviewId - 削除するレビューのID
+ * @param reason - 削除理由（監査ログに記録）
+ * @returns 成功/失敗の結果
+ */
+export async function deleteReviewByAdmin(reviewId: string, reason: string) {
+  const { adminUser } = await checkAdminPermission()
+
+  const review = await prisma.shopReview.findUnique({
+    where: { id: reviewId },
+  })
+
+  if (!review) {
+    return { error: 'レビューが見つかりません' }
+  }
+
+  await prisma.$transaction([
+    prisma.shopReview.delete({
+      where: { id: reviewId },
+    }),
+    prisma.adminLog.create({
+      data: {
+        adminId: adminUser.userId,
+        action: 'delete_review',
+        targetType: 'review',
+        targetId: reviewId,
+        details: JSON.stringify({ reason }),
+      },
+    }),
+  ])
+
+  revalidatePath('/admin/reviews')
+  return { success: true }
+}
+
 /**
  * 期間別統計サマリーを取得
  *

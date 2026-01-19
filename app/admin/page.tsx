@@ -80,6 +80,14 @@ function MessageSquareIcon({ className }: { className?: string }) {
   )
 }
 
+function StarIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  )
+}
+
 export const metadata = {
   title: '管理者ダッシュボード - BON-LOG',
 }
@@ -228,7 +236,7 @@ export default async function AdminDashboardPage() {
       {/* クイックアクション */}
       <div className="bg-card rounded-lg border p-6">
         <h2 className="text-lg font-semibold mb-4">クイックアクション</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Link
             href="/admin/users"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -242,6 +250,13 @@ export default async function AdminDashboardPage() {
           >
             <FileTextIcon className="w-8 h-8 text-green-500" />
             <span className="text-sm">投稿管理</span>
+          </Link>
+          <Link
+            href="/admin/reviews"
+            className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
+          >
+            <StarIcon className="w-8 h-8 text-yellow-500" />
+            <span className="text-sm">レビュー管理</span>
           </Link>
           <Link
             href="/admin/reports"
