@@ -885,6 +885,92 @@ export async function getShopGenres() {
   return { genres }
 }
 
+/**
+ * 盆栽園の取り扱いジャンルを更新
+ *
+ * ## 機能概要
+ * ログインユーザーなら誰でも盆栽園のジャンルを更新できます。
+ * これにより、訪問者が実際の取り扱いに合わせてジャンル情報を改善できます。
+ *
+ * @param shopId - 盆栽園ID
+ * @param genreIds - 新しいジャンルID配列
+ * @returns 成功時は { success: true }、失敗時は { error: string }
+ */
+export async function updateShopGenres(shopId: string, genreIds: string[]) {
+  // ------------------------------------------------------------
+  // 認証チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // バリデーション
+  // ------------------------------------------------------------
+
+  if (!Array.isArray(genreIds)) {
+    return { error: 'ジャンルの形式が不正です' }
+  }
+
+  // ジャンルは最大5つまで
+  if (genreIds.length > 5) {
+    return { error: 'ジャンルは5つまで選択できます' }
+  }
+
+  // ------------------------------------------------------------
+  // 盆栽園の存在確認
+  // ------------------------------------------------------------
+
+  const shop = await prisma.bonsaiShop.findUnique({
+    where: { id: shopId, isHidden: false },
+    select: { id: true },
+  })
+
+  if (!shop) {
+    return { error: '盆栽園が見つかりません' }
+  }
+
+  // ------------------------------------------------------------
+  // ジャンルの有効性確認
+  // ------------------------------------------------------------
+
+  if (genreIds.length > 0) {
+    const validGenres = await prisma.genre.findMany({
+      where: { id: { in: genreIds }, type: 'shop' },
+      select: { id: true },
+    })
+
+    if (validGenres.length !== genreIds.length) {
+      return { error: '無効なジャンルが含まれています' }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // ジャンルを更新
+  // ------------------------------------------------------------
+
+  await prisma.$transaction([
+    // 既存のジャンルを削除
+    prisma.shopGenre.deleteMany({
+      where: { shopId },
+    }),
+    // 新しいジャンルを追加
+    ...(genreIds.length > 0
+      ? [
+          prisma.shopGenre.createMany({
+            data: genreIds.map((genreId) => ({ shopId, genreId })),
+          }),
+        ]
+      : []),
+  ])
+
+  revalidatePath(`/shops/${shopId}`)
+
+  return { success: true }
+}
+
 // ============================================================
 // 盆栽園変更リクエスト
 // ============================================================

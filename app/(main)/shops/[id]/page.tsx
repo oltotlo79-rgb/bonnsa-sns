@@ -9,6 +9,7 @@ import { ReviewList } from '@/components/shop/ReviewList'
 import { MapWrapperSmall } from '@/components/shop/MapWrapper'
 import { LocalBusinessJsonLd } from '@/components/seo/JsonLd'
 import { ShopActions } from '@/components/shop/ShopActions'
+import { ShopGenreEditor } from '@/components/shop/ShopGenreEditor'
 
 interface ShopDetailPageProps {
   params: Promise<{ id: string }>
@@ -226,22 +227,12 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
           )}
         </div>
 
-        {/* ジャンル */}
-        {shop.genres.length > 0 && (
-          <div className="mt-4">
-            <p className="text-sm text-muted-foreground mb-2">取り扱いジャンル</p>
-            <div className="flex flex-wrap gap-2">
-              {shop.genres.map((genre: { id: string; name: string }) => (
-                <span
-                  key={genre.id}
-                  className="px-3 py-1 text-sm bg-muted rounded-full"
-                >
-                  {genre.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ジャンル（誰でも編集可能） */}
+        <ShopGenreEditor
+          shopId={shop.id}
+          currentGenres={shop.genres}
+          isLoggedIn={!!session?.user}
+        />
       </div>
 
       {/* マップ */}
