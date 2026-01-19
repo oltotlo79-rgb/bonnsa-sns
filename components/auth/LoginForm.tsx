@@ -190,17 +190,17 @@ export function LoginForm() {
 
     try {
       // レート制限チェック（ブルートフォース攻撃対策）
-      try {
-        const checkResult = await checkLoginAllowed(email)
-        if (!checkResult.allowed) {
-          setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
-          setLoading(false)
-          return
-        }
-      } catch (checkError) {
-        console.error('Login check error:', checkError)
-        // レート制限チェックに失敗しても認証処理は続行
-      }
+      // TODO: Upstash Redis設定後に有効化
+      // try {
+      //   const checkResult = await checkLoginAllowed(email)
+      //   if (!checkResult.allowed) {
+      //     setError(checkResult.message || 'ログイン試行回数の上限に達しました。しばらく待ってから再試行してください。')
+      //     setLoading(false)
+      //     return
+      //   }
+      // } catch (checkError) {
+      //   console.error('Login check error:', checkError)
+      // }
 
       /**
        * NextAuth.jsによる認証
@@ -218,22 +218,9 @@ export function LoginForm() {
        * 認証失敗時のエラー処理
        */
       if (result?.error) {
-        // ログイン失敗を記録（レート制限用）
-        try {
-          await recordLoginFailure(email)
-        } catch (recordError) {
-          console.error('Failed to record login failure:', recordError)
-        }
         setError('メールアドレスまたはパスワードが間違っています')
         setLoading(false)
         return
-      }
-
-      // ログイン成功時は失敗カウントをクリア
-      try {
-        await clearLoginAttempts(email)
-      } catch (clearError) {
-        console.error('Failed to clear login attempts:', clearError)
       }
 
       /**
