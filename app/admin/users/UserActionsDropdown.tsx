@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { suspendUser, activateUser } from '@/lib/actions/admin'
 
@@ -25,6 +25,17 @@ export function UserActionsDropdown({ userId, isSuspended }: UserActionsDropdown
   const [showSuspendModal, setShowSuspendModal] = useState(false)
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [openUpward, setOpenUpward] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      // メニューの高さ（約50px）+ マージン より下のスペースが小さければ上に開く
+      setOpenUpward(spaceBelow < 80)
+    }
+  }, [isOpen])
 
   const handleSuspend = async () => {
     if (!reason.trim()) {
@@ -68,6 +79,7 @@ export function UserActionsDropdown({ userId, isSuspended }: UserActionsDropdown
     <>
       <div className="relative">
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 hover:bg-muted rounded-lg"
         >
@@ -80,7 +92,7 @@ export function UserActionsDropdown({ userId, isSuspended }: UserActionsDropdown
               className="fixed inset-0 z-10"
               onClick={() => setIsOpen(false)}
             />
-            <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-20 min-w-[150px]">
+            <div className={`absolute right-0 bg-card border rounded-lg shadow-lg py-1 z-20 min-w-[150px] ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
               {isSuspended ? (
                 <button
                   onClick={handleActivate}
