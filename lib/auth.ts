@@ -256,8 +256,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
          *
          * findUnique: 一意な条件でレコードを取得
          * email はユニーク制約があるため使用可能
+         * isSuspended: アカウント停止状態のチェック用
          */
-        const user = await prisma.user.findUnique({ where: { email } })
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            password: true,
+            nickname: true,
+            avatarUrl: true,
+            isSuspended: true,
+          },
+        })
 
         /**
          * ユーザー存在チェックとパスワード存在チェック
@@ -267,6 +278,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
          * - パスワードが設定されていない
          */
         if (!user || !user.password) return null
+
+        /**
+         * アカウント停止チェック
+         *
+         * 管理者によって停止されたアカウントはログイン不可
+         * null を返すことで認証失敗として扱われる
+         */
+        if (user.isSuspended) return null
 
         /**
          * パスワードの検証

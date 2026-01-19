@@ -170,6 +170,19 @@ export async function createPost(formData: FormData) {
   }
 
   /**
+   * アカウント停止チェック
+   *
+   * 停止されたアカウントは投稿不可
+   */
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSuspended: true },
+  })
+  if (user?.isSuspended) {
+    return { error: 'アカウントが停止されています' }
+  }
+
+  /**
    * フォームデータの取得
    *
    * formData.get(): 単一値を取得
@@ -345,6 +358,17 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     return { error: '認証が必要です' }
   }
 
+  /**
+   * アカウント停止チェック
+   */
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSuspended: true },
+  })
+  if (user?.isSuspended) {
+    return { error: 'アカウントが停止されています' }
+  }
+
   const rawContent = formData.get('content') as string
   const content = sanitizePostContent(rawContent)
 
@@ -471,6 +495,17 @@ export async function createRepost(postId: string) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  /**
+   * アカウント停止チェック
+   */
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSuspended: true },
+  })
+  if (currentUser?.isSuspended) {
+    return { error: 'アカウントが停止されています' }
   }
 
   try {
