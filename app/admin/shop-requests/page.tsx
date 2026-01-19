@@ -154,18 +154,32 @@ export default async function AdminShopRequestsPage({ searchParams }: PageProps)
                       <p className="text-sm text-muted-foreground">{request.shop.address}</p>
                     </div>
 
-                    {/* 変更内容サマリー */}
+                    {/* 変更内容詳細（現在値 → 変更後） */}
                     <div className="mb-3">
-                      <p className="text-sm text-muted-foreground mb-1">変更リクエスト</p>
-                      <div className="flex flex-wrap gap-1">
-                        {changeFields.map((field) => (
-                          <span
-                            key={field}
-                            className="px-2 py-0.5 text-xs bg-muted rounded"
-                          >
-                            {fieldLabels[field] || field}
-                          </span>
-                        ))}
+                      <p className="text-sm text-muted-foreground mb-2">変更リクエスト内容</p>
+                      <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                        {changeFields.map((field) => {
+                          const currentValue = request.shop[field as keyof typeof request.shop] as string | null
+                          const newValue = changes[field]
+                          return (
+                            <div key={field} className="text-sm">
+                              <div className="font-medium text-muted-foreground mb-1">
+                                {fieldLabels[field] || field}
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 p-2 bg-red-500/10 rounded text-red-700 dark:text-red-400">
+                                  <span className="text-xs text-muted-foreground block mb-0.5">現在</span>
+                                  <span className="break-all">{currentValue || '（未設定）'}</span>
+                                </div>
+                                <div className="text-muted-foreground self-center">→</div>
+                                <div className="flex-1 p-2 bg-green-500/10 rounded text-green-700 dark:text-green-400">
+                                  <span className="text-xs text-muted-foreground block mb-0.5">変更後</span>
+                                  <span className="break-all">{newValue || '（空欄に変更）'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
 

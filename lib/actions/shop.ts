@@ -1118,7 +1118,15 @@ export async function getShopChangeRequests(options?: {
     },
     include: {
       shop: {
-        select: { id: true, name: true, address: true },
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          phone: true,
+          website: true,
+          businessHours: true,
+          closedDays: true,
+        },
       },
       user: {
         select: { id: true, nickname: true, avatarUrl: true },
