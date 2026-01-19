@@ -232,10 +232,11 @@ export async function createPost(formData: FormData) {
   }
 
   /**
-   * 投稿制限チェック（1日20件）
+   * 投稿制限チェック（会員種別で異なる）
    *
    * スパム対策として、1日の投稿数を制限
    * 今日の0時以降の投稿数をカウント
+   * 無料会員: 20件、プレミアム会員: 40件
    */
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -246,8 +247,8 @@ export async function createPost(formData: FormData) {
     },
   })
 
-  if (count >= 20) {
-    return { error: '1日の投稿上限（20件）に達しました' }
+  if (count >= limits.maxDailyPosts) {
+    return { error: `1日の投稿上限（${limits.maxDailyPosts}件）に達しました` }
   }
 
   try {
@@ -366,7 +367,7 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
   }
 
   /**
-   * 投稿制限チェック
+   * 投稿制限チェック（会員種別で異なる）
    */
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -377,8 +378,8 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     },
   })
 
-  if (count >= 20) {
-    return { error: '1日の投稿上限（20件）に達しました' }
+  if (count >= limits.maxDailyPosts) {
+    return { error: `1日の投稿上限（${limits.maxDailyPosts}件）に達しました` }
   }
 
   try {
@@ -497,10 +498,11 @@ export async function createRepost(postId: string) {
     }
 
     /**
-     * 投稿制限チェック
+     * 投稿制限チェック（会員種別で異なる）
      *
      * リポストも通常の投稿としてカウント
      */
+    const limits = await getMembershipLimits(session.user.id)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const count = await prisma.post.count({
@@ -510,8 +512,8 @@ export async function createRepost(postId: string) {
       },
     })
 
-    if (count >= 20) {
-      return { error: '1日の投稿上限（20件）に達しました' }
+    if (count >= limits.maxDailyPosts) {
+      return { error: `1日の投稿上限（${limits.maxDailyPosts}件）に達しました` }
     }
 
     /**

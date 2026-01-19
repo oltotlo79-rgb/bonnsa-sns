@@ -58,6 +58,7 @@ export type MembershipType = 'free' | 'premium'
  * - maxPostLength: 投稿の最大文字数
  * - maxImages: 1投稿あたりの最大画像枚数
  * - maxVideos: 1投稿あたりの最大動画数
+ * - maxDailyPosts: 1日の最大投稿数
  * - canSchedulePost: 予約投稿機能が使えるか
  * - canViewAnalytics: 分析機能が使えるか
  */
@@ -65,6 +66,7 @@ export interface MembershipLimits {
   maxPostLength: number      // 投稿の最大文字数
   maxImages: number          // 最大画像枚数
   maxVideos: number          // 最大動画数
+  maxDailyPosts: number      // 1日の最大投稿数
   canSchedulePost: boolean   // 予約投稿の可否
   canViewAnalytics: boolean  // 分析機能の可否
 }
@@ -80,6 +82,7 @@ export interface MembershipLimits {
  * - maxPostLength: 500文字（Twitterと同程度）
  * - maxImages: 4枚（一般的なSNSの標準）
  * - maxVideos: 2本（ストレージコスト考慮）
+ * - maxDailyPosts: 20件（スパム対策）
  * - canSchedulePost: false（プレミアム限定機能）
  * - canViewAnalytics: false（プレミアム限定機能）
  */
@@ -87,6 +90,7 @@ const FREE_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
   maxVideos: 2,
+  maxDailyPosts: 20,
   canSchedulePost: false,
   canViewAnalytics: false,
 }
@@ -98,6 +102,7 @@ const FREE_LIMITS: MembershipLimits = {
  * - maxPostLength: 2000文字（長文投稿が可能）
  * - maxImages: 6枚（より多くの写真を共有可能）
  * - maxVideos: 3本（動画投稿の自由度向上）
+ * - maxDailyPosts: 40件（無料会員の2倍）
  * - canSchedulePost: true（予約投稿機能を解放）
  * - canViewAnalytics: true（投稿の分析機能を解放）
  */
@@ -105,6 +110,7 @@ const PREMIUM_LIMITS: MembershipLimits = {
   maxPostLength: 2000,
   maxImages: 6,
   maxVideos: 3,
+  maxDailyPosts: 40,
   canSchedulePost: true,
   canViewAnalytics: true,
 }
