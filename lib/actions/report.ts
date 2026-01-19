@@ -641,6 +641,147 @@ export async function updateReportStatus(
 }
 
 // ============================================================
+// 通報対象コンテンツ削除（管理者用）
+// ============================================================
+
+/**
+ * 通報対象のコンテンツを削除（管理者用）
+ *
+ * ## 機能概要
+ * 管理者が通報されたコンテンツを削除します。
+ *
+ * ## 処理内容
+ * 1. 管理者権限チェック
+ * 2. 対象コンテンツを削除
+ * 3. 関連する通報のステータスを「resolved」に更新
+ * 4. 管理ログを作成
+ *
+ * ## 削除対象
+ * - post: 投稿（関連するメディア、コメント、いいね等も連鎖削除）
+ * - comment: コメント
+ * - event: イベント
+ * - shop: 盆栽園（関連するレビュー等も連鎖削除）
+ * - review: レビュー
+ * - user: ユーザーの場合は停止処理（削除ではない）
+ *
+ * @param targetType - 対象の種類
+ * @param targetId - 対象のID
+ * @returns 成功時は { success: true }、失敗時は { error: string }
+ *
+ * @example
+ * ```typescript
+ * const result = await deleteReportedContent('post', 'post-123')
+ * ```
+ */
+export async function deleteReportedContent(
+  targetType: ReportTargetType,
+  targetId: string
+) {
+  // ------------------------------------------------------------
+  // 認証チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // 管理者権限チェック
+  // ------------------------------------------------------------
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // 対象コンテンツを削除
+  // ------------------------------------------------------------
+
+  try {
+    switch (targetType) {
+      case 'post': {
+        // 投稿を削除（Prismaのカスケード削除で関連データも削除される）
+        await prisma.post.delete({
+          where: { id: targetId },
+        })
+        break
+      }
+      case 'comment': {
+        // コメントを削除
+        await prisma.comment.delete({
+          where: { id: targetId },
+        })
+        break
+      }
+      case 'event': {
+        // イベントを削除
+        await prisma.event.delete({
+          where: { id: targetId },
+        })
+        break
+      }
+      case 'shop': {
+        // 盆栽園を削除（関連するレビュー等も連鎖削除）
+        await prisma.bonsaiShop.delete({
+          where: { id: targetId },
+        })
+        break
+      }
+      case 'review': {
+        // レビューを削除
+        await prisma.shopReview.delete({
+          where: { id: targetId },
+        })
+        break
+      }
+      case 'user': {
+        // ユーザーの場合は削除ではなくアカウント停止
+        await prisma.user.update({
+          where: { id: targetId },
+          data: { isSuspended: true, suspendedAt: new Date() },
+        })
+        break
+      }
+    }
+
+    // ------------------------------------------------------------
+    // 関連する通報のステータスを更新
+    // ------------------------------------------------------------
+
+    await prisma.report.updateMany({
+      where: { targetType, targetId },
+      data: { status: 'resolved' },
+    })
+
+    // ------------------------------------------------------------
+    // 管理ログを作成
+    // ------------------------------------------------------------
+
+    const label = TARGET_TYPE_LABELS[targetType]
+    await prisma.adminLog.create({
+      data: {
+        adminId: adminUser.userId,
+        action: targetType === 'user' ? 'suspend_user' : 'delete_content',
+        targetType,
+        targetId,
+        details: JSON.stringify({
+          action: targetType === 'user' ? 'アカウント停止' : `${label}を削除`,
+        }),
+      },
+    })
+
+    return { success: true }
+  } catch {
+    return { error: '削除に失敗しました' }
+  }
+}
+
+// ============================================================
 // 通報統計取得（管理者用）
 // ============================================================
 

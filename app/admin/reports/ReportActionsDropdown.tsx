@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { updateReportStatus } from '@/lib/actions/report'
+import { updateReportStatus, deleteReportedContent } from '@/lib/actions/report'
 
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
@@ -22,6 +22,15 @@ interface ReportActionsDropdownProps {
   targetId: string
 }
 
+const targetTypeLabels: Record<string, string> = {
+  post: '投稿',
+  comment: 'コメント',
+  event: 'イベント',
+  shop: '盆栽園',
+  review: 'レビュー',
+  user: 'ユーザー',
+}
+
 export function ReportActionsDropdown({
   reportId,
   currentStatus,
@@ -31,6 +40,7 @@ export function ReportActionsDropdown({
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -66,6 +76,21 @@ export function ReportActionsDropdown({
     }
 
     setIsOpen(false)
+    router.refresh()
+  }
+
+  const handleDelete = async () => {
+    setIsSubmitting(true)
+    const result = await deleteReportedContent(targetType as 'post' | 'comment' | 'event' | 'shop' | 'review' | 'user', targetId)
+    setIsSubmitting(false)
+
+    if (result.error) {
+      alert(result.error)
+      return
+    }
+
+    setIsOpen(false)
+    setShowDeleteConfirm(false)
     router.refresh()
   }
 
@@ -154,6 +179,38 @@ export function ReportActionsDropdown({
                 className="w-full px-4 py-2 text-left text-sm hover:bg-muted text-yellow-600"
               >
                 未対応に戻す
+              </button>
+            )}
+
+            <div className="border-t my-1" />
+
+            {showDeleteConfirm ? (
+              <div className="px-4 py-2 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {targetTypeLabels[targetType]}を{targetType === 'user' ? '停止' : '削除'}しますか？
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDelete}
+                    disabled={isSubmitting}
+                    className="flex-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                  >
+                    {isSubmitting ? '処理中...' : (targetType === 'user' ? '停止' : '削除')}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 px-2 py-1 text-xs border rounded hover:bg-muted"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-950 text-red-600"
+              >
+                {targetType === 'user' ? 'アカウントを停止' : `${targetTypeLabels[targetType]}を削除`}
               </button>
             )}
           </div>
