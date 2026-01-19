@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { createReport } from '@/lib/actions/report'
 import { REPORT_REASONS, TARGET_TYPE_LABELS, type ReportTargetType, type ReportReason } from '@/lib/constants/report'
 
@@ -34,6 +35,16 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
   const [description, setDescription] = useState('')
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // モーダル表示中はbodyのスクロールを無効化
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,8 +69,11 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
     })
   }
 
-  return (
-    <div className="fixed inset-0 z-[200] overflow-y-auto">
+  // クライアントサイドでのみレンダリング
+  if (!mounted) return null
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       {/* オーバーレイ */}
       <div
         className="fixed inset-0 bg-black/50"
@@ -69,7 +83,10 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
       {/* モーダルコンテナ */}
       <div className="min-h-full flex items-center justify-center p-4">
         {/* モーダル */}
-        <div className="relative z-[201] bg-card rounded-lg border shadow-lg w-full max-w-md my-8">
+        <div
+          className="relative bg-card rounded-lg border shadow-lg w-full max-w-md my-8"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">
@@ -190,4 +207,6 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
