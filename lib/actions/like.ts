@@ -60,6 +60,12 @@ import { recordLikeReceived } from './analytics'
  */
 import logger from '@/lib/logger'
 
+/**
+ * レート制限
+ * スパム防止、クラウド課金対策
+ */
+import { checkUserRateLimit } from '@/lib/rate-limit'
+
 // ============================================================
 // 投稿いいねトグル
 // ============================================================
@@ -109,6 +115,14 @@ export async function togglePostLike(postId: string) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'engagement')
+  if (!rateLimitResult.success) {
+    return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
   }
 
   try {
@@ -265,6 +279,14 @@ export async function toggleCommentLike(commentId: string, postId: string) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'engagement')
+  if (!rateLimitResult.success) {
+    return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
   }
 
   try {

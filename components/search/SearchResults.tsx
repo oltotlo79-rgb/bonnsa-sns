@@ -108,23 +108,32 @@ type UserSearchResultsProps = {
 export function UserSearchResults({ query, initialUsers = [] }: UserSearchResultsProps) {
   const { ref, inView } = useInView()
 
+  // searchUsersの戻り値型（エラー時も含む）
+  type SearchUsersResult = Awaited<ReturnType<typeof searchUsers>>
+
   const {
     data,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    error,
   } = useInfiniteQuery({
     queryKey: ['search-users', query],
     queryFn: async ({ pageParam }) => {
-      return await searchUsers(query, pageParam)
+      const result = await searchUsers(query, pageParam)
+      // エラーの場合はthrowしてReact Queryのエラーハンドリングに任せる
+      if ('error' in result && result.error) {
+        throw new Error(result.error)
+      }
+      return result
     },
     initialPageParam: undefined as string | undefined,
     initialData: initialUsers.length > 0 ? {
       pages: [{
         users: initialUsers,
         nextCursor: initialUsers.length >= 20 ? initialUsers[initialUsers.length - 1]?.id : undefined,
-      }],
+      } as SearchUsersResult],
       pageParams: [undefined],
     } : undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -138,6 +147,14 @@ export function UserSearchResults({ query, initialUsers = [] }: UserSearchResult
 
   if (isLoading) {
     return <SearchResultsSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-destructive">
+        {error.message || '検索中にエラーが発生しました'}
+      </div>
+    )
   }
 
   const allUsers = data?.pages.flatMap((page) => page.users) || []

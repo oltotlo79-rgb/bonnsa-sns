@@ -73,6 +73,12 @@ import logger from '@/lib/logger'
  */
 import { getBlockedUserIds } from './filter-helper'
 
+/**
+ * レート制限
+ * スパム防止、クラウド課金対策
+ */
+import { checkUserRateLimit, checkDailyLimit } from '@/lib/rate-limit'
+
 // ============================================================
 // コメント作成
 // ============================================================
@@ -134,6 +140,14 @@ export async function createComment(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'comment')
+  if (!rateLimitResult.success) {
+    return { error: 'コメント投稿が多すぎます。しばらく待ってから再試行してください' }
   }
 
   // ------------------------------------------------------------
@@ -861,6 +875,22 @@ export async function uploadCommentMedia(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック（分単位）
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'upload')
+  if (!rateLimitResult.success) {
+    return { error: 'アップロードが多すぎます。しばらく待ってから再試行してください' }
+  }
+
+  // ------------------------------------------------------------
+  // 日次制限チェック
+  // ------------------------------------------------------------
+  const dailyLimitResult = await checkDailyLimit(session.user.id, 'upload')
+  if (!dailyLimitResult.allowed) {
+    return { error: `1日のアップロード上限（${dailyLimitResult.limit}回）に達しました` }
   }
 
   // ------------------------------------------------------------

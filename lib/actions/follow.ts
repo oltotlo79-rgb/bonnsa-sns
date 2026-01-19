@@ -50,6 +50,12 @@ import { auth } from '@/lib/auth'
  */
 import { recordNewFollower } from './analytics'
 
+/**
+ * レート制限
+ * スパム防止、クラウド課金対策
+ */
+import { checkUserRateLimit } from '@/lib/rate-limit'
+
 // ============================================================
 // フォロートグル
 // ============================================================
@@ -104,6 +110,14 @@ export async function toggleFollow(userId: string) {
 
   if (session.user.id === userId) {
     return { error: '自分自身をフォローすることはできません' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'engagement')
+  if (!rateLimitResult.success) {
+    return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
   }
 
   // ------------------------------------------------------------

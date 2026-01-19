@@ -85,6 +85,13 @@ import { getMembershipLimits } from '@/lib/premium'
 import { sanitizePostContent } from '@/lib/sanitize'
 
 /**
+ * レート制限関数
+ *
+ * スパム・DDoS対策、クラウド課金保護のために使用
+ */
+import { checkUserRateLimit, checkDailyLimit } from '@/lib/rate-limit'
+
+/**
  * ハッシュタグ関連の関数
  *
  * attachHashtagsToPost: 投稿にハッシュタグを関連付け
@@ -180,6 +187,16 @@ export async function createPost(formData: FormData) {
   })
   if (user?.isSuspended) {
     return { error: 'アカウントが停止されています' }
+  }
+
+  /**
+   * レート制限チェック
+   *
+   * 1分あたりの投稿数を制限（スパム対策）
+   */
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'post')
+  if (!rateLimitResult.success) {
+    return { error: '投稿が多すぎます。しばらく待ってから再試行してください' }
   }
 
   /**
@@ -369,6 +386,14 @@ export async function createQuotePost(formData: FormData, quotePostId: string) {
     return { error: 'アカウントが停止されています' }
   }
 
+  /**
+   * レート制限チェック
+   */
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'post')
+  if (!rateLimitResult.success) {
+    return { error: '投稿が多すぎます。しばらく待ってから再試行してください' }
+  }
+
   const rawContent = formData.get('content') as string
   const content = sanitizePostContent(rawContent)
 
@@ -506,6 +531,14 @@ export async function createRepost(postId: string) {
   })
   if (currentUser?.isSuspended) {
     return { error: 'アカウントが停止されています' }
+  }
+
+  /**
+   * レート制限チェック
+   */
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'post')
+  if (!rateLimitResult.success) {
+    return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
   }
 
   try {
@@ -1193,6 +1226,26 @@ export async function uploadPostMedia(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  /**
+   * レート制限チェック（1分あたり5回）
+   *
+   * R2 Class A Operations（書き込み）の課金対策
+   */
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'upload')
+  if (!rateLimitResult.success) {
+    return { error: 'アップロードが多すぎます。しばらく待ってから再試行してください' }
+  }
+
+  /**
+   * 日次制限チェック（1日50回）
+   *
+   * 投稿を削除して再アップロードする攻撃への対策
+   */
+  const dailyLimitResult = await checkDailyLimit(session.user.id, 'upload')
+  if (!dailyLimitResult.allowed) {
+    return { error: `1日のアップロード上限（${dailyLimitResult.limit}回）に達しました` }
   }
 
   /**

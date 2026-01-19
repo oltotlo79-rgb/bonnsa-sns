@@ -38,6 +38,12 @@ import { prisma } from '@/lib/db'
  */
 import { auth } from '@/lib/auth'
 
+/**
+ * レート制限
+ * スパム防止、クラウド課金対策
+ */
+import { checkUserRateLimit } from '@/lib/rate-limit'
+
 // ============================================================
 // ブックマークトグル
 // ============================================================
@@ -75,6 +81,14 @@ export async function toggleBookmark(postId: string) {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'engagement')
+  if (!rateLimitResult.success) {
+    return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
   }
 
   // ------------------------------------------------------------

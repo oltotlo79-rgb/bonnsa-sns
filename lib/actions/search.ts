@@ -67,6 +67,34 @@ import { getExcludedUserIds } from './filter-helper'
  */
 import { getCachedGenres, getCachedPopularTags } from '@/lib/cache'
 
+/**
+ * レート制限関数
+ *
+ * 検索はDB負荷が高いため、レート制限を適用
+ */
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { headers } from 'next/headers'
+
+// ============================================================
+// ヘルパー関数
+// ============================================================
+
+/**
+ * Server ActionsでクライアントIPを取得
+ *
+ * headers()を使用してリクエストヘッダーからIPアドレスを取得
+ */
+async function getClientIpFromHeaders(): Promise<string> {
+  const headersList = await headers()
+  const cfIp = headersList.get('cf-connecting-ip')
+  if (cfIp) return cfIp
+  const xForwardedFor = headersList.get('x-forwarded-for')
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim()
+  const xRealIp = headersList.get('x-real-ip')
+  if (xRealIp) return xRealIp
+  return 'unknown'
+}
+
 // ============================================================
 // 投稿検索
 // ============================================================
@@ -117,6 +145,17 @@ export async function searchPosts(
   cursor?: string,
   limit = 20
 ) {
+  /**
+   * レート制限チェック（IP単位）
+   *
+   * 検索はDB負荷が高いため、IP単位で制限
+   */
+  const clientIp = await getClientIpFromHeaders()
+  const rateLimitResult = await rateLimit(`search:${clientIp}`, RATE_LIMITS.search)
+  if (!rateLimitResult.success) {
+    return { posts: [], nextCursor: undefined, error: '検索リクエストが多すぎます。しばらく待ってから再試行してください' }
+  }
+
   const session = await auth()
   const currentUserId = session?.user?.id
 
@@ -416,6 +455,15 @@ export async function searchPosts(
  * ```
  */
 export async function searchUsers(query: string, cursor?: string, limit = 20) {
+  /**
+   * レート制限チェック（IP単位）
+   */
+  const clientIp = await getClientIpFromHeaders()
+  const rateLimitResult = await rateLimit(`search:${clientIp}`, RATE_LIMITS.search)
+  if (!rateLimitResult.success) {
+    return { users: [], nextCursor: undefined, error: '検索リクエストが多すぎます。しばらく待ってから再試行してください' }
+  }
+
   const session = await auth()
   const currentUserId = session?.user?.id
 
@@ -605,6 +653,15 @@ export async function searchUsers(query: string, cursor?: string, limit = 20) {
  * ```
  */
 export async function searchByTag(tag: string, cursor?: string, limit = 20) {
+  /**
+   * レート制限チェック（IP単位）
+   */
+  const clientIp = await getClientIpFromHeaders()
+  const rateLimitResult = await rateLimit(`search:${clientIp}`, RATE_LIMITS.search)
+  if (!rateLimitResult.success) {
+    return { posts: [], nextCursor: undefined, error: '検索リクエストが多すぎます。しばらく待ってから再試行してください' }
+  }
+
   const session = await auth()
   const currentUserId = session?.user?.id
 

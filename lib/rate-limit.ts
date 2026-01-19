@@ -290,28 +290,52 @@ export const RATE_LIMITS = {
   passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
 
   /**
-   * ファイルアップロード（1分あたり10回）
+   * ファイルアップロード（1分あたり5回）
    *
    * 用途: 画像/動画のアップロード
-   * 理由: ストレージとネットワーク帯域の保護
+   * 理由: R2ストレージの書き込み回数（Class A Operations）保護
    */
-  upload: { windowMs: 60000, maxRequests: 10 },
+  upload: { windowMs: 60000, maxRequests: 5 },
 
   /**
-   * 検索（1分あたり30回）
+   * 検索（1分あたり20回）
    *
    * 用途: 検索クエリの実行
-   * 理由: 検索はDBに負荷がかかるため、やや厳しめに
+   * 理由: 検索はDBに負荷がかかるため、厳しめに
    */
-  search: { windowMs: 60000, maxRequests: 30 },
+  search: { windowMs: 60000, maxRequests: 20 },
 
   /**
-   * コメント投稿（1分あたり10回）
+   * コメント投稿（1分あたり5回）
    *
    * 用途: コメントの投稿
    * 理由: スパムコメントの防止
    */
-  comment: { windowMs: 60000, maxRequests: 10 },
+  comment: { windowMs: 60000, maxRequests: 5 },
+
+  /**
+   * 投稿作成（1分あたり3回）
+   *
+   * 用途: 投稿、引用、リポストの作成
+   * 理由: スパム投稿の防止、DB負荷軽減
+   */
+  post: { windowMs: 60000, maxRequests: 3 },
+
+  /**
+   * いいね/ブックマーク（1分あたり30回）
+   *
+   * 用途: いいね、ブックマークの追加/解除
+   * 理由: 連打防止、DB負荷軽減
+   */
+  engagement: { windowMs: 60000, maxRequests: 30 },
+
+  /**
+   * タイムライン取得（1分あたり30回）
+   *
+   * 用途: フィード、タイムラインの取得
+   * 理由: DB負荷の高いクエリを保護
+   */
+  timeline: { windowMs: 60000, maxRequests: 30 },
 } as const
 
 // ============================================================
@@ -442,5 +466,120 @@ export async function checkRateLimit(
   const key = additionalKey ? `${limitType}:${ip}:${additionalKey}` : `${limitType}:${ip}`
 
   // プリセット設定でレート制限をチェック
+  return rateLimit(key, RATE_LIMITS[limitType])
+}
+
+// ============================================================
+// 日次制限
+// ============================================================
+
+/**
+ * 日次制限の設定
+ *
+ * ## 設計思想
+ * 分単位のレート制限に加えて、1日あたりの総操作数を制限
+ * クラウド課金対策として特に重要
+ *
+ * ## 制限値の根拠
+ * - upload: R2 Class A Operations（$4.50/100万回）対策
+ *   無料会員20件×6枚=120回/日を想定、余裕を見て50回
+ */
+export const DAILY_LIMITS = {
+  /**
+   * アップロード（1日50回）
+   *
+   * 用途: 画像/動画のアップロード回数制限
+   * 計算: 投稿20件×最大6枚=120枚が上限だが、
+   *       投稿を削除して再投稿する攻撃を防ぐため厳しめに
+   */
+  upload: 50,
+} as const
+
+/**
+ * 日次制限をチェック
+ *
+ * ## 機能概要
+ * 1日あたりの操作回数を制限します。
+ * 毎日0時（UTC）にリセットされます。
+ *
+ * ## パラメータ
+ * @param userId - ユーザーID
+ * @param limitType - 制限タイプ（DAILY_LIMITSのキー）
+ *
+ * ## 戻り値
+ * @returns { allowed: boolean, count: number, limit: number }
+ *
+ * ## 使用例
+ * ```typescript
+ * const result = await checkDailyLimit(userId, 'upload')
+ * if (!result.allowed) {
+ *   return { error: `1日のアップロード上限（${result.limit}回）に達しました` }
+ * }
+ * ```
+ */
+export async function checkDailyLimit(
+  userId: string,
+  limitType: keyof typeof DAILY_LIMITS
+): Promise<{ allowed: boolean; count: number; limit: number }> {
+  const redis = getRedisClient()
+  const limit = DAILY_LIMITS[limitType]
+
+  /**
+   * 日付ベースのキー生成
+   *
+   * UTC日付を使用して、毎日0時にリセット
+   * キー例: "daily:upload:user123:2024-01-15"
+   */
+  const today = new Date().toISOString().split('T')[0]
+  const key = `daily:${limitType}:${userId}:${today}`
+
+  try {
+    const currentStr = await redis.get(key)
+    const current = currentStr ? parseInt(currentStr, 10) : 0
+
+    if (current >= limit) {
+      return { allowed: false, count: current, limit }
+    }
+
+    // カウントをインクリメント（24時間後に自動削除）
+    await redis.incr(key)
+    const ttl = await redis.ttl(key)
+    if (ttl < 0) {
+      // TTLが設定されていない場合、24時間後に期限切れ
+      await redis.expire(key, 24 * 60 * 60)
+    }
+
+    return { allowed: true, count: current + 1, limit }
+  } catch (error) {
+    logger.error('Daily limit check error:', error)
+    // エラー時はフェイルオープン
+    return { allowed: true, count: 0, limit }
+  }
+}
+
+/**
+ * ユーザーIDベースのレート制限チェック
+ *
+ * ## 機能概要
+ * IPではなくユーザーIDでレート制限を行う
+ * 認証済みユーザー向けの制限に使用
+ *
+ * ## パラメータ
+ * @param userId - ユーザーID
+ * @param limitType - プリセットの種類
+ *
+ * ## 使用例
+ * ```typescript
+ * const result = await checkUserRateLimit(session.user.id, 'post')
+ * if (!result.success) {
+ *   return { error: '操作が多すぎます。しばらく待ってから再試行してください' }
+ * }
+ * ```
+ */
+export async function checkUserRateLimit(
+  userId: string,
+  limitType: keyof typeof RATE_LIMITS
+): Promise<RateLimitResult> {
+  const key = `${limitType}:user:${userId}`
   return rateLimit(key, RATE_LIMITS[limitType])
 }
