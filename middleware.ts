@@ -1,8 +1,58 @@
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 const { auth } = NextAuth(authConfig)
+
+// Basic認証のチェック
+function checkBasicAuth(request: NextRequest): NextResponse | null {
+  const basicAuthUser = process.env.BASIC_AUTH_USER
+  const basicAuthPassword = process.env.BASIC_AUTH_PASSWORD
+
+  // 環境変数が設定されていない場合はBasic認証をスキップ
+  if (!basicAuthUser || !basicAuthPassword) {
+    return null
+  }
+
+  const authHeader = request.headers.get('authorization')
+
+  if (!authHeader) {
+    return new NextResponse('Authentication required', {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'Basic realm="Secure Area"',
+      },
+    })
+  }
+
+  const [scheme, encoded] = authHeader.split(' ')
+
+  if (scheme !== 'Basic' || !encoded) {
+    return new NextResponse('Authentication required', {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'Basic realm="Secure Area"',
+      },
+    })
+  }
+
+  // Base64デコード
+  const decoded = atob(encoded)
+  const [user, password] = decoded.split(':')
+
+  if (user !== basicAuthUser || password !== basicAuthPassword) {
+    return new NextResponse('Invalid credentials', {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'Basic realm="Secure Area"',
+      },
+    })
+  }
+
+  // 認証成功
+  return null
+}
 
 // セキュリティヘッダーを追加する関数
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -51,8 +101,20 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth
   const { nextUrl } = req
+
+  // APIルートはBasic認証をスキップ（Webhook等のため）
+  if (nextUrl.pathname.startsWith('/api/')) {
+    return addSecurityHeaders(NextResponse.next())
+  }
+
+  // Basic認証チェック
+  const basicAuthResponse = checkBasicAuth(req)
+  if (basicAuthResponse) {
+    return basicAuthResponse
+  }
+
+  const isLoggedIn = !!req.auth
 
   // 認証済みユーザーが認証ページにアクセスした場合 → フィードへリダイレクト
   const authOnlyPaths = ['/login', '/register', '/password-reset']
@@ -70,6 +132,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
