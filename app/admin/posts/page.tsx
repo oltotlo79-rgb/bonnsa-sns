@@ -85,7 +85,7 @@ export default async function AdminPostsPage({ searchParams }: PageProps) {
       </div>
 
       {/* 投稿テーブル */}
-      <div className="bg-card rounded-lg border overflow-hidden">
+      <div className="bg-card rounded-lg border">
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>

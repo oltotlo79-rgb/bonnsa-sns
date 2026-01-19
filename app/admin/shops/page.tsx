@@ -83,7 +83,7 @@ export default async function AdminShopsPage({ searchParams }: PageProps) {
       </div>
 
       {/* 盆栽園テーブル */}
-      <div className="bg-card rounded-lg border overflow-hidden">
+      <div className="bg-card rounded-lg border">
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>

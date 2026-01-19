@@ -105,7 +105,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
       </div>
 
       {/* 通報テーブル */}
-      <div className="bg-card rounded-lg border overflow-hidden">
+      <div className="bg-card rounded-lg border">
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>
