@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { updateReportStatus, deleteReportedContent } from '@/lib/actions/report'
+import { updateReportStatus, deleteReportedContent, deleteReport } from '@/lib/actions/report'
 
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
@@ -91,6 +91,20 @@ export function ReportActionsDropdown({
 
     setIsOpen(false)
     setShowDeleteConfirm(false)
+    router.refresh()
+  }
+
+  const handleDeleteReport = async () => {
+    setIsSubmitting(true)
+    const result = await deleteReport(reportId)
+    setIsSubmitting(false)
+
+    if (result.error) {
+      alert(result.error)
+      return
+    }
+
+    setIsOpen(false)
     router.refresh()
   }
 
@@ -213,6 +227,14 @@ export function ReportActionsDropdown({
                 {targetType === 'user' ? 'アカウントを停止' : `${targetTypeLabels[targetType]}を削除`}
               </button>
             )}
+
+            <button
+              onClick={handleDeleteReport}
+              disabled={isSubmitting}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-muted text-muted-foreground"
+            >
+              通報を削除（レコードのみ）
+            </button>
           </div>
         </>
       )}

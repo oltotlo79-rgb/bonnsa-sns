@@ -792,6 +792,56 @@ export async function deleteReportedContent(
 }
 
 // ============================================================
+// 通報レコード削除（管理者用）
+// ============================================================
+
+/**
+ * 通報レコードを削除（管理者用）
+ *
+ * コンテンツが既に削除されている場合など、
+ * 通報レコードだけを削除したい場合に使用します。
+ *
+ * @param reportId - 通報ID
+ * @returns 成功時は { success: true }、失敗時は { error: string }
+ */
+export async function deleteReport(reportId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  try {
+    await prisma.report.delete({
+      where: { id: reportId },
+    })
+
+    await prisma.adminLog.create({
+      data: {
+        adminId: adminUser.userId,
+        action: 'delete_report',
+        targetType: 'report',
+        targetId: reportId,
+        details: JSON.stringify({ action: '通報レコードを削除' }),
+      },
+    })
+
+    revalidatePath('/admin/reports')
+
+    return { success: true }
+  } catch {
+    return { error: '削除に失敗しました' }
+  }
+}
+
+// ============================================================
 // 通報統計取得（管理者用）
 // ============================================================
 
