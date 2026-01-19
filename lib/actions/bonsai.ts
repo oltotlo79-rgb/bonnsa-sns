@@ -53,6 +53,32 @@ import { revalidatePath } from 'next/cache'
  */
 import logger from '@/lib/logger'
 
+/**
+ * レート制限関数
+ * 検索はDB負荷が高いため、レート制限を適用
+ */
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
+import { headers } from 'next/headers'
+
+// ============================================================
+// ヘルパー関数
+// ============================================================
+
+/**
+ * Server ActionsでクライアントIPを取得
+ * headers()を使用してリクエストヘッダーからIPアドレスを取得
+ */
+async function getClientIpFromHeaders(): Promise<string> {
+  const headersList = await headers()
+  const cfIp = headersList.get('cf-connecting-ip')
+  if (cfIp) return cfIp
+  const xForwardedFor = headersList.get('x-forwarded-for')
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim()
+  const xRealIp = headersList.get('x-real-ip')
+  if (xRealIp) return xRealIp
+  return 'unknown'
+}
+
 // ============================================================
 // 盆栽一覧取得
 // ============================================================
@@ -875,5 +901,116 @@ export async function getBonsaiRecords(
   } catch (error) {
     logger.error('Get bonsai records error:', error)
     return { records: [], nextCursor: undefined }
+  }
+}
+
+// ============================================================
+// 盆栽検索
+// ============================================================
+
+/**
+ * 盆栽を検索
+ *
+ * ## 機能概要
+ * 現在のユーザーの盆栽をキーワードで検索します。
+ *
+ * ## 検索対象
+ * - 盆栽の名前（name）
+ * - 樹種（species）
+ * - 説明（description）
+ *
+ * ## セキュリティ
+ * - 自分の盆栽のみ検索可能
+ * - レート制限あり（1分20回）
+ *
+ * @param query - 検索キーワード
+ * @returns 検索結果の盆栽一覧、または { error: string }
+ *
+ * @example
+ * ```typescript
+ * const { bonsais } = await searchBonsais('黒松')
+ * ```
+ */
+export async function searchBonsais(query: string) {
+  // ------------------------------------------------------------
+  // 認証チェック
+  // ------------------------------------------------------------
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // レート制限チェック（IP単位）
+  // ------------------------------------------------------------
+  const clientIp = await getClientIpFromHeaders()
+  const rateLimitResult = await rateLimit(`search:bonsai:${clientIp}`, RATE_LIMITS.search)
+  if (!rateLimitResult.success) {
+    return {
+      bonsais: [],
+      error: '検索リクエストが多すぎます。しばらく待ってから再試行してください',
+    }
+  }
+
+  // ------------------------------------------------------------
+  // 入力バリデーション
+  // ------------------------------------------------------------
+  const trimmedQuery = query.trim()
+  if (!trimmedQuery) {
+    // 空のクエリの場合は全件返す
+    return getBonsais()
+  }
+
+  // クエリが長すぎる場合は拒否
+  if (trimmedQuery.length > 100) {
+    return { bonsais: [], error: '検索キーワードが長すぎます' }
+  }
+
+  try {
+    // ------------------------------------------------------------
+    // 盆栽を検索
+    // ------------------------------------------------------------
+
+    const bonsais = await prisma.bonsai.findMany({
+      where: {
+        userId: session.user.id,
+        OR: [
+          {
+            name: {
+              contains: trimmedQuery,
+              mode: 'insensitive',
+            },
+          },
+          {
+            species: {
+              contains: trimmedQuery,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: trimmedQuery,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      include: {
+        records: {
+          orderBy: { recordAt: 'desc' },
+          take: 1,
+          include: {
+            images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+          },
+        },
+        _count: { select: { records: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return { bonsais }
+  } catch (error) {
+    logger.error('Search bonsais error:', error)
+    return { error: '盆栽の検索に失敗しました' }
   }
 }

@@ -884,3 +884,432 @@ export async function getShopGenres() {
 
   return { genres }
 }
+
+// ============================================================
+// 盆栽園変更リクエスト
+// ============================================================
+
+/**
+ * 変更リクエストの内容型定義
+ */
+export type ShopChangeRequestData = {
+  name?: string
+  address?: string
+  phone?: string
+  website?: string
+  businessHours?: string
+  closedDays?: string
+}
+
+/**
+ * 盆栽園の変更リクエストを作成
+ *
+ * ## 機能概要
+ * 登録者以外のユーザーが盆栽園情報の変更をリクエストできます。
+ * リクエストは管理者に通知され、管理者が承認/却下を行います。
+ *
+ * @param shopId - 盆栽園ID
+ * @param changes - 変更内容（変更したいフィールドのみ）
+ * @param reason - 変更理由（任意）
+ * @returns 成功時は { success: true, requestId }、失敗時は { error: string }
+ */
+export async function createShopChangeRequest(
+  shopId: string,
+  changes: ShopChangeRequestData,
+  reason?: string
+) {
+  // ------------------------------------------------------------
+  // 認証チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // 盆栽園の存在確認
+  // ------------------------------------------------------------
+
+  const shop = await prisma.bonsaiShop.findUnique({
+    where: { id: shopId, isHidden: false },
+    select: { id: true, createdBy: true },
+  })
+
+  if (!shop) {
+    return { error: '盆栽園が見つかりません' }
+  }
+
+  // ------------------------------------------------------------
+  // オーナーは変更リクエストを出す必要がない
+  // ------------------------------------------------------------
+
+  if (shop.createdBy === session.user.id) {
+    return { error: '登録者は直接編集できます' }
+  }
+
+  // ------------------------------------------------------------
+  // 変更内容のバリデーション
+  // ------------------------------------------------------------
+
+  const hasChanges = Object.values(changes).some((v) => v !== undefined && v !== '')
+  if (!hasChanges) {
+    return { error: '変更内容を入力してください' }
+  }
+
+  // ------------------------------------------------------------
+  // 保留中のリクエストがないか確認
+  // ------------------------------------------------------------
+
+  const existingRequest = await prisma.shopChangeRequest.findFirst({
+    where: {
+      shopId,
+      userId: session.user.id,
+      status: 'pending',
+    },
+  })
+
+  if (existingRequest) {
+    return { error: '既に保留中のリクエストがあります。承認/却下を待ってください。' }
+  }
+
+  // ------------------------------------------------------------
+  // 変更リクエストを作成
+  // ------------------------------------------------------------
+
+  const request = await prisma.shopChangeRequest.create({
+    data: {
+      shopId,
+      userId: session.user.id,
+      requestedChanges: changes,
+      reason: reason?.trim() || null,
+    },
+  })
+
+  return { success: true, requestId: request.id }
+}
+
+/**
+ * 盆栽園変更リクエスト一覧を取得（管理者用）
+ *
+ * ## 機能概要
+ * 管理者が全ての変更リクエストを確認できます。
+ *
+ * @param options - フィルターオプション
+ * @returns 変更リクエスト一覧
+ */
+export async function getShopChangeRequests(options?: {
+  status?: 'pending' | 'approved' | 'rejected' | 'all'
+  cursor?: string
+  limit?: number
+}) {
+  const { status = 'pending', cursor, limit = 20 } = options || {}
+
+  // ------------------------------------------------------------
+  // 管理者チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // リクエスト一覧を取得
+  // ------------------------------------------------------------
+
+  const requests = await prisma.shopChangeRequest.findMany({
+    where: {
+      ...(status !== 'all' && { status }),
+    },
+    include: {
+      shop: {
+        select: { id: true, name: true, address: true },
+      },
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1,
+    }),
+  })
+
+  const hasMore = requests.length === limit
+
+  return {
+    requests,
+    nextCursor: hasMore ? requests[requests.length - 1]?.id : undefined,
+  }
+}
+
+/**
+ * 盆栽園変更リクエスト詳細を取得（管理者用）
+ *
+ * @param requestId - リクエストID
+ * @returns リクエスト詳細と現在の盆栽園情報
+ */
+export async function getShopChangeRequest(requestId: string) {
+  // ------------------------------------------------------------
+  // 管理者チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // リクエスト詳細を取得
+  // ------------------------------------------------------------
+
+  const request = await prisma.shopChangeRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          address: true,
+          phone: true,
+          website: true,
+          businessHours: true,
+          closedDays: true,
+        },
+      },
+      user: {
+        select: { id: true, nickname: true, avatarUrl: true },
+      },
+    },
+  })
+
+  if (!request) {
+    return { error: 'リクエストが見つかりません' }
+  }
+
+  return { request }
+}
+
+/**
+ * 盆栽園変更リクエストを承認（管理者用）
+ *
+ * ## 機能概要
+ * 変更リクエストを承認し、盆栽園情報を更新します。
+ *
+ * @param requestId - リクエストID
+ * @param adminComment - 管理者コメント（任意）
+ * @returns 成功時は { success: true }、失敗時は { error: string }
+ */
+export async function approveShopChangeRequest(
+  requestId: string,
+  adminComment?: string
+) {
+  // ------------------------------------------------------------
+  // 管理者チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // リクエストを取得
+  // ------------------------------------------------------------
+
+  const request = await prisma.shopChangeRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      shop: true,
+    },
+  })
+
+  if (!request) {
+    return { error: 'リクエストが見つかりません' }
+  }
+
+  if (request.status !== 'pending') {
+    return { error: 'このリクエストは既に処理済みです' }
+  }
+
+  // ------------------------------------------------------------
+  // 変更内容を適用
+  // ------------------------------------------------------------
+
+  const changes = request.requestedChanges as ShopChangeRequestData
+
+  await prisma.$transaction([
+    // 盆栽園を更新
+    prisma.bonsaiShop.update({
+      where: { id: request.shopId },
+      data: {
+        ...(changes.name && { name: changes.name }),
+        ...(changes.address && { address: changes.address }),
+        ...(changes.phone !== undefined && { phone: changes.phone || null }),
+        ...(changes.website !== undefined && { website: changes.website || null }),
+        ...(changes.businessHours !== undefined && { businessHours: changes.businessHours || null }),
+        ...(changes.closedDays !== undefined && { closedDays: changes.closedDays || null }),
+      },
+    }),
+    // リクエストを承認済みに更新
+    prisma.shopChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'approved',
+        adminComment: adminComment?.trim() || null,
+        resolvedAt: new Date(),
+      },
+    }),
+    // 管理者ログを記録
+    prisma.adminLog.create({
+      data: {
+        adminId: session.user.id,
+        action: 'approve_shop_change_request',
+        targetType: 'shop_change_request',
+        targetId: requestId,
+        details: {
+          shopId: request.shopId,
+          changes,
+        },
+      },
+    }),
+  ])
+
+  // ------------------------------------------------------------
+  // キャッシュ再検証
+  // ------------------------------------------------------------
+
+  revalidatePath('/shops')
+  revalidatePath(`/shops/${request.shopId}`)
+  revalidatePath('/admin/shop-requests')
+
+  return { success: true }
+}
+
+/**
+ * 盆栽園変更リクエストを却下（管理者用）
+ *
+ * @param requestId - リクエストID
+ * @param adminComment - 却下理由（任意）
+ * @returns 成功時は { success: true }、失敗時は { error: string }
+ */
+export async function rejectShopChangeRequest(
+  requestId: string,
+  adminComment?: string
+) {
+  // ------------------------------------------------------------
+  // 管理者チェック
+  // ------------------------------------------------------------
+
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: '認証が必要です' }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { error: '管理者権限が必要です' }
+  }
+
+  // ------------------------------------------------------------
+  // リクエストを取得
+  // ------------------------------------------------------------
+
+  const request = await prisma.shopChangeRequest.findUnique({
+    where: { id: requestId },
+  })
+
+  if (!request) {
+    return { error: 'リクエストが見つかりません' }
+  }
+
+  if (request.status !== 'pending') {
+    return { error: 'このリクエストは既に処理済みです' }
+  }
+
+  // ------------------------------------------------------------
+  // リクエストを却下
+  // ------------------------------------------------------------
+
+  await prisma.$transaction([
+    prisma.shopChangeRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'rejected',
+        adminComment: adminComment?.trim() || null,
+        resolvedAt: new Date(),
+      },
+    }),
+    // 管理者ログを記録
+    prisma.adminLog.create({
+      data: {
+        adminId: session.user.id,
+        action: 'reject_shop_change_request',
+        targetType: 'shop_change_request',
+        targetId: requestId,
+        details: {
+          shopId: request.shopId,
+          reason: adminComment,
+        },
+      },
+    }),
+  ])
+
+  revalidatePath('/admin/shop-requests')
+
+  return { success: true }
+}
+
+/**
+ * 保留中の変更リクエスト数を取得（管理者用）
+ */
+export async function getPendingShopChangeRequestsCount() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { count: 0 }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { count: 0 }
+  }
+
+  const count = await prisma.shopChangeRequest.count({
+    where: { status: 'pending' },
+  })
+
+  return { count }
+}

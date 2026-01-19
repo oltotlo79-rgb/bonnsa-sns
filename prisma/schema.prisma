@@ -125,6 +125,9 @@ model User {
   // 盆栽
   bonsais        Bonsai[]
 
+  // 盆栽園変更リクエスト
+  shopChangeRequests ShopChangeRequest[]
+
   @@map("users")
 }
 
@@ -344,9 +347,10 @@ model BonsaiShop {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  creator User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  genres  ShopGenre[]
-  reviews ShopReview[]
+  creator        User                @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  genres         ShopGenre[]
+  reviews        ShopReview[]
+  changeRequests ShopChangeRequest[]
 
   @@index([isHidden])
   @@map("bonsai_shops")
@@ -389,6 +393,27 @@ model ShopReviewImage {
   review ShopReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@map("shop_review_images")
+}
+
+// 盆栽園変更リクエスト
+model ShopChangeRequest {
+  id               String    @id @default(cuid())
+  shopId           String    @map("shop_id")
+  userId           String    @map("user_id")
+  status           String    @default("pending") // pending, approved, rejected
+  requestedChanges Json      @map("requested_changes") // { name?, address?, phone?, website?, businessHours?, closedDays? }
+  reason           String?   @db.Text // 変更理由
+  adminComment     String?   @db.Text @map("admin_comment") // 管理者のコメント
+  resolvedAt       DateTime? @map("resolved_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  shop BonsaiShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([userId])
+  @@index([status])
+  @@map("shop_change_requests")
 }
 
 // イベント

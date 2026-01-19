@@ -8,6 +8,7 @@ import { ReviewForm } from '@/components/shop/ReviewForm'
 import { ReviewList } from '@/components/shop/ReviewList'
 import { MapWrapperSmall } from '@/components/shop/MapWrapper'
 import { LocalBusinessJsonLd } from '@/components/seo/JsonLd'
+import { ShopActions } from '@/components/shop/ShopActions'
 
 interface ShopDetailPageProps {
   params: Promise<{ id: string }>
@@ -57,15 +58,6 @@ function GlobeIcon({ className }: { className?: string }) {
       <circle cx="12" cy="12" r="10" />
       <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
       <path d="M2 12h20" />
-    </svg>
-  )
-}
-
-function EditIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
     </svg>
   )
 }
@@ -174,15 +166,19 @@ export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
               </div>
             )}
           </div>
-          {shop.isOwner && (
-            <Link
-              href={`/shops/${shop.id}/edit`}
-              className="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg hover:bg-muted"
-            >
-              <EditIcon className="w-4 h-4" />
-              <span>編集</span>
-            </Link>
-          )}
+          <ShopActions
+            shop={{
+              id: shop.id,
+              name: shop.name,
+              address: shop.address,
+              phone: shop.phone,
+              website: shop.website,
+              businessHours: shop.businessHours,
+              closedDays: shop.closedDays,
+            }}
+            isOwner={shop.isOwner}
+            isLoggedIn={!!session?.user}
+          />
         </div>
 
         {/* 情報 */}

@@ -197,6 +197,17 @@ function HelpCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/** 木アイコン（マイ盆栽用） */
+function TreeIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 22v-7" />
+      <path d="M9 22h6" />
+      <path d="M12 15a6 6 0 0 0 6-6c0-3-2-5-3-6 0 2-1 3-3 3s-3-1-3-3c-1 1-3 3-3 6a6 6 0 0 0 6 6Z" />
+    </svg>
+  )
+}
+
 // ============================================================
 // 型定義
 // ============================================================
@@ -237,6 +248,7 @@ const baseNavItems: NavItem[] = [
  * 「もっと見る」ボタンをタップすると表示される追加メニュー
  */
 const moreMenuItems: NavItem[] = [
+  { href: '/bonsai', icon: TreeIcon, label: 'マイ盆栽' },
   { href: '/shops', icon: MapPinIcon, label: '盆栽園マップ' },
   { href: '/events', icon: CalendarIcon, label: 'イベント' },
   { href: '/bookmarks', icon: BookmarkIcon, label: 'ブックマーク' },
