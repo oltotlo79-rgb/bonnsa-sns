@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { deleteReview, updateReview } from '@/lib/actions/review'
+import { deleteReview, updateReview, uploadReviewImage } from '@/lib/actions/review'
 import { StarRatingDisplay, StarRatingInput } from './StarRating'
 import { ReportButton } from '@/components/report/ReportButton'
 
@@ -45,6 +45,25 @@ function PencilIcon({ className }: { className?: string }) {
   )
 }
 
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  )
+}
+
+function ImageIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  )
+}
+
 export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -53,6 +72,11 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
   const [editRating, setEditRating] = useState(review.rating)
   const [editContent, setEditContent] = useState(review.content || '')
   const [editError, setEditError] = useState<string | null>(null)
+  // 画像編集用の状態
+  const [existingImages, setExistingImages] = useState(review.images)
+  const [deleteImageIds, setDeleteImageIds] = useState<string[]>([])
+  const [newImages, setNewImages] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
 
   const isOwner = currentUserId === review.user.id
 
@@ -60,6 +84,10 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
     addSuffix: true,
     locale: ja,
   })
+
+  // 現在の合計画像数（既存で削除されていないもの + 新規追加分）
+  const remainingExistingCount = existingImages.filter(img => !deleteImageIds.includes(img.id)).length
+  const totalImageCount = remainingExistingCount + newImages.length
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -75,11 +103,57 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
     setEditRating(review.rating)
     setEditContent(review.content || '')
     setEditError(null)
+    // 画像の状態をリセット
+    setExistingImages(review.images)
+    setDeleteImageIds([])
+    setNewImages([])
   }
 
   const handleCancelEdit = () => {
     setIsEditing(false)
     setEditError(null)
+    // 画像の状態をリセット
+    setDeleteImageIds([])
+    setNewImages([])
+  }
+
+  const handleDeleteExistingImage = (imageId: string) => {
+    setDeleteImageIds([...deleteImageIds, imageId])
+  }
+
+  const handleRestoreExistingImage = (imageId: string) => {
+    setDeleteImageIds(deleteImageIds.filter(id => id !== imageId))
+  }
+
+  const handleRemoveNewImage = (index: number) => {
+    setNewImages(newImages.filter((_, i) => i !== index))
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (totalImageCount >= 3) {
+      setEditError('画像は3枚までです')
+      return
+    }
+
+    setUploading(true)
+    setEditError(null)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const result = await uploadReviewImage(formData)
+
+    if (result.error) {
+      setEditError(result.error)
+    } else if (result.url) {
+      setNewImages([...newImages, result.url])
+    }
+
+    setUploading(false)
+    e.target.value = ''
   }
 
   const handleSaveEdit = () => {
@@ -87,6 +161,10 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
       const formData = new FormData()
       formData.append('rating', editRating.toString())
       formData.append('content', editContent)
+      // 削除する画像ID
+      deleteImageIds.forEach(id => formData.append('deleteImageIds', id))
+      // 新しく追加する画像URL
+      newImages.forEach(url => formData.append('imageUrls', url))
 
       const result = await updateReview(review.id, formData)
       if (result.error) {
@@ -200,11 +278,96 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
               placeholder="レビューコメント（任意）"
             />
           </div>
+
+          {/* 画像編集エリア */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              画像 ({totalImageCount}/3枚)
+            </label>
+
+            {/* 既存の画像 */}
+            {existingImages.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {existingImages.map((image) => {
+                  const isMarkedForDelete = deleteImageIds.includes(image.id)
+                  return (
+                    <div key={image.id} className="relative w-20 h-20">
+                      <Image
+                        src={image.url}
+                        alt="レビュー画像"
+                        fill
+                        className={`object-cover rounded-lg ${isMarkedForDelete ? 'opacity-30' : ''}`}
+                      />
+                      {isMarkedForDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreExistingImage(image.id)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg text-white text-xs"
+                        >
+                          元に戻す
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExistingImage(image.id)}
+                          className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                        >
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* 新しく追加する画像 */}
+            {newImages.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {newImages.map((url, index) => (
+                  <div key={`new-${index}`} className="relative w-20 h-20">
+                    <Image
+                      src={url}
+                      alt={`新規画像 ${index + 1}`}
+                      fill
+                      className="object-cover rounded-lg border-2 border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveNewImage(index)}
+                      className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                    <span className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-xs text-center py-0.5 rounded-b-lg">
+                      新規
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 画像追加ボタン */}
+            <label className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer hover:bg-muted ${totalImageCount >= 3 || uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <ImageIcon className="w-4 h-4" />
+              <span className="text-sm">
+                {uploading ? 'アップロード中...' : '画像を追加'}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={totalImageCount >= 3 || uploading}
+                className="hidden"
+              />
+            </label>
+          </div>
+
           <div className="flex gap-2 justify-end">
             <button
               type="button"
               onClick={handleCancelEdit}
-              disabled={isPending}
+              disabled={isPending || uploading}
               className="px-3 py-1 text-sm border rounded-lg hover:bg-muted disabled:opacity-50"
             >
               キャンセル
@@ -212,7 +375,7 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
             <button
               type="button"
               onClick={handleSaveEdit}
-              disabled={isPending}
+              disabled={isPending || uploading}
               className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               {isPending ? '保存中...' : '保存'}

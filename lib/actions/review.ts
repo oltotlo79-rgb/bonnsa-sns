@@ -267,8 +267,7 @@ export async function createReview(formData: FormData) {
  * 既存のレビューを編集
  *
  * ## 機能概要
- * 自分が投稿したレビューの評価とコメントを更新します。
- * 画像の変更はこの関数では行いません。
+ * 自分が投稿したレビューの評価、コメント、画像を更新します。
  *
  * ## セキュリティ
  * 所有者のみが編集可能です。
@@ -277,19 +276,9 @@ export async function createReview(formData: FormData) {
  * @param formData - フォームデータ
  * @param formData.rating - 新しい評価（1〜5）
  * @param formData.content - 新しいコメント（任意）
+ * @param formData.imageUrls - 新たに追加する画像URL配列（任意）
+ * @param formData.deleteImageIds - 削除する画像ID配列（任意）
  * @returns 成功時: { success: true }, 失敗時: { error: string }
- *
- * @example
- * ```typescript
- * // バインドで reviewId を渡す
- * const updateReviewWithId = updateReview.bind(null, review.id)
- *
- * <form action={updateReviewWithId}>
- *   <StarRating name="rating" defaultValue={review.rating} />
- *   <textarea name="content" defaultValue={review.content} />
- *   <button type="submit">更新</button>
- * </form>
- * ```
  */
 export async function updateReview(reviewId: string, formData: FormData) {
   // ------------------------------------------------------------
@@ -307,6 +296,8 @@ export async function updateReview(reviewId: string, formData: FormData) {
 
   const ratingStr = formData.get('rating') as string
   const content = formData.get('content') as string | null
+  const newImageUrls = formData.getAll('imageUrls') as string[]
+  const deleteImageIds = formData.getAll('deleteImageIds') as string[]
 
   // ------------------------------------------------------------
   // 所有者確認
@@ -314,14 +305,15 @@ export async function updateReview(reviewId: string, formData: FormData) {
 
   /**
    * レビューを取得して所有者を確認
-   *
-   * select で必要なフィールドのみ取得
-   * - userId: 所有者確認用
-   * - shopId: revalidatePath用
+   * 既存の画像数も取得して制限チェックに使用
    */
   const review = await prisma.shopReview.findUnique({
     where: { id: reviewId },
-    select: { userId: true, shopId: true },
+    select: {
+      userId: true,
+      shopId: true,
+      images: { select: { id: true } },
+    },
   })
 
   if (!review) {
@@ -344,22 +336,48 @@ export async function updateReview(reviewId: string, formData: FormData) {
     return { error: '評価は1〜5の間で選択してください' }
   }
 
+  // 画像の総数チェック（既存 - 削除 + 新規 <= 3）
+  const existingImageCount = review.images.length
+  const remainingImageCount = existingImageCount - deleteImageIds.length
+  const totalImageCount = remainingImageCount + newImageUrls.length
+
+  if (totalImageCount > MAX_REVIEW_IMAGES) {
+    return { error: '画像は3枚までです' }
+  }
+
   // ------------------------------------------------------------
-  // レビュー更新
+  // レビュー更新（トランザクション）
   // ------------------------------------------------------------
 
-  /**
-   * レビューを更新
-   *
-   * where: 更新対象の特定
-   * data: 更新するフィールド
-   */
-  await prisma.shopReview.update({
-    where: { id: reviewId },
-    data: {
-      rating,
-      content: content?.trim() || null,
-    },
+  await prisma.$transaction(async (tx) => {
+    // 画像の削除
+    if (deleteImageIds.length > 0) {
+      await tx.shopReviewImage.deleteMany({
+        where: {
+          id: { in: deleteImageIds },
+          reviewId: reviewId,
+        },
+      })
+    }
+
+    // 新しい画像の追加
+    if (newImageUrls.length > 0) {
+      await tx.shopReviewImage.createMany({
+        data: newImageUrls.map((url: string) => ({
+          reviewId: reviewId,
+          url,
+        })),
+      })
+    }
+
+    // レビュー本体の更新
+    await tx.shopReview.update({
+      where: { id: reviewId },
+      data: {
+        rating,
+        content: content?.trim() || null,
+      },
+    })
   })
 
   // ------------------------------------------------------------
