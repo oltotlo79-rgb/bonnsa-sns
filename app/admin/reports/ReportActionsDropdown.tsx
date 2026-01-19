@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { updateReportStatus } from '@/lib/actions/report'
@@ -31,6 +31,29 @@ export function ReportActionsDropdown({
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUpward = spaceBelow < 200
+
+      if (openUpward) {
+        setMenuStyle({
+          bottom: window.innerHeight - rect.top + 4,
+          left: rect.right - 180,
+        })
+      } else {
+        setMenuStyle({
+          top: rect.bottom + 4,
+          left: rect.right - 180,
+        })
+      }
+    }
+    setIsOpen(!isOpen)
+  }
 
   const handleStatusUpdate = async (newStatus: 'pending' | 'reviewed' | 'resolved' | 'dismissed') => {
     setIsSubmitting(true)
@@ -66,7 +89,8 @@ export function ReportActionsDropdown({
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="p-2 hover:bg-muted rounded-lg"
         disabled={isSubmitting}
       >
@@ -76,10 +100,13 @@ export function ReportActionsDropdown({
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-20 min-w-[180px]">
+          <div
+            className="fixed bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[180px]"
+            style={menuStyle}
+          >
             {targetLink && (
               <>
                 <Link

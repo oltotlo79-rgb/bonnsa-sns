@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteShopByAdmin } from '@/lib/actions/admin'
 
@@ -24,6 +24,29 @@ export function ShopActionsDropdown({ shopId }: ShopActionsDropdownProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const openUpward = spaceBelow < 80
+
+      if (openUpward) {
+        setMenuStyle({
+          bottom: window.innerHeight - rect.top + 4,
+          left: rect.right - 150,
+        })
+      } else {
+        setMenuStyle({
+          top: rect.bottom + 4,
+          left: rect.right - 150,
+        })
+      }
+    }
+    setIsOpen(!isOpen)
+  }
 
   const handleDelete = async () => {
     if (!reason.trim()) {
@@ -49,7 +72,8 @@ export function ShopActionsDropdown({ shopId }: ShopActionsDropdownProps) {
     <>
       <div className="relative">
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          ref={buttonRef}
+          onClick={handleToggle}
           className="p-2 hover:bg-muted rounded-lg"
         >
           <MoreVerticalIcon className="w-4 h-4" />
@@ -58,10 +82,13 @@ export function ShopActionsDropdown({ shopId }: ShopActionsDropdownProps) {
         {isOpen && (
           <>
             <div
-              className="fixed inset-0 z-10"
+              className="fixed inset-0 z-40"
               onClick={() => setIsOpen(false)}
             />
-            <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg py-1 z-20 min-w-[150px]">
+            <div
+              className="fixed bg-card border rounded-lg shadow-lg py-1 z-50 min-w-[150px]"
+              style={menuStyle}
+            >
               <button
                 onClick={() => {
                   setIsOpen(false)
