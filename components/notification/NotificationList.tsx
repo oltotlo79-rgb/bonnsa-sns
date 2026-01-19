@@ -1,6 +1,6 @@
 'use client'
 
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { useInView } from 'react-intersection-observer'
 import { useEffect } from 'react'
 import { NotificationItem } from './NotificationItem'
@@ -33,6 +33,7 @@ function CheckCheckIcon({ className }: { className?: string }) {
 
 export function NotificationList({ initialNotifications }: NotificationListProps) {
   const { ref, inView } = useInView()
+  const queryClient = useQueryClient()
 
   const {
     data,
@@ -69,13 +70,17 @@ export function NotificationList({ initialNotifications }: NotificationListProps
       await markAllAsRead()
       // UIを更新して既読状態を反映
       refetch()
+      // 通知バッジのキャッシュも無効化して未読数を0にする
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
     }
     autoMarkAsRead()
-  }, [refetch])
+  }, [refetch, queryClient])
 
   const handleMarkAllAsRead = async () => {
     await markAllAsRead()
     refetch()
+    // 通知バッジのキャッシュも無効化
+    queryClient.invalidateQueries({ queryKey: ['unreadCount'] })
   }
 
   if (isLoading) {
