@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getAdminStats } from '@/lib/actions/admin'
 import { getReportStats } from '@/lib/actions/report'
+import { getPendingShopChangeRequestCount } from '@/lib/actions/shop'
 
 function UsersIcon({ className }: { className?: string }) {
   return (
@@ -71,13 +72,24 @@ function ArrowRightIcon({ className }: { className?: string }) {
   )
 }
 
+function MessageSquareIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  )
+}
+
 export const metadata = {
   title: '管理者ダッシュボード - BON-LOG',
 }
 
 export default async function AdminDashboardPage() {
-  const stats = await getAdminStats()
-  const reportResult = await getReportStats()
+  const [stats, reportResult, shopRequestResult] = await Promise.all([
+    getAdminStats(),
+    getReportStats(),
+    getPendingShopChangeRequestCount(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -129,6 +141,21 @@ export default async function AdminDashboardPage() {
           </div>
           <p className="text-3xl font-bold">{stats.activeUsersWeek.toLocaleString()}</p>
           <p className="text-sm text-muted-foreground mt-1">過去7日間</p>
+        </div>
+
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
+              <MessageSquareIcon className="w-5 h-5" />
+            </div>
+            <span className="text-sm text-muted-foreground">未対応変更リクエスト</span>
+          </div>
+          <p className={`text-3xl font-bold ${shopRequestResult.count > 0 ? 'text-amber-500' : ''}`}>
+            {shopRequestResult.count}
+          </p>
+          <Link href="/admin/shop-requests" className="text-sm text-blue-500 hover:underline mt-1 inline-flex items-center gap-1">
+            確認する <ArrowRightIcon className="w-3 h-3" />
+          </Link>
         </div>
       </div>
 

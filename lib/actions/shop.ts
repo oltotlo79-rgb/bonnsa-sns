@@ -1149,6 +1149,32 @@ export async function getShopChangeRequests(options?: {
 }
 
 /**
+ * 未対応の盆栽園変更リクエスト数を取得（管理者用）
+ *
+ * @returns 未対応リクエスト数
+ */
+export async function getPendingShopChangeRequestCount() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { count: 0 }
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: { userId: session.user.id },
+  })
+
+  if (!adminUser) {
+    return { count: 0 }
+  }
+
+  const count = await prisma.shopChangeRequest.count({
+    where: { status: 'pending' },
+  })
+
+  return { count }
+}
+
+/**
  * 盆栽園変更リクエスト詳細を取得（管理者用）
  *
  * @param requestId - リクエストID
