@@ -758,12 +758,11 @@ export async function deleteReportedContent(
     }
 
     // ------------------------------------------------------------
-    // 関連する通報のステータスを更新
+    // 関連する通報を削除
     // ------------------------------------------------------------
 
-    await prisma.report.updateMany({
+    await prisma.report.deleteMany({
       where: { targetType, targetId },
-      data: { status: 'resolved' },
     })
 
     // ------------------------------------------------------------
