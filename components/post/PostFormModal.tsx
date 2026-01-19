@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { createPost, uploadPostMedia } from '@/lib/actions/post'
+import { saveDraft } from '@/lib/actions/draft'
 import { GenreSelector } from './GenreSelector'
 
 type Genre = {
@@ -59,6 +60,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
   const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([])
   const [loading, setLoading] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -156,6 +158,39 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     fileInputRef.current?.click()
   }
 
+  async function handleSaveDraft() {
+    if (content.length === 0 && mediaFiles.length === 0) {
+      setError('テキストまたは画像を入力してください')
+      return
+    }
+
+    setSavingDraft(true)
+    setError(null)
+
+    try {
+      const result = await saveDraft({
+        content: content || undefined,
+        mediaUrls: mediaFiles.map((m) => m.url),
+        genreIds: selectedGenres,
+      })
+
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setContent('')
+        setSelectedGenres([])
+        setMediaFiles([])
+        setError(null)
+        onClose()
+        router.push('/drafts')
+      }
+    } catch {
+      setError('下書きの保存に失敗しました')
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -170,13 +205,23 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
           >
             <XIcon className="w-5 h-5" />
           </button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || uploading || (content.length === 0 && mediaFiles.length === 0) || remainingChars < 0}
-            className="bg-bonsai-green hover:bg-bonsai-green/90"
-          >
-            {loading ? '投稿中...' : '投稿する'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={savingDraft || uploading || (content.length === 0 && mediaFiles.length === 0)}
+            >
+              {savingDraft ? '保存中...' : '下書き'}
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || uploading || (content.length === 0 && mediaFiles.length === 0) || remainingChars < 0}
+              className="bg-bonsai-green hover:bg-bonsai-green/90"
+            >
+              {loading ? '投稿中...' : '投稿する'}
+            </Button>
+          </div>
         </div>
       </div>
 
