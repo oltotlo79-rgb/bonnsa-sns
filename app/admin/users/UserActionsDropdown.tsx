@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { suspendUser, activateUser } from '@/lib/actions/admin'
 
@@ -28,14 +28,15 @@ export function UserActionsDropdown({ userId, isSuspended }: UserActionsDropdown
   const [openUpward, setOpenUpward] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       const spaceBelow = window.innerHeight - rect.bottom
       // メニューの高さ（約50px）+ マージン より下のスペースが小さければ上に開く
       setOpenUpward(spaceBelow < 80)
     }
-  }, [isOpen])
+    setIsOpen(!isOpen)
+  }
 
   const handleSuspend = async () => {
     if (!reason.trim()) {
@@ -80,7 +81,7 @@ export function UserActionsDropdown({ userId, isSuspended }: UserActionsDropdown
       <div className="relative">
         <button
           ref={buttonRef}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
           className="p-2 hover:bg-muted rounded-lg"
         >
           <MoreVerticalIcon className="w-4 h-4" />
