@@ -52,6 +52,11 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 
 /**
+ * Next.jsのキャッシュ再検証
+ */
+import { revalidatePath } from 'next/cache'
+
+/**
  * 通報関連の型と定数
  * - ReportReason: 通報理由
  * - ReportTargetType: 通報対象の種類
@@ -637,6 +642,9 @@ export async function updateReportStatus(
     }),
   ])
 
+  // ページキャッシュを再検証
+  revalidatePath('/admin/reports')
+
   return { success: true }
 }
 
@@ -774,6 +782,9 @@ export async function deleteReportedContent(
         }),
       },
     })
+
+    // ページキャッシュを再検証
+    revalidatePath('/admin/reports')
 
     return { success: true }
   } catch {
