@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_JP, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { GoogleAdSense } from "@/components/ads";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -83,6 +84,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" suppressHydrationWarning>
+      <head>
+        <GoogleAdSense />
+      </head>
       <body
         className={`${notoSansJP.variable} ${geistMono.variable} ${shipporiMincho.variable} font-sans antialiased`}
       >

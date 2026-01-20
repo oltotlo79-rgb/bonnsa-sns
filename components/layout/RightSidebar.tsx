@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { getRecommendedUsers, getTrendingGenres } from '@/lib/actions/feed'
+import { SidebarAd } from '@/components/ads'
 
 function TrendingIcon({ className }: { className?: string }) {
   return (
@@ -106,6 +107,11 @@ export async function RightSidebar() {
             トレンドデータはありません
           </p>
         )}
+      </div>
+
+      {/* 広告スペース */}
+      <div className="mt-4">
+        <SidebarAd adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR} />
       </div>
 
       {/* フッター */}

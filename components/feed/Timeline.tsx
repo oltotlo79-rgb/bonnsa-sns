@@ -50,6 +50,11 @@ import { useEffect } from 'react'
 import { PostCard } from '@/components/post/PostCard'
 
 /**
+ * フィード内広告コンポーネント
+ */
+import { InFeedAd } from '@/components/ads'
+
+/**
  * タイムライン取得用Server Action
  */
 import { getTimeline } from '@/lib/actions/feed'
@@ -231,10 +236,22 @@ export function Timeline({ initialPosts, currentUserId }: TimelineProps) {
   // レンダリング
   // ------------------------------------------------------------
 
+  // 広告を挿入する間隔（N投稿ごとに1つ）
+  const AD_INTERVAL = 5
+
   return (
     <div className="space-y-4">
-      {allPosts.map((post) => (
-        <PostCard key={post.id} post={post} currentUserId={currentUserId} />
+      {allPosts.map((post, index) => (
+        <div key={post.id}>
+          <PostCard post={post} currentUserId={currentUserId} />
+          {/* N投稿ごとに広告を表示 */}
+          {(index + 1) % AD_INTERVAL === 0 && (
+            <InFeedAd
+              adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_INFEED}
+              className="my-4"
+            />
+          )}
+        </div>
       ))}
 
       {/* 無限スクロール検知 */}

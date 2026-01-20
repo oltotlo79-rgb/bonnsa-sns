@@ -6,6 +6,7 @@ import { getComments, getCommentCount } from '@/lib/actions/comment'
 import { recordPostView } from '@/lib/actions/analytics'
 import { PostCard } from '@/components/post/PostCard'
 import { CommentThread } from '@/components/comment'
+import { AdBanner } from '@/components/ads'
 import Link from 'next/link'
 
 type Props = {
@@ -89,6 +90,15 @@ export default async function PostDetailPage({ params }: Props) {
         </div>
 
         <PostCard post={post} currentUserId={session?.user?.id} disableNavigation={true} />
+
+        {/* 広告スペース */}
+        <div className="border-t p-4 flex justify-center">
+          <AdBanner
+            adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_POST_DETAIL}
+            size="responsive"
+            format="auto"
+          />
+        </div>
 
         {/* コメントセクション */}
         <div className="border-t p-4">
