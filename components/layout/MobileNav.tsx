@@ -263,6 +263,7 @@ const moreMenuItems: NavItem[] = [
 const footerLinks: NavItem[] = [
   { href: '/terms', icon: FileTextIcon, label: '利用規約' },
   { href: '/privacy', icon: ShieldIcon, label: 'プライバシー' },
+  { href: '/tokushoho', icon: FileTextIcon, label: '特商法表記' },
   { href: '/help', icon: HelpCircleIcon, label: 'ヘルプ' },
 ]
 

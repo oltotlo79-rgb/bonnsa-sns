@@ -116,6 +116,8 @@ export async function RightSidebar() {
           <span className="text-border">|</span>
           <Link href="/privacy" className="hover:text-primary transition-colors">プライバシー</Link>
           <span className="text-border">|</span>
+          <Link href="/tokushoho" className="hover:text-primary transition-colors">特商法表記</Link>
+          <span className="text-border">|</span>
           <Link href="/help" className="hover:text-primary transition-colors">ヘルプ</Link>
         </div>
         <p className="mt-3 text-muted-foreground/70">&copy; 2024 BON-LOG</p>
