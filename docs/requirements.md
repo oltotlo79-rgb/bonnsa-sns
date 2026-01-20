@@ -8,7 +8,7 @@
 |------|------|
 | プロジェクト名 | BON-LOG（ボンログ） |
 | 概要 | 盆栽愛好家向けのソーシャルネットワークサービス |
-| 本番URL | https://bonnsa-sns.vercel.app |
+| 本番URL | https://www.bon-log.com |
 | リポジトリ | GitHub (プライベート) |
 
 ### 1.2 目的
@@ -656,6 +656,7 @@
 | `/` | ホーム（LP） |
 | `/terms` | 利用規約 |
 | `/privacy` | プライバシーポリシー |
+| `/tokushoho` | 特定商取引法に基づく表記 |
 | `/help` | ヘルプ |
 
 ---
@@ -738,11 +739,11 @@ DATABASE_URL="postgresql://..."
 DIRECT_URL="postgresql://..."
 
 # 認証
-NEXTAUTH_URL="https://bonnsa-sns.vercel.app"
+NEXTAUTH_URL="https://www.bon-log.com"
 NEXTAUTH_SECRET="..."
 
 # アプリケーション
-NEXT_PUBLIC_APP_URL="https://bonnsa-sns.vercel.app"
+NEXT_PUBLIC_APP_URL="https://www.bon-log.com"
 
 # Redis（Upstash）
 UPSTASH_REDIS_REST_URL="https://..."
@@ -799,3 +800,4 @@ STRIPE_PRICE_ID_YEARLY="..."
 | 2025-01-09 | Azure App Service → Azure Container Apps |
 | 2025-01-17 | Azure → Vercel/Supabase/R2 構成に変更 |
 | 2025-01-19 | 実装状況に基づき全面改訂 |
+| 2026-01-21 | 独自ドメイン(bon-log.com)設定、特定商取引法ページ追加 |
