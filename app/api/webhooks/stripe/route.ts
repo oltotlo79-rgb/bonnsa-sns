@@ -3,6 +3,19 @@ import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
 
+// Stripe APIレスポンスの型定義（current_period_endなどのプロパティにアクセスするため）
+type SubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_end: number
+}
+
+type InvoiceWithDetails = Stripe.Invoice & {
+  subscription: string | null
+  payment_intent: string | null
+  amount_paid: number
+  currency: string
+  billing_reason: string | null
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -31,60 +44,72 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const userId = session.metadata?.userId
         const subscriptionId = session.subscription as string
+        const customerId = session.customer as string
+
+        console.log('checkout.session.completed:', { userId, subscriptionId, customerId })
 
         if (userId && subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          const currentPeriodEnd = (subscription as unknown as { current_period_end: number }).current_period_end
+          const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId)
+          const subscription = subscriptionResponse as unknown as SubscriptionWithPeriod
 
           await prisma.user.update({
             where: { id: userId },
             data: {
               isPremium: true,
+              stripeCustomerId: customerId,
               stripeSubscriptionId: subscriptionId,
-              premiumExpiresAt: new Date(currentPeriodEnd * 1000),
+              premiumExpiresAt: new Date(subscription.current_period_end * 1000),
             },
           })
 
-          // 支払い履歴を記録
-          if (session.payment_intent) {
-            const paymentIntent = await stripe.paymentIntents.retrieve(
-              session.payment_intent as string
-            )
-            await prisma.payment.create({
-              data: {
-                userId,
-                stripePaymentId: paymentIntent.id,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                status: paymentIntent.status,
-                description: 'プレミアム会員登録',
-              },
-            })
+          // 支払い履歴を記録（サブスクリプションの場合、invoiceから取得）
+          if (session.invoice) {
+            const invoiceResponse = await stripe.invoices.retrieve(session.invoice as string)
+            const invoice = invoiceResponse as unknown as InvoiceWithDetails
+            if (invoice.payment_intent) {
+              await prisma.payment.create({
+                data: {
+                  userId,
+                  stripePaymentId: invoice.payment_intent,
+                  amount: invoice.amount_paid,
+                  currency: invoice.currency,
+                  status: 'succeeded',
+                  description: 'プレミアム会員登録',
+                },
+              })
+            }
           }
 
           console.log(`User ${userId} upgraded to premium`)
+        } else {
+          console.error('Missing userId or subscriptionId:', { userId, subscriptionId })
         }
         break
       }
 
       // サブスクリプション更新（更新・期限延長）
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        const subscriptionData = subscription as unknown as { current_period_end: number }
+        const subscriptionData = event.data.object as unknown as SubscriptionWithPeriod
         const user = await prisma.user.findFirst({
-          where: { stripeSubscriptionId: subscription.id },
+          where: { stripeSubscriptionId: subscriptionData.id },
+        })
+
+        console.log('customer.subscription.updated:', {
+          subscriptionId: subscriptionData.id,
+          status: subscriptionData.status,
+          userId: user?.id
         })
 
         if (user) {
           await prisma.user.update({
             where: { id: user.id },
             data: {
-              isPremium: subscription.status === 'active',
+              isPremium: subscriptionData.status === 'active',
               premiumExpiresAt: new Date(subscriptionData.current_period_end * 1000),
             },
           })
 
-          console.log(`User ${user.id} subscription updated: ${subscription.status}`)
+          console.log(`User ${user.id} subscription updated: ${subscriptionData.status}`)
         }
         break
       }
@@ -113,9 +138,10 @@ export async function POST(request: NextRequest) {
 
       // 支払い失敗
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
-        const invoiceData = invoice as unknown as { subscription: string | null }
-        const subscriptionId = invoiceData.subscription as string
+        const invoice = event.data.object as unknown as InvoiceWithDetails
+        const subscriptionId = invoice.subscription
+
+        console.log('invoice.payment_failed:', { subscriptionId })
 
         if (subscriptionId) {
           const user = await prisma.user.findFirst({
@@ -140,42 +166,40 @@ export async function POST(request: NextRequest) {
 
       // 請求書支払い成功（継続課金）
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
-        const invoiceData = invoice as unknown as {
-          subscription: string | null
-          billing_reason: string | null
-          payment_intent: string | null
-          amount_paid: number
-          currency: string
-        }
-        const subscriptionId = invoiceData.subscription
+        const invoice = event.data.object as unknown as InvoiceWithDetails
+        const subscriptionId = invoice.subscription
+
+        console.log('invoice.payment_succeeded:', {
+          subscriptionId,
+          billingReason: invoice.billing_reason,
+        })
 
         // 継続課金の場合のみ記録（初回は checkout.session.completed で処理）
-        if (subscriptionId && invoiceData.billing_reason === 'subscription_cycle') {
+        if (subscriptionId && invoice.billing_reason === 'subscription_cycle') {
           const user = await prisma.user.findFirst({
             where: { stripeSubscriptionId: subscriptionId },
           })
 
-          if (user && invoiceData.payment_intent) {
+          if (user && invoice.payment_intent) {
             // 支払い履歴を記録
             await prisma.payment.create({
               data: {
                 userId: user.id,
-                stripePaymentId: invoiceData.payment_intent,
-                amount: invoiceData.amount_paid,
-                currency: invoiceData.currency,
+                stripePaymentId: invoice.payment_intent,
+                amount: invoice.amount_paid,
+                currency: invoice.currency,
                 status: 'succeeded',
                 description: 'プレミアム会員更新',
               },
             })
 
             // 期限を延長
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-            const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end
+            const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId)
+            const subscription = subscriptionResponse as unknown as SubscriptionWithPeriod
             await prisma.user.update({
               where: { id: user.id },
               data: {
-                premiumExpiresAt: new Date(periodEnd * 1000),
+                premiumExpiresAt: new Date(subscription.current_period_end * 1000),
               },
             })
 
@@ -192,6 +216,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Webhook processing error:', error)
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    console.error('Event type:', event.type)
+    console.error('Event data:', JSON.stringify(event.data.object, null, 2))
+    return NextResponse.json(
+      { error: 'Webhook processing failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
   }
 }
