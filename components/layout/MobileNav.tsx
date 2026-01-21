@@ -339,6 +339,9 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // デバッグ用ログ
+  console.log('[MobileNav] isPremium:', isPremium)
+
   // プレミアム会員専用メニュー項目
   const premiumMenuItems: NavItem[] = isPremium
     ? [

@@ -20,6 +20,9 @@ export default async function MainLayout({
 
   const isPremium = await isPremiumUser(session.user.id)
 
+  // デバッグ用ログ
+  console.log('[MainLayout] userId:', session.user.id, 'isPremium:', isPremium)
+
   return (
     <div className="min-h-screen bg-background asanoha-pattern">
       {/* モバイルヘッダー */}
