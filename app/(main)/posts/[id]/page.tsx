@@ -5,6 +5,7 @@ import { getPost } from '@/lib/actions/post'
 import { getComments, getCommentCount } from '@/lib/actions/comment'
 import { recordPostView } from '@/lib/actions/analytics'
 import { PostCard } from '@/components/post/PostCard'
+import { ShareButtons } from '@/components/post/ShareButtons'
 import { CommentThread } from '@/components/comment'
 import { AdBanner } from '@/components/ads'
 import Link from 'next/link'
@@ -90,6 +91,15 @@ export default async function PostDetailPage({ params }: Props) {
         </div>
 
         <PostCard post={post} currentUserId={session?.user?.id} disableNavigation={true} />
+
+        {/* シェアボタン */}
+        <div className="border-t px-4 py-3">
+          <ShareButtons
+            url={`${process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'}/posts/${id}`}
+            title={`${post.user.nickname}さんの投稿 | BON-LOG`}
+            text={post.content ? (post.content.length > 100 ? post.content.slice(0, 100) + '...' : post.content) : ''}
+          />
+        </div>
 
         {/* 広告スペース */}
         <div className="border-t p-4 flex justify-center">

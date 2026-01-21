@@ -1,28 +1,13 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import { isPremiumUser, getMembershipLimits } from '@/lib/premium'
+import { getGenres } from '@/lib/actions/post'
 import { ScheduledPostForm } from '@/components/post/ScheduledPostForm'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 export const metadata = {
   title: '予約投稿を作成 | BONLOG',
-}
-
-async function getGenres() {
-  const genres = await prisma.genre.findMany({
-    orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }],
-  })
-
-  type GenreType = typeof genres[number]
-  return genres.reduce((acc: Record<string, GenreType[]>, genre: GenreType) => {
-    if (!acc[genre.category]) {
-      acc[genre.category] = []
-    }
-    acc[genre.category].push(genre)
-    return acc
-  }, {})
 }
 
 export default async function NewScheduledPostPage() {
@@ -36,7 +21,8 @@ export default async function NewScheduledPostPage() {
     redirect('/posts/scheduled')
   }
 
-  const genres = await getGenres()
+  const genresResult = await getGenres()
+  const genres = genresResult.genres || {}
   const limits = await getMembershipLimits(session.user.id)
 
   return (
