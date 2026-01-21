@@ -3,12 +3,8 @@ import { stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 import Stripe from 'stripe'
 
-// Stripe APIレスポンスの型定義（current_period_endなどのプロパティにアクセスするため）
-type SubscriptionWithPeriod = Stripe.Subscription & {
-  current_period_end: number
-}
-
-type InvoiceWithDetails = Stripe.Invoice & {
+// Stripe APIレスポンスの型定義
+type InvoiceData = {
   subscription: string | null
   payment_intent: string | null
   amount_paid: number
@@ -50,7 +46,19 @@ export async function POST(request: NextRequest) {
 
         if (userId && subscriptionId) {
           const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId)
-          const subscription = subscriptionResponse as unknown as SubscriptionWithPeriod
+          console.log('Subscription response:', JSON.stringify(subscriptionResponse, null, 2))
+
+          // current_period_endを取得
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const subData = subscriptionResponse as any
+          const currentPeriodEnd = subData.current_period_end as number | undefined
+
+          // 有効期限を計算（取得できない場合は1ヶ月後をデフォルト）
+          const premiumExpiresAt = currentPeriodEnd
+            ? new Date(currentPeriodEnd * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30日後
+
+          console.log('currentPeriodEnd:', currentPeriodEnd, 'premiumExpiresAt:', premiumExpiresAt)
 
           await prisma.user.update({
             where: { id: userId },
@@ -58,21 +66,22 @@ export async function POST(request: NextRequest) {
               isPremium: true,
               stripeCustomerId: customerId,
               stripeSubscriptionId: subscriptionId,
-              premiumExpiresAt: new Date(subscription.current_period_end * 1000),
+              premiumExpiresAt,
             },
           })
 
           // 支払い履歴を記録（サブスクリプションの場合、invoiceから取得）
           if (session.invoice) {
             const invoiceResponse = await stripe.invoices.retrieve(session.invoice as string)
-            const invoice = invoiceResponse as unknown as InvoiceWithDetails
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const invoice = invoiceResponse as any
             if (invoice.payment_intent) {
               await prisma.payment.create({
                 data: {
                   userId,
-                  stripePaymentId: invoice.payment_intent,
-                  amount: invoice.amount_paid,
-                  currency: invoice.currency,
+                  stripePaymentId: invoice.payment_intent as string,
+                  amount: invoice.amount_paid as number,
+                  currency: invoice.currency as string,
                   status: 'succeeded',
                   description: 'プレミアム会員登録',
                 },
@@ -89,27 +98,37 @@ export async function POST(request: NextRequest) {
 
       // サブスクリプション更新（更新・期限延長）
       case 'customer.subscription.updated': {
-        const subscriptionData = event.data.object as unknown as SubscriptionWithPeriod
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subscriptionData = event.data.object as any
+        const subscriptionId = subscriptionData.id as string
+        const subscriptionStatus = subscriptionData.status as string
+        const currentPeriodEnd = subscriptionData.current_period_end as number | undefined
+
         const user = await prisma.user.findFirst({
-          where: { stripeSubscriptionId: subscriptionData.id },
+          where: { stripeSubscriptionId: subscriptionId },
         })
 
         console.log('customer.subscription.updated:', {
-          subscriptionId: subscriptionData.id,
-          status: subscriptionData.status,
+          subscriptionId,
+          status: subscriptionStatus,
+          currentPeriodEnd,
           userId: user?.id
         })
 
         if (user) {
+          const premiumExpiresAt = currentPeriodEnd
+            ? new Date(currentPeriodEnd * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
           await prisma.user.update({
             where: { id: user.id },
             data: {
-              isPremium: subscriptionData.status === 'active',
-              premiumExpiresAt: new Date(subscriptionData.current_period_end * 1000),
+              isPremium: subscriptionStatus === 'active',
+              premiumExpiresAt,
             },
           })
 
-          console.log(`User ${user.id} subscription updated: ${subscriptionData.status}`)
+          console.log(`User ${user.id} subscription updated: ${subscriptionStatus}`)
         }
         break
       }
@@ -138,7 +157,7 @@ export async function POST(request: NextRequest) {
 
       // 支払い失敗
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as unknown as InvoiceWithDetails
+        const invoice = event.data.object as unknown as InvoiceData
         const subscriptionId = invoice.subscription
 
         console.log('invoice.payment_failed:', { subscriptionId })
@@ -166,7 +185,7 @@ export async function POST(request: NextRequest) {
 
       // 請求書支払い成功（継続課金）
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as unknown as InvoiceWithDetails
+        const invoice = event.data.object as unknown as InvoiceData
         const subscriptionId = invoice.subscription
 
         console.log('invoice.payment_succeeded:', {
@@ -195,11 +214,17 @@ export async function POST(request: NextRequest) {
 
             // 期限を延長
             const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId)
-            const subscription = subscriptionResponse as unknown as SubscriptionWithPeriod
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const subData = subscriptionResponse as any
+            const currentPeriodEnd = subData.current_period_end as number | undefined
+            const premiumExpiresAt = currentPeriodEnd
+              ? new Date(currentPeriodEnd * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
             await prisma.user.update({
               where: { id: user.id },
               data: {
-                premiumExpiresAt: new Date(subscription.current_period_end * 1000),
+                premiumExpiresAt,
               },
             })
 
