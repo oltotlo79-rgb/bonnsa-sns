@@ -41,7 +41,7 @@ export default async function MainLayout({
       </div>
 
       {/* モバイルボトムナビ */}
-      <MobileNav userId={session.user.id} />
+      <MobileNav userId={session.user.id} isPremium={isPremium} />
 
       <Toaster />
     </div>
