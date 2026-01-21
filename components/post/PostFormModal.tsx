@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -43,6 +44,18 @@ function XIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+    </svg>
+  )
+}
+
+function FileTextIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
     </svg>
   )
 }
@@ -206,13 +219,22 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             <XIcon className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
+            <Link
+              href="/drafts"
+              onClick={onClose}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="下書き一覧"
+            >
+              <FileTextIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">下書き一覧</span>
+            </Link>
             <Button
               type="button"
               variant="outline"
               onClick={handleSaveDraft}
               disabled={savingDraft || uploading || (content.length === 0 && mediaFiles.length === 0)}
             >
-              {savingDraft ? '保存中...' : '下書き'}
+              {savingDraft ? '保存中...' : '下書き保存'}
             </Button>
             <Button
               onClick={handleSubmit}
