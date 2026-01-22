@@ -5,9 +5,8 @@ import { getPostsByBonsai } from '@/lib/actions/post'
 import Link from 'next/link'
 import Image from 'next/image'
 import { BonsaiRecordForm } from '@/components/bonsai/BonsaiRecordForm'
-import { BonsaiRecordList } from '@/components/bonsai/BonsaiRecordList'
 import { BonsaiActions } from '@/components/bonsai/BonsaiActions'
-import { BonsaiRelatedPosts } from '@/components/bonsai/BonsaiRelatedPosts'
+import { BonsaiTimeline } from '@/components/bonsai/BonsaiTimeline'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -110,7 +109,7 @@ export default async function BonsaiDetailPage({ params }: Props) {
                 <span>入手: {new Date(bonsai.acquiredAt).toLocaleDateString('ja-JP')}</span>
               </div>
             )}
-            <span>{bonsai._count?.records || 0}件の成長記録</span>
+            <span>{bonsai._count?.records || 0}件の成長記録 / {relatedPosts.length}件の投稿</span>
           </div>
         </div>
       </div>
@@ -125,20 +124,13 @@ export default async function BonsaiDetailPage({ params }: Props) {
         </div>
       )}
 
-      {/* 成長記録一覧 */}
+      {/* タイムライン */}
       <div className="bg-card rounded-lg border">
-        <h2 className="px-4 py-3 font-bold border-b">成長記録</h2>
-        <BonsaiRecordList
+        <h2 className="px-4 py-3 font-bold border-b">タイムライン</h2>
+        <BonsaiTimeline
           records={bonsai.records || []}
-          isOwner={isOwner}
-        />
-      </div>
-
-      {/* 関連投稿 */}
-      <div className="bg-card rounded-lg border">
-        <h2 className="px-4 py-3 font-bold border-b">関連投稿</h2>
-        <BonsaiRelatedPosts
           posts={relatedPosts}
+          isOwner={isOwner}
           currentUserId={session?.user?.id}
         />
       </div>
