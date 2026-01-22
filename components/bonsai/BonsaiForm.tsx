@@ -94,9 +94,70 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
           className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="">選択してください</option>
-          <option value="松柏類">松柏類</option>
-          <option value="雑木類">雑木類</option>
-          <option value="草もの">草もの</option>
+          <optgroup label="松柏類">
+            <option value="黒松">黒松</option>
+            <option value="赤松">赤松</option>
+            <option value="五葉松">五葉松</option>
+            <option value="真柏">真柏</option>
+            <option value="杜松">杜松</option>
+            <option value="檜">檜</option>
+            <option value="椹">椹</option>
+            <option value="檜葉/翌檜">檜葉/翌檜</option>
+            <option value="杉">杉</option>
+            <option value="一位">一位</option>
+            <option value="キャラボク">キャラボク</option>
+            <option value="蝦夷松">蝦夷松</option>
+            <option value="落葉松">落葉松</option>
+            <option value="米栂">米栂</option>
+            <option value="樅木">樅木</option>
+            <option value="榧">榧</option>
+            <option value="槙">槙</option>
+            <option value="その他松柏類">その他松柏類</option>
+          </optgroup>
+          <optgroup label="雑木類">
+            <option value="紅葉">紅葉</option>
+            <option value="楓">楓</option>
+            <option value="匂楓">匂楓</option>
+            <option value="銀杏">銀杏</option>
+            <option value="欅">欅</option>
+            <option value="楡欅">楡欅</option>
+            <option value="梅">梅</option>
+            <option value="長寿梅/木瓜">長寿梅/木瓜</option>
+            <option value="梅擬">梅擬</option>
+            <option value="蔓梅擬/岩梅蔓">蔓梅擬/岩梅蔓</option>
+            <option value="縮緬蔓">縮緬蔓</option>
+            <option value="金豆">金豆</option>
+            <option value="ピラカンサ">ピラカンサ</option>
+            <option value="花梨">花梨</option>
+            <option value="台湾黄楊">台湾黄楊</option>
+            <option value="イボタ">イボタ</option>
+            <option value="群雀">群雀</option>
+            <option value="香丁木/白丁木">香丁木/白丁木</option>
+            <option value="真弓">真弓</option>
+            <option value="小真弓">小真弓</option>
+            <option value="ブナ">ブナ</option>
+            <option value="梔子">梔子</option>
+            <option value="グミ">グミ</option>
+            <option value="桜">桜</option>
+            <option value="皐月">皐月</option>
+            <option value="椿">椿</option>
+            <option value="山茶花">山茶花</option>
+            <option value="柿">柿</option>
+            <option value="柘榴">柘榴</option>
+            <option value="百日紅">百日紅</option>
+            <option value="姫林檎/海棠">姫林檎/海棠</option>
+            <option value="柊">柊</option>
+            <option value="針蔓柾">針蔓柾</option>
+            <option value="蔦">蔦</option>
+            <option value="イヌビワ">イヌビワ</option>
+            <option value="紫式部">紫式部</option>
+            <option value="レンギョウ">レンギョウ</option>
+            <option value="その他雑木類">その他雑木類</option>
+          </optgroup>
+          <optgroup label="草もの">
+            <option value="山野草">山野草</option>
+            <option value="苔">苔</option>
+          </optgroup>
         </select>
       </div>
 
