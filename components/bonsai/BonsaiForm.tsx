@@ -87,14 +87,17 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         <label htmlFor="species" className="block text-sm font-medium mb-1">
           樹種
         </label>
-        <input
-          type="text"
+        <select
           id="species"
           name="species"
           defaultValue={bonsai?.species || ''}
           className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          placeholder="例: 黒松、五葉松、もみじ"
-        />
+        >
+          <option value="">選択してください</option>
+          <option value="松柏類">松柏類</option>
+          <option value="雑木類">雑木類</option>
+          <option value="草もの">草もの</option>
+        </select>
       </div>
 
       <div>
