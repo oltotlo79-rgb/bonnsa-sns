@@ -126,6 +126,28 @@ export async function getDrafts() {
   }
 }
 
+/**
+ * 下書きの件数を取得
+ *
+ * @returns 下書きの件数
+ */
+export async function getDraftCount(): Promise<number> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return 0
+  }
+
+  try {
+    const count = await prisma.draftPost.count({
+      where: { userId: session.user.id },
+    })
+    return count
+  } catch (error) {
+    logger.error('Get draft count error:', error)
+    return 0
+  }
+}
+
 // ============================================================
 // 下書き保存
 // ============================================================

@@ -210,6 +210,7 @@ export async function createPost(formData: FormData) {
   const genreIds = formData.getAll('genreIds') as string[]
   const mediaUrls = formData.getAll('mediaUrls') as string[]
   const mediaTypes = formData.getAll('mediaTypes') as string[]
+  const bonsaiId = (formData.get('bonsaiId') as string) || null
 
   /**
    * 会員種別に応じた制限を取得
@@ -293,6 +294,7 @@ export async function createPost(formData: FormData) {
       data: {
         userId: session.user.id,
         content: content || null,
+        bonsaiId: bonsaiId || null,
         media: mediaUrls.length > 0 ? {
           create: mediaUrls.map((url: string, index: number) => ({
             url,
@@ -1308,5 +1310,77 @@ export async function uploadPostMedia(formData: FormData) {
     success: true,
     url: result.url,
     type: isVideo ? 'video' : 'image',
+  }
+}
+
+// ============================================================
+// 盆栽に関連付けられた投稿を取得
+// ============================================================
+
+/**
+ * 盆栽に関連付けられた投稿を取得
+ *
+ * ## 機能概要
+ * 指定された盆栽IDに関連付けられた投稿一覧を取得します。
+ *
+ * ## 用途
+ * - マイ盆栽詳細ページで関連投稿を表示
+ *
+ * @param bonsaiId - 盆栽ID
+ * @param cursor - ページネーション用カーソル
+ * @param limit - 取得件数（デフォルト: 20）
+ * @returns 投稿一覧と次のカーソル
+ *
+ * @example
+ * ```typescript
+ * const { posts, nextCursor } = await getPostsByBonsai('bonsai-123')
+ * ```
+ */
+export async function getPostsByBonsai(
+  bonsaiId: string,
+  cursor?: string,
+  limit = 20
+) {
+  try {
+    const posts = await prisma.post.findMany({
+      where: { bonsaiId },
+      take: limit,
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1,
+      }),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            nickname: true,
+            avatarUrl: true,
+          },
+        },
+        media: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        genres: {
+          include: {
+            genre: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    })
+
+    const hasMore = posts.length === limit
+    const nextCursor = hasMore ? posts[posts.length - 1]?.id : undefined
+
+    return { posts, nextCursor }
+  } catch (error) {
+    console.error('Get posts by bonsai error:', error)
+    return { posts: [], nextCursor: undefined }
   }
 }

@@ -23,11 +23,19 @@ type MembershipLimits = {
   maxVideos: number
 }
 
+type Bonsai = {
+  id: string
+  name: string
+  species: string | null
+}
+
 type PostFormModalProps = {
   genres: Record<string, Genre[]>
   limits?: MembershipLimits
   isOpen: boolean
   onClose: () => void
+  draftCount?: number
+  bonsais?: Bonsai[]
 }
 
 function ImageIcon({ className }: { className?: string }) {
@@ -66,12 +74,13 @@ const DEFAULT_LIMITS: MembershipLimits = {
   maxVideos: 2,
 }
 
-export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose }: PostFormModalProps) {
+export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose, draftCount = 0, bonsais = [] }: PostFormModalProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [content, setContent] = useState('')
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
   const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([])
+  const [selectedBonsaiId, setSelectedBonsaiId] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -137,6 +146,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       formData.append('mediaUrls', m.url)
       formData.append('mediaTypes', m.type)
     })
+    if (selectedBonsaiId) {
+      formData.append('bonsaiId', selectedBonsaiId)
+    }
 
     const result = await createPost(formData)
 
@@ -219,15 +231,17 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             <XIcon className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Link
-              href="/drafts"
-              onClick={onClose}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              title="下書き一覧"
-            >
-              <FileTextIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">下書き一覧</span>
-            </Link>
+            {draftCount > 0 && (
+              <Link
+                href="/drafts"
+                onClick={onClose}
+                className="flex items-center gap-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                title="下書き一覧"
+              >
+                <FileTextIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">下書き一覧</span>
+              </Link>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -309,6 +323,27 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
               {remainingChars}
             </span>
           </div>
+
+          {/* マイ盆栽選択 */}
+          {bonsais.length > 0 && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                関連する盆栽（任意）
+              </label>
+              <select
+                value={selectedBonsaiId}
+                onChange={(e) => setSelectedBonsaiId(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">選択しない</option>
+                {bonsais.map((bonsai) => (
+                  <option key={bonsai.id} value={bonsai.id}>
+                    {bonsai.name}{bonsai.species ? ` (${bonsai.species})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* ジャンル選択 */}
           <div className="mt-4">

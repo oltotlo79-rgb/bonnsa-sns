@@ -18,6 +18,12 @@ type MembershipLimits = {
   canViewAnalytics: boolean
 }
 
+type Bonsai = {
+  id: string
+  name: string
+  species: string | null
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Post = any
 
@@ -26,6 +32,8 @@ type FeedWithComposeProps = {
   currentUserId?: string
   genres: Record<string, Genre[]>
   limits: MembershipLimits
+  draftCount?: number
+  bonsais?: Bonsai[]
 }
 
 function PenIcon({ className }: { className?: string }) {
@@ -36,7 +44,7 @@ function PenIcon({ className }: { className?: string }) {
   )
 }
 
-export function FeedWithCompose({ initialPosts, currentUserId, genres, limits }: FeedWithComposeProps) {
+export function FeedWithCompose({ initialPosts, currentUserId, genres, limits, draftCount = 0, bonsais = [] }: FeedWithComposeProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
@@ -66,6 +74,8 @@ export function FeedWithCompose({ initialPosts, currentUserId, genres, limits }:
         limits={limits}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        draftCount={draftCount}
+        bonsais={bonsais}
       />
     </div>
   )

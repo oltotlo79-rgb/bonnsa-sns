@@ -138,6 +138,7 @@ model Post {
   content      String?   @db.Text
   quotePostId  String?   @map("quote_post_id")
   repostPostId String?   @map("repost_post_id")
+  bonsaiId     String?   @map("bonsai_id")
   isHidden     Boolean   @default(false) @map("is_hidden")
   hiddenAt     DateTime? @map("hidden_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -147,6 +148,7 @@ model Post {
   quotedBy    Post[]     @relation("QuotePost")
   repostPost  Post?      @relation("RepostPost", fields: [repostPostId], references: [id], onDelete: SetNull)
   repostedBy  Post[]     @relation("RepostPost")
+  bonsai      Bonsai?    @relation(fields: [bonsaiId], references: [id], onDelete: SetNull)
   media       PostMedia[]
   genres      PostGenre[]
   comments    Comment[]
@@ -159,6 +161,7 @@ model Post {
   @@index([userId])
   @@index([createdAt])
   @@index([isHidden])
+  @@index([bonsaiId])
   @@map("posts")
 }
 
@@ -692,6 +695,7 @@ model Bonsai {
 
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   records BonsaiRecord[]
+  posts   Post[]
 
   @@index([userId])
   @@map("bonsais")

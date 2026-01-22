@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { getBonsai } from '@/lib/actions/bonsai'
+import { getPostsByBonsai } from '@/lib/actions/post'
 import Link from 'next/link'
 import Image from 'next/image'
 import { BonsaiRecordForm } from '@/components/bonsai/BonsaiRecordForm'
 import { BonsaiRecordList } from '@/components/bonsai/BonsaiRecordList'
 import { BonsaiActions } from '@/components/bonsai/BonsaiActions'
+import { BonsaiRelatedPosts } from '@/components/bonsai/BonsaiRelatedPosts'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -44,13 +46,17 @@ function CalendarIcon({ className }: { className?: string }) {
 export default async function BonsaiDetailPage({ params }: Props) {
   const { id } = await params
   const session = await auth()
-  const result = await getBonsai(id)
+  const [result, postsResult] = await Promise.all([
+    getBonsai(id),
+    getPostsByBonsai(id),
+  ])
 
   if (result.error || !result.bonsai) {
     notFound()
   }
 
   const bonsai = result.bonsai
+  const relatedPosts = postsResult.posts || []
   const isOwner = session?.user?.id === bonsai.userId
   const latestImage = bonsai.records?.[0]?.images?.[0]?.url
 
@@ -125,6 +131,15 @@ export default async function BonsaiDetailPage({ params }: Props) {
         <BonsaiRecordList
           records={bonsai.records || []}
           isOwner={isOwner}
+        />
+      </div>
+
+      {/* 関連投稿 */}
+      <div className="bg-card rounded-lg border">
+        <h2 className="px-4 py-3 font-bold border-b">関連投稿</h2>
+        <BonsaiRelatedPosts
+          posts={relatedPosts}
+          currentUserId={session?.user?.id}
         />
       </div>
     </div>

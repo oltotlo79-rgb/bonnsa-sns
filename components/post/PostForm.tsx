@@ -125,6 +125,7 @@ type MembershipLimits = {
 type PostFormProps = {
   genres: Record<string, Genre[]>
   limits?: MembershipLimits
+  draftCount?: number
 }
 
 // ============================================================
@@ -231,7 +232,7 @@ const DEFAULT_LIMITS: MembershipLimits = {
  * />
  * ```
  */
-export function PostForm({ genres, limits = DEFAULT_LIMITS }: PostFormProps) {
+export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: PostFormProps) {
   // ------------------------------------------------------------
   // Hooks
   // ------------------------------------------------------------
@@ -609,14 +610,16 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS }: PostFormProps) {
           <span className={`text-sm ${remainingChars < 0 ? 'text-destructive' : remainingChars < 50 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
             {remainingChars}
           </span>
-          <Link
-            href="/drafts"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            title="下書き一覧"
-          >
-            <FileTextIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">一覧</span>
-          </Link>
+{draftCount > 0 && (
+            <Link
+              href="/drafts"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="下書き一覧"
+            >
+              <FileTextIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">一覧</span>
+            </Link>
+          )}
           <Button
             type="button"
             variant="outline"
