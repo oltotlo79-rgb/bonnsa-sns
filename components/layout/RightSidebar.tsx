@@ -22,11 +22,11 @@ export async function RightSidebar() {
   const trendingGenres = genresResult.genres || []
 
   return (
-    <aside className="sticky top-0 h-screen w-80 border-l border-kitsune/20 bg-tonoko/95 backdrop-blur-sm hidden xl:flex flex-col p-4 overflow-y-auto shadow-washi">
+    <aside className="sticky top-0 h-screen w-80 border-l bg-card/95 backdrop-blur-sm hidden xl:flex flex-col p-4 overflow-y-auto shadow-washi">
       {/* おすすめユーザー */}
-      <div className="bg-tonoko border border-kitsune/20 p-4 mb-4 shadow-washi">
-        <h3 className="font-serif text-sm mb-4 flex items-center gap-2 text-sumi">
-          <span className="w-1 h-4 bg-kitsune" />
+      <div className="card-washi rounded p-4 mb-4">
+        <h3 className="font-medium mb-4 text-sm flex items-center gap-2">
+          <span className="w-1 h-4 bg-primary rounded-full" />
           おすすめユーザー
         </h3>
         {recommendedUsers.length > 0 ? (
@@ -35,7 +35,7 @@ export async function RightSidebar() {
               <li key={user.id}>
                 <Link
                   href={`/users/${user.id}`}
-                  className="flex items-center gap-3 hover:bg-kitsune/10 p-2 -m-2 transition-all duration-200"
+                  className="flex items-center gap-3 hover:bg-muted/50 rounded p-2 -m-2 transition-all duration-200"
                 >
                   {user.avatarUrl ? (
                     <Image
@@ -43,19 +43,19 @@ export async function RightSidebar() {
                       alt={user.nickname}
                       width={40}
                       height={40}
-                      className="rounded-sm object-cover border-2 border-border/50"
+                      className="rounded-full object-cover ring-2 ring-border"
                     />
                   ) : (
-                    <div className="w-10 h-10 bg-muted flex items-center justify-center border-2 border-border/50">
-                      <span className="text-muted-foreground text-sm font-serif">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center ring-2 ring-border">
+                      <span className="text-muted-foreground text-sm font-medium">
                         {user.nickname.charAt(0)}
                       </span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate text-sumi">{user.nickname}</p>
+                    <p className="font-medium text-sm truncate">{user.nickname}</p>
                     <p className="text-xs text-muted-foreground">
-                      {user.followersCount}人
+                      {user.followersCount}フォロワー
                     </p>
                   </div>
                 </Link>
@@ -69,17 +69,17 @@ export async function RightSidebar() {
         )}
         <Link
           href="/search?tab=users"
-          className="block text-sm text-kitsune hover:text-kitsune/80 mt-4 transition-colors"
+          className="block text-sm text-primary hover:text-primary/80 mt-4 transition-colors"
         >
           もっと見る →
         </Link>
       </div>
 
       {/* トレンドジャンル */}
-      <div className="bg-tonoko border border-kitsune/20 p-4 shadow-washi">
-        <h3 className="font-serif text-sm mb-4 flex items-center gap-2 text-sumi">
-          <TrendingIcon className="w-4 h-4 text-kincha" />
-          人気のジャンル
+      <div className="card-washi rounded p-4">
+        <h3 className="font-medium mb-4 text-sm flex items-center gap-2">
+          <TrendingIcon className="w-4 h-4 text-accent" />
+          トレンドジャンル
         </h3>
         {trendingGenres.length > 0 ? (
           <ul className="space-y-2">
@@ -87,15 +87,15 @@ export async function RightSidebar() {
               <li key={genre.id}>
                 <Link
                   href={`/search?genre=${genre.id}`}
-                  className="flex items-center gap-3 hover:bg-kitsune/10 p-2 -m-2 transition-all duration-200"
+                  className="flex items-center gap-3 hover:bg-muted/50 rounded p-2 -m-2 transition-all duration-200"
                 >
-                  <span className="w-6 h-6 bg-kincha/10 text-kincha text-xs flex items-center justify-center font-serif border border-kincha/20">
-                    {['壱', '弐', '参', '肆', '伍'][index] || index + 1}
+                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                    {index + 1}
                   </span>
                   <div className="flex-1">
-                    <p className="font-medium text-sm text-sumi">{genre.name}</p>
+                    <p className="font-medium text-sm">{genre.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {genre.postCount}件
+                      {genre.postCount}件の投稿
                     </p>
                   </div>
                 </Link>
@@ -116,17 +116,17 @@ export async function RightSidebar() {
 
       {/* フッター */}
       <div className="mt-auto pt-6 text-xs text-muted-foreground">
-        <div className="h-px bg-gradient-to-r from-transparent via-kincha/20 to-transparent mb-4" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-4" />
         <div className="flex flex-wrap gap-3">
-          <Link href="/terms" className="hover:text-kitsune transition-colors">利用規約</Link>
-          <span className="text-kitsune/30">·</span>
-          <Link href="/privacy" className="hover:text-kitsune transition-colors">プライバシー</Link>
-          <span className="text-kitsune/30">·</span>
-          <Link href="/tokushoho" className="hover:text-kitsune transition-colors">特商法表記</Link>
-          <span className="text-kitsune/30">·</span>
-          <Link href="/help" className="hover:text-kitsune transition-colors">ヘルプ</Link>
+          <Link href="/terms" className="hover:text-primary transition-colors">利用規約</Link>
+          <span className="text-border">|</span>
+          <Link href="/privacy" className="hover:text-primary transition-colors">プライバシー</Link>
+          <span className="text-border">|</span>
+          <Link href="/tokushoho" className="hover:text-primary transition-colors">特商法表記</Link>
+          <span className="text-border">|</span>
+          <Link href="/help" className="hover:text-primary transition-colors">ヘルプ</Link>
         </div>
-        <p className="mt-3 text-muted-foreground/50 font-serif tracking-wider">&copy; 2026 BON-LOG</p>
+        <p className="mt-3 text-muted-foreground/70">&copy; 2024 BON-LOG</p>
       </div>
     </aside>
   )

@@ -51,10 +51,7 @@ export function FeedWithCompose({ initialPosts, currentUserId, genres, limits, d
     <div className="relative min-h-screen">
       {/* タイムライン */}
       <div>
-        <h2 className="font-serif text-lg text-sumi mb-4 flex items-center gap-2">
-          <span className="w-1 h-5 bg-kitsune" />
-          タイムライン
-        </h2>
+        <h2 className="text-lg font-bold mb-4">タイムライン</h2>
         <Timeline initialPosts={initialPosts} currentUserId={currentUserId} />
       </div>
 
@@ -63,7 +60,7 @@ export function FeedWithCompose({ initialPosts, currentUserId, genres, limits, d
         <div className="flex justify-end">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="pointer-events-auto w-14 h-14 bg-kitsune hover:bg-kitsune/90 text-tonoko shadow-washi-lg flex items-center justify-center transition-all hover:scale-105 border-2 border-kitsune/50"
+            className="pointer-events-auto w-14 h-14 bg-bonsai-green hover:bg-bonsai-green/90 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
             aria-label="新規投稿"
           >
             <PenIcon className="w-6 h-6" />

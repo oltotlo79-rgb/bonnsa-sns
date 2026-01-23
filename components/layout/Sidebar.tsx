@@ -439,24 +439,25 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
   // ------------------------------------------------------------
 
   return (
-    <aside className="sticky top-0 h-screen w-64 border-r border-kitsune/20 bg-tonoko/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
+    <aside className="sticky top-0 h-screen w-64 border-r bg-card/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
       {/* ロゴ */}
-      <div className="p-4 border-b border-kitsune/20">
-        <Link href="/feed" className="flex items-center justify-center">
+      <div className="p-5 border-b border-border/50">
+        <Link href="/feed" className="flex items-center gap-3">
           <Image
             src="/logo.png"
             alt="BON-LOG"
-            width={140}
-            height={56}
-            className="h-12 w-auto"
+            width={120}
+            height={48}
+            className="h-10 w-auto"
             priority
           />
         </Link>
+        <p className="text-[10px] text-muted-foreground mt-1 tracking-wider">盆栽愛好家のコミュニティ</p>
       </div>
 
       {/* ナビゲーション */}
       <nav className="flex-1 p-3 overflow-y-auto">
-        <ul className="space-y-0.5">
+        <ul className="space-y-1">
           {allNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -465,10 +466,10 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-2.5 transition-all duration-200 ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded transition-all duration-200 ${
                     isActive
-                      ? 'bg-kitsune/15 text-kitsune font-medium border-l-2 border-kitsune'
-                      : 'text-sumi/70 hover:bg-kitsune/10 hover:text-sumi hover:translate-x-0.5'
+                      ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
+                      : 'text-foreground hover:bg-muted/70 hover:translate-x-1'
                   }`}
                 >
                   <div className="relative">
@@ -483,7 +484,7 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
                   <span className="text-sm flex items-center gap-1.5">
                     {item.label}
                     {item.premium && (
-                      <CrownIcon className="w-3.5 h-3.5 text-kincha" />
+                      <CrownIcon className="w-3.5 h-3.5 text-amber-500" />
                     )}
                   </span>
                 </Link>
@@ -494,13 +495,13 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
       </nav>
 
       {/* 装飾ライン */}
-      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-kitsune/30 to-transparent" />
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       {/* ログアウトボタン */}
       <div className="p-3">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-3 px-4 py-2.5 w-full text-sumi/50 hover:bg-aka/10 hover:text-aka transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-3 w-full rounded text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all duration-200"
         >
           <LogOutIcon className="w-5 h-5" />
           <span className="text-sm">ログアウト</span>

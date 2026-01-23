@@ -10,6 +10,8 @@ export interface ServiceUsage {
     percentage: number
   }[]
   error?: string
+  helpText?: string
+  helpUrl?: string
   dashboardUrl: string
   lastUpdated: string
 }
@@ -23,56 +25,74 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
     return {
       name: 'Vercel',
       status: 'unconfigured',
-      error: 'VERCEL_TOKEN が設定されていません',
+      error: 'VERCEL_TOKEN が未設定',
+      helpText: 'Vercel Account Settings → Tokens で作成',
+      helpUrl: 'https://vercel.com/account/tokens',
       dashboardUrl: 'https://vercel.com/dashboard',
       lastUpdated: new Date().toISOString(),
     }
   }
 
   try {
-    const url = teamId
-      ? `https://api.vercel.com/v1/usage?teamId=${teamId}`
-      : 'https://api.vercel.com/v1/usage'
+    // プロジェクト一覧を取得してビルド回数などを確認
+    const projectsUrl = teamId
+      ? `https://api.vercel.com/v9/projects?teamId=${teamId}&limit=100`
+      : 'https://api.vercel.com/v9/projects?limit=100'
 
-    const response = await fetch(url, {
+    const response = await fetch(projectsUrl, {
       headers: { Authorization: `Bearer ${token}` },
-      next: { revalidate: 300 }, // 5分キャッシュ
+      next: { revalidate: 300 },
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`)
     }
 
     const data = await response.json()
-
-    // Vercel API response structure varies, handle common fields
     const usage: ServiceUsage['usage'] = []
 
-    if (data.bandwidth) {
+    // プロジェクト数
+    if (data.projects) {
+      const projectCount = data.projects.length
+      // Hobby: 無制限, Pro: 無制限
       usage.push({
-        current: data.bandwidth.used || 0,
-        limit: data.bandwidth.limit || 100 * 1024 * 1024 * 1024, // 100GB default
-        unit: 'GB (帯域幅)',
-        percentage: Math.round(((data.bandwidth.used || 0) / (data.bandwidth.limit || 100 * 1024 * 1024 * 1024)) * 100),
+        current: projectCount,
+        limit: 100, // 表示用の目安
+        unit: 'プロジェクト',
+        percentage: Math.min(projectCount, 100),
       })
     }
 
-    if (data.builds) {
-      usage.push({
-        current: data.builds.used || 0,
-        limit: data.builds.limit || 6000,
-        unit: '分 (ビルド時間)',
-        percentage: Math.round(((data.builds.used || 0) / (data.builds.limit || 6000)) * 100),
-      })
-    }
+    // デプロイ情報を取得（最初のプロジェクト）
+    if (data.projects && data.projects.length > 0) {
+      const deploymentsUrl = teamId
+        ? `https://api.vercel.com/v6/deployments?teamId=${teamId}&limit=100&state=READY`
+        : `https://api.vercel.com/v6/deployments?limit=100&state=READY`
 
-    if (data.serverlessFunctionExecution) {
-      usage.push({
-        current: data.serverlessFunctionExecution.used || 0,
-        limit: data.serverlessFunctionExecution.limit || 100 * 60 * 60, // 100時間
-        unit: '秒 (Serverless実行)',
-        percentage: Math.round(((data.serverlessFunctionExecution.used || 0) / (data.serverlessFunctionExecution.limit || 100 * 60 * 60)) * 100),
+      const deploymentsRes = await fetch(deploymentsUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+        next: { revalidate: 300 },
       })
+
+      if (deploymentsRes.ok) {
+        const deploymentsData = await deploymentsRes.json()
+        const thisMonth = new Date()
+        thisMonth.setDate(1)
+        thisMonth.setHours(0, 0, 0, 0)
+
+        const monthlyDeployments = deploymentsData.deployments?.filter(
+          (d: { createdAt: number }) => new Date(d.createdAt) >= thisMonth
+        ).length || 0
+
+        // Hobby: 100 deployments/day
+        usage.push({
+          current: monthlyDeployments,
+          limit: 3000, // 100/day * 30days
+          unit: 'デプロイ/月',
+          percentage: Math.round((monthlyDeployments / 3000) * 100),
+        })
+      }
     }
 
     const maxPercentage = usage.length > 0 ? Math.max(...usage.map(u => u.percentage)) : 0
@@ -81,14 +101,16 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
       name: 'Vercel',
       status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
       usage: usage.length > 0 ? usage : undefined,
-      dashboardUrl: 'https://vercel.com/dashboard',
+      dashboardUrl: teamId
+        ? `https://vercel.com/teams/${teamId}/usage`
+        : 'https://vercel.com/account/usage',
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {
     return {
       name: 'Vercel',
       status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
+      error: error instanceof Error ? error.message : '取得に失敗',
       dashboardUrl: 'https://vercel.com/dashboard',
       lastUpdated: new Date().toISOString(),
     }
@@ -104,70 +126,105 @@ export async function getSupabaseUsage(): Promise<ServiceUsage> {
     return {
       name: 'Supabase',
       status: 'unconfigured',
-      error: 'SUPABASE_ACCESS_TOKEN または SUPABASE_PROJECT_REF が設定されていません',
+      error: !token ? 'SUPABASE_ACCESS_TOKEN が未設定' : 'SUPABASE_PROJECT_REF が未設定',
+      helpText: 'Account Settings → Access Tokens で作成',
+      helpUrl: 'https://supabase.com/dashboard/account/tokens',
       dashboardUrl: 'https://supabase.com/dashboard',
       lastUpdated: new Date().toISOString(),
     }
   }
 
   try {
+    // プロジェクトの使用量を取得
     const response = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}/usage`,
+      `https://api.supabase.com/v1/projects/${projectRef}`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
         next: { revalidate: 300 },
       }
     )
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      const errorText = await response.text()
+      throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 100)}`)
     }
 
-    const data = await response.json()
+    const project = await response.json()
     const usage: ServiceUsage['usage'] = []
 
-    // Database size
-    if (data.db_size) {
-      const limitGB = 0.5 // Free tier: 500MB
-      const currentGB = data.db_size / (1024 * 1024 * 1024)
+    // 組織の使用量を取得
+    if (project.organization_id) {
+      const usageRes = await fetch(
+        `https://api.supabase.com/v1/organizations/${project.organization_id}/usage`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          next: { revalidate: 300 },
+        }
+      )
+
+      if (usageRes.ok) {
+        const usageData = await usageRes.json()
+
+        // データベースサイズ (Free: 500MB)
+        if (usageData.db_size !== undefined) {
+          const currentMB = usageData.db_size / (1024 * 1024)
+          const limitMB = 500
+          usage.push({
+            current: Math.round(currentMB * 100) / 100,
+            limit: limitMB,
+            unit: 'MB (データベース)',
+            percentage: Math.round((currentMB / limitMB) * 100),
+          })
+        }
+
+        // ストレージ (Free: 1GB)
+        if (usageData.storage_size !== undefined) {
+          const currentMB = usageData.storage_size / (1024 * 1024)
+          const limitMB = 1024
+          usage.push({
+            current: Math.round(currentMB * 100) / 100,
+            limit: limitMB,
+            unit: 'MB (Storage)',
+            percentage: Math.round((currentMB / limitMB) * 100),
+          })
+        }
+
+        // 帯域幅 (Free: 5GB/月)
+        if (usageData.total_egress !== undefined) {
+          const currentGB = usageData.total_egress / (1024 * 1024 * 1024)
+          const limitGB = 5
+          usage.push({
+            current: Math.round(currentGB * 100) / 100,
+            limit: limitGB,
+            unit: 'GB (帯域幅/月)',
+            percentage: Math.round((currentGB / limitGB) * 100),
+          })
+        }
+      }
+    }
+
+    // 使用量APIが取得できない場合でもプロジェクト情報は表示
+    if (usage.length === 0) {
       usage.push({
-        current: Math.round(currentGB * 100) / 100,
-        limit: limitGB,
-        unit: 'GB (データベース)',
-        percentage: Math.round((currentGB / limitGB) * 100),
+        current: 1,
+        limit: 2, // Free: 2 projects
+        unit: 'プロジェクト',
+        percentage: 50,
       })
     }
 
-    // Storage
-    if (data.storage_size) {
-      const limitGB = 1 // Free tier: 1GB
-      const currentGB = data.storage_size / (1024 * 1024 * 1024)
-      usage.push({
-        current: Math.round(currentGB * 100) / 100,
-        limit: limitGB,
-        unit: 'GB (ストレージ)',
-        percentage: Math.round((currentGB / limitGB) * 100),
-      })
-    }
-
-    // Bandwidth
-    if (data.bandwidth) {
-      const limitGB = 2 // Free tier: 2GB
-      const currentGB = data.bandwidth / (1024 * 1024 * 1024)
-      usage.push({
-        current: Math.round(currentGB * 100) / 100,
-        limit: limitGB,
-        unit: 'GB (帯域幅)',
-        percentage: Math.round((currentGB / limitGB) * 100),
-      })
-    }
-
-    const maxPercentage = usage.length > 0 ? Math.max(...usage.map(u => u.percentage)) : 0
+    const maxPercentage = Math.max(...usage.map(u => u.percentage))
 
     return {
       name: 'Supabase',
       status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
-      usage: usage.length > 0 ? usage : undefined,
+      usage,
       dashboardUrl: `https://supabase.com/dashboard/project/${projectRef}`,
       lastUpdated: new Date().toISOString(),
     }
@@ -175,92 +232,8 @@ export async function getSupabaseUsage(): Promise<ServiceUsage> {
     return {
       name: 'Supabase',
       status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
+      error: error instanceof Error ? error.message : '取得に失敗',
       dashboardUrl: 'https://supabase.com/dashboard',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-}
-
-// Upstash使用量を取得
-export async function getUpstashUsage(): Promise<ServiceUsage> {
-  const email = process.env.UPSTASH_EMAIL
-  const apiKey = process.env.UPSTASH_API_KEY
-  const databaseId = process.env.UPSTASH_REDIS_DATABASE_ID
-
-  if (!email || !apiKey) {
-    return {
-      name: 'Upstash',
-      status: 'unconfigured',
-      error: 'UPSTASH_EMAIL または UPSTASH_API_KEY が設定されていません',
-      dashboardUrl: 'https://console.upstash.com',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-
-  try {
-    // データベース一覧を取得
-    const listUrl = databaseId
-      ? `https://api.upstash.com/v2/redis/database/${databaseId}`
-      : 'https://api.upstash.com/v2/redis/databases'
-
-    const response = await fetch(listUrl, {
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`,
-      },
-      next: { revalidate: 300 },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-    const usage: ServiceUsage['usage'] = []
-
-    // 単一データベースまたは配列の最初のものを使用
-    const db = Array.isArray(data) ? data[0] : data
-
-    if (db) {
-      // Daily commands limit (Free tier: 10,000/day)
-      if (db.daily_request_count !== undefined) {
-        const limit = db.daily_request_limit || 10000
-        usage.push({
-          current: db.daily_request_count,
-          limit: limit,
-          unit: 'リクエスト/日',
-          percentage: Math.round((db.daily_request_count / limit) * 100),
-        })
-      }
-
-      // Storage (Free tier: 256MB)
-      if (db.disk_threshold !== undefined && db.disk_usage !== undefined) {
-        const currentMB = db.disk_usage / (1024 * 1024)
-        const limitMB = db.disk_threshold / (1024 * 1024)
-        usage.push({
-          current: Math.round(currentMB * 100) / 100,
-          limit: Math.round(limitMB * 100) / 100,
-          unit: 'MB (ストレージ)',
-          percentage: Math.round((currentMB / limitMB) * 100),
-        })
-      }
-    }
-
-    const maxPercentage = usage.length > 0 ? Math.max(...usage.map(u => u.percentage)) : 0
-
-    return {
-      name: 'Upstash',
-      status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
-      usage: usage.length > 0 ? usage : undefined,
-      dashboardUrl: 'https://console.upstash.com',
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    return {
-      name: 'Upstash',
-      status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
-      dashboardUrl: 'https://console.upstash.com',
       lastUpdated: new Date().toISOString(),
     }
   }
@@ -275,14 +248,16 @@ export async function getCloudflareR2Usage(): Promise<ServiceUsage> {
     return {
       name: 'Cloudflare R2',
       status: 'unconfigured',
-      error: 'CLOUDFLARE_API_TOKEN または CLOUDFLARE_ACCOUNT_ID が設定されていません',
+      error: !token ? 'CLOUDFLARE_API_TOKEN が未設定' : 'CLOUDFLARE_ACCOUNT_ID が未設定',
+      helpText: 'My Profile → API Tokens で作成（R2の権限が必要）',
+      helpUrl: 'https://dash.cloudflare.com/profile/api-tokens',
       dashboardUrl: 'https://dash.cloudflare.com',
       lastUpdated: new Date().toISOString(),
     }
   }
 
   try {
-    // バケット一覧を取得してストレージ使用量を計算
+    // バケット一覧を取得
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`,
       {
@@ -292,40 +267,40 @@ export async function getCloudflareR2Usage(): Promise<ServiceUsage> {
     )
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.errors?.[0]?.message || `HTTP ${response.status}`)
     }
 
     const data = await response.json()
     const usage: ServiceUsage['usage'] = []
 
     if (data.result && Array.isArray(data.result)) {
-      // Free tier: 10GB storage, 1M Class A ops, 10M Class B ops
-      const totalBuckets = data.result.length
+      const bucketCount = data.result.length
 
       usage.push({
-        current: totalBuckets,
-        limit: 100, // バケット数の目安
+        current: bucketCount,
+        limit: 100, // 目安
         unit: 'バケット',
-        percentage: Math.round((totalBuckets / 100) * 100),
+        percentage: Math.round((bucketCount / 100) * 100),
       })
 
-      // Note: 詳細なストレージ使用量はAnalytics APIが必要
-      // ここでは基本的なバケット情報のみ
+      // R2 Free tier: 10GB storage, 1M Class A ops, 10M Class B ops
+      // 詳細な使用量はAnalytics APIが必要だが、基本情報を表示
     }
 
-    // R2は使用量超過で課金されるため、常にokとして返す
     return {
       name: 'Cloudflare R2',
       status: 'ok',
       usage: usage.length > 0 ? usage : undefined,
-      dashboardUrl: `https://dash.cloudflare.com/${accountId}/r2`,
+      helpText: '詳細な使用量はダッシュボードで確認',
+      dashboardUrl: `https://dash.cloudflare.com/${accountId}/r2/overview`,
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {
     return {
       name: 'Cloudflare R2',
       status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
+      error: error instanceof Error ? error.message : '取得に失敗',
       dashboardUrl: 'https://dash.cloudflare.com',
       lastUpdated: new Date().toISOString(),
     }
@@ -340,191 +315,56 @@ export async function getResendUsage(): Promise<ServiceUsage> {
     return {
       name: 'Resend',
       status: 'unconfigured',
-      error: 'RESEND_API_KEY が設定されていません',
+      error: 'RESEND_API_KEY が未設定',
+      helpText: 'API Keys で作成',
+      helpUrl: 'https://resend.com/api-keys',
       dashboardUrl: 'https://resend.com/emails',
       lastUpdated: new Date().toISOString(),
     }
   }
 
   try {
-    // ドメイン情報を取得（間接的な使用状況確認）
-    const response = await fetch('https://api.resend.com/domains', {
+    // ドメイン情報を取得
+    const domainsRes = await fetch('https://api.resend.com/domains', {
       headers: { Authorization: `Bearer ${apiKey}` },
       next: { revalidate: 300 },
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+    if (!domainsRes.ok) {
+      throw new Error(`HTTP ${domainsRes.status}`)
     }
 
-    const data = await response.json()
+    const domainsData = await domainsRes.json()
     const usage: ServiceUsage['usage'] = []
 
-    // Free tier: 100 emails/day, 3000 emails/month
-    // Note: Resend APIでは直接的な送信数取得が限られているため、
-    // ドメイン数を表示（実際の使用量はダッシュボードで確認）
-    if (data.data && Array.isArray(data.data)) {
+    // ドメイン数
+    if (domainsData.data && Array.isArray(domainsData.data)) {
       usage.push({
-        current: data.data.length,
-        limit: 10, // 目安
+        current: domainsData.data.length,
+        limit: 10, // Free tier目安
         unit: 'ドメイン',
-        percentage: Math.round((data.data.length / 10) * 100),
+        percentage: Math.round((domainsData.data.length / 10) * 100),
       })
     }
+
+    // 今月のメール送信数を取得（API制限あり）
+    // Free tier: 100 emails/day, 3000 emails/month
+    // 注: 直接的な送信数APIは限定的なため、ダッシュボードでの確認を推奨
 
     return {
       name: 'Resend',
       status: 'ok',
       usage: usage.length > 0 ? usage : undefined,
-      error: '詳細な送信数はダッシュボードで確認してください',
-      dashboardUrl: 'https://resend.com/emails',
+      helpText: '送信数: Free 100通/日, 3,000通/月',
+      dashboardUrl: 'https://resend.com/overview',
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {
     return {
       name: 'Resend',
       status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
+      error: error instanceof Error ? error.message : '取得に失敗',
       dashboardUrl: 'https://resend.com/emails',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-}
-
-// Stripe使用量を取得
-export async function getStripeUsage(): Promise<ServiceUsage> {
-  const secretKey = process.env.STRIPE_SECRET_KEY
-
-  if (!secretKey) {
-    return {
-      name: 'Stripe',
-      status: 'unconfigured',
-      error: 'STRIPE_SECRET_KEY が設定されていません',
-      dashboardUrl: 'https://dashboard.stripe.com',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-
-  try {
-    // 残高を取得
-    const response = await fetch('https://api.stripe.com/v1/balance', {
-      headers: { Authorization: `Bearer ${secretKey}` },
-      next: { revalidate: 300 },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-    const usage: ServiceUsage['usage'] = []
-
-    // 利用可能残高を表示
-    if (data.available && data.available.length > 0) {
-      const balance = data.available[0]
-      usage.push({
-        current: balance.amount / 100, // centからの変換
-        limit: 0, // Stripeには制限なし
-        unit: `${balance.currency.toUpperCase()} (残高)`,
-        percentage: 0,
-      })
-    }
-
-    // 保留中の残高
-    if (data.pending && data.pending.length > 0) {
-      const pending = data.pending[0]
-      usage.push({
-        current: pending.amount / 100,
-        limit: 0,
-        unit: `${pending.currency.toUpperCase()} (保留中)`,
-        percentage: 0,
-      })
-    }
-
-    return {
-      name: 'Stripe',
-      status: 'ok',
-      usage: usage.length > 0 ? usage : undefined,
-      dashboardUrl: 'https://dashboard.stripe.com',
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    return {
-      name: 'Stripe',
-      status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
-      dashboardUrl: 'https://dashboard.stripe.com',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-}
-
-// Sentry使用量を取得
-export async function getSentryUsage(): Promise<ServiceUsage> {
-  const authToken = process.env.SENTRY_AUTH_TOKEN
-  const org = process.env.SENTRY_ORG
-
-  if (!authToken || !org) {
-    return {
-      name: 'Sentry',
-      status: 'unconfigured',
-      error: 'SENTRY_AUTH_TOKEN または SENTRY_ORG が設定されていません',
-      dashboardUrl: 'https://sentry.io',
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-
-  try {
-    // Organization stats を取得
-    const response = await fetch(
-      `https://sentry.io/api/0/organizations/${org}/stats_v2/?field=sum(quantity)&groupBy=outcome&category=error&interval=1d&statsPeriod=30d`,
-      {
-        headers: { Authorization: `Bearer ${authToken}` },
-        next: { revalidate: 300 },
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-    const usage: ServiceUsage['usage'] = []
-
-    // イベント数を集計
-    if (data.groups && Array.isArray(data.groups)) {
-      let totalEvents = 0
-      for (const group of data.groups) {
-        if (group.totals && group.totals['sum(quantity)']) {
-          totalEvents += group.totals['sum(quantity)']
-        }
-      }
-
-      // Free tier: 5K errors/month
-      const limit = 5000
-      usage.push({
-        current: totalEvents,
-        limit: limit,
-        unit: 'エラー/月',
-        percentage: Math.round((totalEvents / limit) * 100),
-      })
-    }
-
-    const maxPercentage = usage.length > 0 ? Math.max(...usage.map(u => u.percentage)) : 0
-
-    return {
-      name: 'Sentry',
-      status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
-      usage: usage.length > 0 ? usage : undefined,
-      dashboardUrl: `https://sentry.io/organizations/${org}/stats/`,
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    return {
-      name: 'Sentry',
-      status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗しました',
-      dashboardUrl: 'https://sentry.io',
       lastUpdated: new Date().toISOString(),
     }
   }
@@ -535,11 +375,8 @@ export async function getAllUsage(): Promise<ServiceUsage[]> {
   const results = await Promise.allSettled([
     getVercelUsage(),
     getSupabaseUsage(),
-    getUpstashUsage(),
     getCloudflareR2Usage(),
     getResendUsage(),
-    getStripeUsage(),
-    getSentryUsage(),
   ])
 
   return results.map((result, index) => {
@@ -547,11 +384,11 @@ export async function getAllUsage(): Promise<ServiceUsage[]> {
       return result.value
     }
 
-    const names = ['Vercel', 'Supabase', 'Upstash', 'Cloudflare R2', 'Resend', 'Stripe', 'Sentry']
+    const names = ['Vercel', 'Supabase', 'Cloudflare R2', 'Resend']
     return {
       name: names[index],
       status: 'error' as const,
-      error: '取得中にエラーが発生しました',
+      error: '取得中にエラーが発生',
       dashboardUrl: '#',
       lastUpdated: new Date().toISOString(),
     }

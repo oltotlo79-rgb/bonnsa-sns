@@ -70,17 +70,24 @@ const serviceIcons: Record<string, React.ReactNode> = {
     </svg>
   ),
   Supabase: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <path d="M21.362 9.354H12V.396a.396.396 0 0 0-.716-.233L2.203 12.424l-.401.562a1.04 1.04 0 0 0 .836 1.659H12v8.959a.396.396 0 0 0 .716.233l9.081-12.261.401-.562a1.04 1.04 0 0 0-.836-1.66z"/>
-    </svg>
-  ),
-  Upstash: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    <svg viewBox="0 0 109 113" className="w-6 h-6" fill="none">
+      <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874l-43.151 54.347z" fill="url(#a)"/>
+      <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874l-43.151 54.347z" fill="url(#b)" fillOpacity=".2"/>
+      <path d="M45.317 2.071c2.86-3.601 8.657-1.628 8.726 2.97l.442 67.251H9.83c-8.19 0-12.759-9.46-7.665-15.875L45.317 2.072z" fill="#3ECF8E"/>
+      <defs>
+        <linearGradient id="a" x1="53.974" y1="54.974" x2="94.163" y2="71.829" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#249361"/>
+          <stop offset="1" stopColor="#3ECF8E"/>
+        </linearGradient>
+        <linearGradient id="b" x1="36.156" y1="30.578" x2="54.484" y2="65.081" gradientUnits="userSpaceOnUse">
+          <stop/>
+          <stop offset="1" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
     </svg>
   ),
   'Cloudflare R2': (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
+    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#F38020">
       <path d="M16.5088 16.8447c.1475-.5068.0908-.9707-.1553-1.2678-.2246-.2795-.5765-.4242-1.0197-.4454l-8.6727-.0726c-.0537 0-.0966-.0215-.1182-.0537a.1435.1435 0 0 1-.021-.1475c.0322-.0752.0966-.129.1767-.1366l8.7453-.0753c.9814-.0322 2.0412-.8125 2.3959-1.7618l.449-1.1997c.0216-.0537.0322-.1143.021-.1689-.4017-1.9526-2.1423-3.411-4.2195-3.411-1.9082 0-3.5318 1.2476-4.0917 2.9682-.389-.2903-.8716-.4242-1.4032-.3628-1.0037.1099-1.8105.9383-1.9312 1.9421-.0322.2687-.0161.5374.0429.7845-1.649.0752-2.9682 1.4315-2.9682 3.1091 0 .1689.0107.3378.0322.5068.0108.0752.0752.1289.1475.1289h12.814c.075 0 .1398-.0645.1582-.1398z"/>
     </svg>
   ),
@@ -89,27 +96,14 @@ const serviceIcons: Record<string, React.ReactNode> = {
       <path d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6zm3.519 0L12 11.671 18.481 6H5.52zM20 7.329l-8 7-8-7V18h16V7.329z"/>
     </svg>
   ),
-  Stripe: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-    </svg>
-  ),
-  Sentry: (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-      <path d="M13.91 2.505c-.873-1.448-2.972-1.448-3.845 0L6.057 9.13a7.932 7.932 0 0 1 4.084 5.318h1.518V9.85h2.549v9.637h-4.067c0-.302-.025-.6-.073-.893H8.51a6.27 6.27 0 0 0-3.137-4.241L2.19 19.488c-.873 1.449.209 3.267 1.923 3.267h3.168V20.21H5.203l2.457-4.073c.747.46 1.395 1.056 1.913 1.76.772 1.048 1.228 2.318 1.277 3.647h4.067a10.462 10.462 0 0 0-1.514-6.076 10.543 10.543 0 0 0-4.213-3.744l2.97-4.926a5.393 5.393 0 0 1 3.546 3.03h-1.977l2.456 4.073c.763-.47 1.425-1.083 1.944-1.798a7.962 7.962 0 0 0 1.29-2.506h2.514c-.225 1.376-.71 2.677-1.42 3.843a10.489 10.489 0 0 1-3.016 3.086l2.456 4.073h-2.88v2.545h5.807c1.714 0 2.796-1.818 1.922-3.267L13.91 2.505z"/>
-    </svg>
-  ),
 }
 
 // サービスの背景色
 const serviceColors: Record<string, string> = {
   Vercel: 'bg-black text-white',
   Supabase: 'bg-emerald-600 text-white',
-  Upstash: 'bg-emerald-500 text-white',
   'Cloudflare R2': 'bg-orange-500 text-white',
   Resend: 'bg-black text-white',
-  Stripe: 'bg-indigo-600 text-white',
-  Sentry: 'bg-purple-600 text-white',
 }
 
 function UsageCard({ service }: { service: ServiceUsage }) {
@@ -165,10 +159,32 @@ function UsageCard({ service }: { service: ServiceUsage }) {
         </a>
       </div>
 
-      {service.error && service.status !== 'ok' && (
-        <p className="text-sm text-muted-foreground mb-3">{service.error}</p>
+      {/* エラーメッセージ */}
+      {service.error && (
+        <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/30 rounded text-sm text-red-700 dark:text-red-400">
+          {service.error}
+        </div>
       )}
 
+      {/* ヘルプテキスト（未設定時） */}
+      {service.status === 'unconfigured' && service.helpText && (
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground mb-2">{service.helpText}</p>
+          {service.helpUrl && (
+            <a
+              href={service.helpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              トークンを作成
+              <ExternalLinkIcon className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* 使用量表示 */}
       {service.usage && service.usage.length > 0 && (
         <div className="space-y-3">
           {service.usage.map((item, index) => (
@@ -201,7 +217,12 @@ function UsageCard({ service }: { service: ServiceUsage }) {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground mt-3">
+      {/* ヘルプテキスト（正常時） */}
+      {service.status === 'ok' && service.helpText && (
+        <p className="text-xs text-muted-foreground mt-3">{service.helpText}</p>
+      )}
+
+      <p className="text-xs text-muted-foreground mt-3 pt-2 border-t">
         更新: {new Date(service.lastUpdated).toLocaleString('ja-JP')}
       </p>
     </div>
@@ -240,8 +261,8 @@ export function UsageCards() {
 
   if (loading && services.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {[...Array(7)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-card rounded-lg border p-4 animate-pulse">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-muted rounded-lg" />
@@ -282,7 +303,7 @@ export function UsageCards() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {services.map((service) => (
           <UsageCard key={service.name} service={service} />
         ))}
@@ -293,35 +314,22 @@ export function UsageCards() {
         <div className="bg-muted/50 rounded-lg border p-4 mt-6">
           <h3 className="font-semibold mb-2">環境変数の設定</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            使用量を取得するには、各サービスのAPIキーを環境変数に設定してください。
+            使用量を取得するには、各サービスの管理用APIトークンを環境変数に設定してください。
           </p>
           <pre className="bg-card border rounded-lg p-3 text-xs overflow-x-auto">
 {`# Vercel
 VERCEL_TOKEN=your_vercel_token
-VERCEL_TEAM_ID=your_team_id  # オプション
+# VERCEL_TEAM_ID=team_xxx  # チーム利用時
 
 # Supabase
-SUPABASE_ACCESS_TOKEN=your_access_token
+SUPABASE_ACCESS_TOKEN=sbp_xxx
 SUPABASE_PROJECT_REF=your_project_ref
-
-# Upstash
-UPSTASH_EMAIL=your_email
-UPSTASH_API_KEY=your_api_key
-UPSTASH_REDIS_DATABASE_ID=your_database_id  # オプション
 
 # Cloudflare R2
 CLOUDFLARE_API_TOKEN=your_api_token
 CLOUDFLARE_ACCOUNT_ID=your_account_id
 
-# Resend
-RESEND_API_KEY=your_api_key
-
-# Stripe
-STRIPE_SECRET_KEY=your_secret_key
-
-# Sentry
-SENTRY_AUTH_TOKEN=your_auth_token
-SENTRY_ORG=your_organization_slug`}
+# Resend（既存のRESEND_API_KEYで動作）`}
           </pre>
         </div>
       )}
