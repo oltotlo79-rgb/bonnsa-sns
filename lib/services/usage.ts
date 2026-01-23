@@ -139,78 +139,54 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
   }
 }
 
-// Supabase使用量を取得
+// Supabase使用量を取得（データベース直接クエリ方式）
 export async function getSupabaseUsage(): Promise<ServiceUsage> {
-  const token = process.env.SUPABASE_ACCESS_TOKEN
-  const projectRef = process.env.SUPABASE_PROJECT_REF
+  // 注: この関数はAPI Routeから呼ばれるため、Prismaは使えない
+  // 代わりにSupabaseのREST APIを使用する
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || extractSupabaseUrl()
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const projectRef = process.env.SUPABASE_PROJECT_REF || extractProjectRef()
 
-  if (!token || !projectRef) {
+  if (!supabaseUrl && !projectRef) {
     return {
       name: 'Supabase',
       status: 'unconfigured',
-      error: !token ? 'SUPABASE_ACCESS_TOKEN が未設定' : 'SUPABASE_PROJECT_REF が未設定',
-      helpText: 'Account Settings → Access Tokens で作成',
-      helpUrl: 'https://supabase.com/dashboard/account/tokens',
+      error: 'Supabaseの設定が見つかりません',
+      helpText: 'DATABASE_URLまたはSUPABASE_PROJECT_REFを設定してください',
       dashboardUrl: 'https://supabase.com/dashboard',
       lastUpdated: new Date().toISOString(),
     }
   }
 
+  const usage: ServiceUsage['usage'] = []
+
+  // Free tier制限値
+  const LIMITS = {
+    dbSize: 500, // 500MB
+    storageSize: 1024, // 1GB = 1024MB
+    bandwidth: 5, // 5GB
+    mau: 50000, // 50,000 MAU
+  }
+
   try {
-    // プロジェクト情報を取得してorganization_idを得る
-    const projectRes = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}`,
-      {
+    // データベースサイズをPostgreSQLから直接取得
+    if (supabaseUrl && supabaseKey) {
+      const dbSizeRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_database_size`, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({}),
         next: { revalidate: 300 },
-      }
-    )
+      })
 
-    if (!projectRes.ok) {
-      const errorText = await projectRes.text()
-      throw new Error(`HTTP ${projectRes.status}: ${errorText.slice(0, 100)}`)
-    }
-
-    const project = await projectRes.json()
-    const usage: ServiceUsage['usage'] = []
-    const orgId = project.organization_id
-
-    // Free tier制限値
-    const LIMITS = {
-      dbSize: 500, // 500MB
-      storageSize: 1024, // 1GB = 1024MB
-      bandwidth: 5, // 5GB
-      mau: 50000, // 50,000 MAU
-    }
-
-    if (orgId) {
-      // 組織の使用量を取得（billing cycleの使用量）
-      const usageRes = await fetch(
-        `https://api.supabase.com/v1/organizations/${orgId}/usage`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          next: { revalidate: 300 },
-        }
-      )
-
-      if (usageRes.ok) {
-        const usageData = await usageRes.json()
-
-        // usageDataが配列の場合（複数プロジェクト）
-        const projectUsage = Array.isArray(usageData)
-          ? usageData.find((u: { project_ref?: string }) => u.project_ref === projectRef) || usageData[0]
-          : usageData
-
-        // データベースサイズ
-        const dbSize = projectUsage?.db_size ?? projectUsage?.usage?.db_size
-        if (dbSize !== undefined) {
-          const currentMB = dbSize / (1024 * 1024)
+      if (dbSizeRes.ok) {
+        const dbSizeData = await dbSizeRes.json()
+        if (typeof dbSizeData === 'number' || (dbSizeData && dbSizeData.size)) {
+          const sizeBytes = typeof dbSizeData === 'number' ? dbSizeData : dbSizeData.size
+          const currentMB = sizeBytes / (1024 * 1024)
           usage.push({
             current: Math.round(currentMB * 100) / 100,
             limit: LIMITS.dbSize,
@@ -218,65 +194,52 @@ export async function getSupabaseUsage(): Promise<ServiceUsage> {
             percentage: Math.round((currentMB / LIMITS.dbSize) * 100),
           })
         }
-
-        // ファイルストレージ
-        const storageSize = projectUsage?.storage_size ?? projectUsage?.usage?.storage_size
-        if (storageSize !== undefined) {
-          const currentMB = storageSize / (1024 * 1024)
-          usage.push({
-            current: Math.round(currentMB * 100) / 100,
-            limit: LIMITS.storageSize,
-            unit: 'MB (ストレージ)',
-            percentage: Math.round((currentMB / LIMITS.storageSize) * 100),
-          })
-        }
-
-        // 帯域幅（egress）
-        const bandwidth = projectUsage?.total_egress ?? projectUsage?.usage?.egress ?? projectUsage?.bandwidth
-        if (bandwidth !== undefined) {
-          const currentGB = bandwidth / (1024 * 1024 * 1024)
-          usage.push({
-            current: Math.round(currentGB * 100) / 100,
-            limit: LIMITS.bandwidth,
-            unit: 'GB (帯域幅/月)',
-            percentage: Math.round((currentGB / LIMITS.bandwidth) * 100),
-          })
-        }
-
-        // MAU (Monthly Active Users)
-        const mau = projectUsage?.mau ?? projectUsage?.usage?.mau ?? projectUsage?.monthly_active_users
-        if (mau !== undefined) {
-          usage.push({
-            current: mau,
-            limit: LIMITS.mau,
-            unit: 'MAU',
-            percentage: Math.round((mau / LIMITS.mau) * 100),
-          })
-        }
       }
+    }
+  } catch {
+    // DBサイズ取得失敗は無視
+  }
 
-      // usageが空の場合、別のAPIを試す
-      if (usage.length === 0) {
-        // 組織の詳細な使用量を取得
-        const billingRes = await fetch(
-          `https://api.supabase.com/v1/organizations/${orgId}/billing/usage`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            next: { revalidate: 300 },
-          }
-        )
+  // Management APIでの取得を試みる（Access Tokenがある場合）
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN
+  const ref = projectRef || extractProjectRef()
 
-        if (billingRes.ok) {
-          const billingData = await billingRes.json()
+  if (accessToken && ref) {
+    try {
+      // プロジェクト情報を取得
+      const projectRes = await fetch(`https://api.supabase.com/v1/projects/${ref}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        next: { revalidate: 300 },
+      })
 
-          // billing APIのレスポンス形式に対応
-          if (billingData.usages && Array.isArray(billingData.usages)) {
-            for (const item of billingData.usages) {
-              if (item.metric === 'DATABASE_SIZE' && item.usage !== undefined) {
-                const currentMB = item.usage / (1024 * 1024)
+      if (projectRes.ok) {
+        const project = await projectRes.json()
+        const orgId = project.organization_id
+
+        if (orgId) {
+          // Daily statsを取得（より詳細な使用量）
+          const statsRes = await fetch(
+            `https://api.supabase.com/v1/projects/${ref}/daily-stats?interval=30d`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+              next: { revalidate: 300 },
+            }
+          )
+
+          if (statsRes.ok) {
+            const statsData = await statsRes.json()
+
+            // 最新のデータを取得
+            if (statsData.data && statsData.data.length > 0) {
+              const latest = statsData.data[statsData.data.length - 1]
+
+              // データベースサイズ
+              if (latest.total_db_size_bytes && usage.length === 0) {
+                const currentMB = latest.total_db_size_bytes / (1024 * 1024)
                 usage.push({
                   current: Math.round(currentMB * 100) / 100,
                   limit: LIMITS.dbSize,
@@ -284,8 +247,10 @@ export async function getSupabaseUsage(): Promise<ServiceUsage> {
                   percentage: Math.round((currentMB / LIMITS.dbSize) * 100),
                 })
               }
-              if (item.metric === 'STORAGE_SIZE' && item.usage !== undefined) {
-                const currentMB = item.usage / (1024 * 1024)
+
+              // ストレージサイズ
+              if (latest.total_storage_size_bytes) {
+                const currentMB = latest.total_storage_size_bytes / (1024 * 1024)
                 usage.push({
                   current: Math.round(currentMB * 100) / 100,
                   limit: LIMITS.storageSize,
@@ -293,58 +258,89 @@ export async function getSupabaseUsage(): Promise<ServiceUsage> {
                   percentage: Math.round((currentMB / LIMITS.storageSize) * 100),
                 })
               }
-              if (item.metric === 'EGRESS' && item.usage !== undefined) {
-                const currentGB = item.usage / (1024 * 1024 * 1024)
+
+              // 帯域幅（egress）- 30日間の合計
+              const totalEgress = statsData.data.reduce(
+                (sum: number, day: { total_egress_modified?: number }) =>
+                  sum + (day.total_egress_modified || 0),
+                0
+              )
+              if (totalEgress > 0) {
+                const currentGB = totalEgress / (1024 * 1024 * 1024)
                 usage.push({
-                  current: Math.round(currentGB * 100) / 100,
+                  current: Math.round(currentGB * 1000) / 1000,
                   limit: LIMITS.bandwidth,
                   unit: 'GB (帯域幅/月)',
                   percentage: Math.round((currentGB / LIMITS.bandwidth) * 100),
                 })
               }
-              if (item.metric === 'MONTHLY_ACTIVE_USERS' && item.usage !== undefined) {
+
+              // MAU
+              if (latest.total_auth_billing_period_mau !== undefined) {
                 usage.push({
-                  current: item.usage,
+                  current: latest.total_auth_billing_period_mau,
                   limit: LIMITS.mau,
                   unit: 'MAU',
-                  percentage: Math.round((item.usage / LIMITS.mau) * 100),
+                  percentage: Math.round((latest.total_auth_billing_period_mau / LIMITS.mau) * 100),
                 })
               }
             }
           }
         }
       }
+    } catch {
+      // Management API取得失敗は無視
     }
+  }
 
-    // 使用量が取得できなかった場合のフォールバック
-    if (usage.length === 0) {
-      return {
-        name: 'Supabase',
-        status: 'ok',
-        helpText: '詳細な使用量はダッシュボードで確認してください',
-        dashboardUrl: `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`,
-        lastUpdated: new Date().toISOString(),
-      }
-    }
-
-    const maxPercentage = Math.max(...usage.map(u => u.percentage))
-
+  // 使用量が取得できなかった場合
+  if (usage.length === 0) {
     return {
       name: 'Supabase',
-      status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
-      usage,
-      dashboardUrl: `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`,
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    return {
-      name: 'Supabase',
-      status: 'error',
-      error: error instanceof Error ? error.message : '取得に失敗',
-      dashboardUrl: 'https://supabase.com/dashboard',
+      status: 'ok',
+      helpText: 'SUPABASE_ACCESS_TOKENを設定すると詳細を表示できます',
+      helpUrl: 'https://supabase.com/dashboard/account/tokens',
+      dashboardUrl: ref
+        ? `https://supabase.com/dashboard/project/${ref}/settings/billing/usage`
+        : 'https://supabase.com/dashboard',
       lastUpdated: new Date().toISOString(),
     }
   }
+
+  const maxPercentage = Math.max(...usage.map(u => u.percentage))
+
+  return {
+    name: 'Supabase',
+    status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
+    usage,
+    dashboardUrl: ref
+      ? `https://supabase.com/dashboard/project/${ref}/settings/billing/usage`
+      : 'https://supabase.com/dashboard',
+    lastUpdated: new Date().toISOString(),
+  }
+}
+
+// DATABASE_URLからSupabase URLを抽出
+function extractSupabaseUrl(): string | undefined {
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) return undefined
+
+  // postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com
+  const match = dbUrl.match(/postgres\.([a-z0-9]+):[^@]+@/)
+  if (match) {
+    return `https://${match[1]}.supabase.co`
+  }
+  return undefined
+}
+
+// DATABASE_URLからproject refを抽出
+function extractProjectRef(): string | undefined {
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) return undefined
+
+  // postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com
+  const match = dbUrl.match(/postgres\.([a-z0-9]+):/)
+  return match ? match[1] : undefined
 }
 
 // Cloudflare R2使用量を取得
