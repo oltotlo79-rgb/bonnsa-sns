@@ -82,7 +82,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org",
     "media-src 'self' blob: https://*.blob.core.windows.net https://*.r2.dev",
-    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev",
+    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
