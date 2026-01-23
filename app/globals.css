@@ -489,3 +489,207 @@
 .frame-washi > * {
   background: var(--card);
 }
+
+/* ボーダー幅のカスタム */
+.border-3 {
+  border-width: 3px;
+}
+
+/* 墨色テキストグラデーション */
+.text-sumi-gradient {
+  background: linear-gradient(135deg, oklch(0.22 0.015 50) 0%, oklch(0.35 0.02 55) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 金茶色テキストグラデーション */
+.text-kincha-gradient {
+  background: linear-gradient(135deg, oklch(0.50 0.12 70) 0%, oklch(0.60 0.15 65) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 和風ボタン - 墨風 */
+.btn-sumi {
+  position: relative;
+  background: oklch(0.22 0.015 50);
+  color: oklch(0.97 0.008 85);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.btn-sumi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s ease;
+}
+.btn-sumi:hover::before {
+  left: 100%;
+}
+
+/* 和風ボタン - 金茶風 */
+.btn-kincha {
+  position: relative;
+  background: oklch(0.50 0.12 70);
+  color: oklch(0.22 0.015 50);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.btn-kincha:hover {
+  background: oklch(0.55 0.14 68);
+  transform: translateY(-1px);
+}
+
+/* 印鑑スタイル強化 */
+.hanko-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  border: 3px solid var(--aka);
+  border-radius: 50%;
+  color: var(--aka);
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  position: relative;
+}
+.hanko-lg::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 1px solid oklch(0.55 0.20 25 / 0.3);
+  border-radius: 50%;
+}
+
+/* 和紙の質感を強化 */
+.washi-paper {
+  background-color: oklch(0.99 0.004 90);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(0,0,0,0.03);
+}
+
+/* 墨流し模様 - 動的 */
+.suminagashi-animated {
+  background:
+    radial-gradient(ellipse at 20% 50%, oklch(0.95 0.01 80 / 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, oklch(0.93 0.015 75 / 0.3) 0%, transparent 40%),
+    radial-gradient(ellipse at 60% 80%, oklch(0.96 0.008 85 / 0.3) 0%, transparent 45%),
+    oklch(0.97 0.008 85);
+}
+
+/* 縦書き装飾文字 */
+.vertical-decoration {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.5em;
+  font-family: var(--font-serif);
+  color: oklch(0.22 0.015 50 / 0.15);
+}
+
+/* 筆文字風シャドウ */
+.text-shadow-brush {
+  text-shadow:
+    1px 1px 0 oklch(0.22 0.015 50 / 0.1),
+    2px 2px 0 oklch(0.22 0.015 50 / 0.05);
+}
+
+/* 和風カード - ホバー時の墨の滲み */
+.card-ink-hover {
+  position: relative;
+  overflow: hidden;
+}
+.card-ink-hover::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, oklch(0.42 0.08 155 / 0.05) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+  pointer-events: none;
+}
+.card-ink-hover:hover::after {
+  width: 300%;
+  height: 300%;
+}
+
+/* 金の装飾線 */
+.gold-line {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    oklch(0.50 0.12 70 / 0.3) 20%,
+    oklch(0.55 0.14 68) 50%,
+    oklch(0.50 0.12 70 / 0.3) 80%,
+    transparent 100%
+  );
+}
+
+/* 墨の装飾線 */
+.sumi-line {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    oklch(0.22 0.015 50 / 0.2) 20%,
+    oklch(0.22 0.015 50 / 0.5) 50%,
+    oklch(0.22 0.015 50 / 0.2) 80%,
+    transparent 100%
+  );
+}
+
+/* 和風グリッド装飾 */
+.grid-tatami {
+  background-image:
+    linear-gradient(90deg, oklch(0.85 0.02 75 / 0.3) 1px, transparent 1px),
+    linear-gradient(oklch(0.85 0.02 75 / 0.3) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* 朱色アクセント */
+.accent-aka {
+  position: relative;
+}
+.accent-aka::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--aka);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+.accent-aka:hover::after {
+  transform: scaleX(1);
+}
+
+/* 透かし模様 */
+.watermark-pattern {
+  position: relative;
+}
+.watermark-pattern::before {
+  content: '盆';
+  position: absolute;
+  font-family: var(--font-serif);
+  font-size: 20rem;
+  color: oklch(0.22 0.015 50 / 0.02);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
