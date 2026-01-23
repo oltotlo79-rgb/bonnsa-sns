@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { prepareFileForUpload, formatFileSize } from '@/lib/client-image-compression'
 
 type HeaderUploaderProps = {
   currentUrl: string | null
@@ -44,10 +45,22 @@ export function HeaderUploader({ currentUrl }: HeaderUploaderProps) {
     setLoading(true)
     setError(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
+      // 画像を圧縮（ヘッダーは1500px幅）
+      const originalSize = file.size
+      const compressedFile = await prepareFileForUpload(file, {
+        maxSizeMB: 1, // ヘッダーは1MB以下
+        maxWidthOrHeight: 1500, // ヘッダーは1500px幅
+      })
+      const compressedSize = compressedFile.size
+      const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+      if (ratio > 0) {
+        console.log(`ヘッダー圧縮: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+      }
+
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+
       const response = await fetch('/api/upload/header', {
         method: 'POST',
         body: formData,

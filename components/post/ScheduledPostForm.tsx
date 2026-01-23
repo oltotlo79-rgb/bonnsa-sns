@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createScheduledPost, updateScheduledPost } from '@/lib/actions/scheduled-post'
-import { uploadPostMedia } from '@/lib/actions/post'
 import { GenreSelector } from './GenreSelector'
+import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 import { Calendar, Clock, ImageIcon, X } from 'lucide-react'
 import { MembershipLimits } from '@/lib/premium'
 
@@ -48,6 +48,7 @@ export function ScheduledPostForm({ genres, limits, editData }: ScheduledPostFor
   )
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -59,7 +60,7 @@ export function ScheduledPostForm({ genres, limits, editData }: ScheduledPostFor
     if (!files || files.length === 0) return
 
     const file = files[0]
-    const isVideo = file.type.startsWith('video/')
+    const isVideo = isVideoFile(file)
 
     const currentImageCount = mediaFiles.filter(m => m.type === 'image').length
     const currentVideoCount = mediaFiles.filter(m => m.type === 'video').length
@@ -74,23 +75,104 @@ export function ScheduledPostForm({ genres, limits, editData }: ScheduledPostFor
       return
     }
 
-    setUploading(true)
-    setError(null)
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const result = await uploadPostMedia(formData)
-
-    if (result.error) {
-      setError(result.error)
-    } else if (result.url) {
-      setMediaFiles([...mediaFiles, { url: result.url, type: result.type || 'image' }])
+    // 動画のファイルサイズチェック（R2直接アップロードで256MBまで対応）
+    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+      setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
     }
 
-    setUploading(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    // 画像のファイルサイズチェック（圧縮前）
+    if (!isVideo && file.size > MAX_IMAGE_SIZE) {
+      setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    setUploading(true)
+    setUploadProgress(0)
+    setError(null)
+
+    try {
+      // 動画の場合はR2に直接アップロード
+      if (isVideo) {
+        const result = await uploadVideoToR2(file, 'scheduled', (progress) => {
+          setUploadProgress(progress)
+        })
+
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: 'video' }])
+        }
+      } else {
+        // 画像の場合はクライアントサイドで圧縮
+        setError('画像を圧縮中...')
+        const originalSize = file.size
+        const fileToUpload = await prepareFileForUpload(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        })
+        const compressedSize = fileToUpload.size
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+        if (ratio > 0) {
+          console.log(`圧縮完了: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+        }
+        setError(null)
+
+        const formData = new FormData()
+        formData.append('file', fileToUpload)
+
+        // XMLHttpRequestを使用して進捗を追跡
+        const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100)
+              setUploadProgress(progress)
+            }
+          })
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText)
+                resolve(response)
+              } catch {
+                resolve({ error: 'アップロードに失敗しました' })
+              }
+            } else {
+              resolve({ error: 'アップロードに失敗しました' })
+            }
+          })
+
+          xhr.addEventListener('error', () => {
+            resolve({ error: 'アップロードに失敗しました' })
+          })
+
+          xhr.open('POST', '/api/upload')
+          xhr.send(formData)
+        })
+
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+        }
+      }
+    } catch {
+      setError('アップロードに失敗しました')
+    } finally {
+      setUploading(false)
+      setUploadProgress(0)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -201,7 +283,17 @@ export function ScheduledPostForm({ genres, limits, editData }: ScheduledPostFor
           <ImageIcon className="w-4 h-4 mr-2" />
           メディア追加
         </Button>
-        {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+        {uploading && (
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-bonsai-green transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+          </div>
+        )}
         <span className="text-xs text-muted-foreground">
           画像: {mediaFiles.filter(m => m.type === 'image').length}/{limits.maxImages}枚,
           動画: {mediaFiles.filter(m => m.type === 'video').length}/{limits.maxVideos}本

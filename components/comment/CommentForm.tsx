@@ -49,9 +49,13 @@ import { Textarea } from '@/components/ui/textarea'
  * Server Actions
  *
  * createComment: コメントを作成
- * uploadCommentMedia: コメント用メディアをアップロード
  */
-import { createComment, uploadCommentMedia } from '@/lib/actions/comment'
+import { createComment } from '@/lib/actions/comment'
+
+/**
+ * クライアントサイド画像圧縮ユーティリティ
+ */
+import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 // ============================================================
 // 型定義
@@ -188,6 +192,11 @@ export function CommentForm({
   const [uploading, setUploading] = useState(false)
 
   /**
+   * アップロード進捗（0-100%）
+   */
+  const [uploadProgress, setUploadProgress] = useState(0)
+
+  /**
    * ファイル入力要素への参照
    */
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -227,8 +236,9 @@ export function CommentForm({
    * ## 処理フロー
    * 1. ファイルの種類（画像/動画）を判定
    * 2. 添付数の上限をチェック
-   * 3. Server Actionでアップロード
-   * 4. 成功時にmediaFiles配列に追加
+   * 3. 動画の場合はR2に直接アップロード
+   * 4. 画像の場合はクライアントサイドで圧縮してアップロード
+   * 5. 成功時にmediaFiles配列に追加
    *
    * @param e - ファイル入力のchangeイベント
    */
@@ -241,7 +251,7 @@ export function CommentForm({
     /**
      * ファイルが動画かどうかを判定
      */
-    const isVideo = file.type.startsWith('video/')
+    const isVideo = isVideoFile(file)
 
     /**
      * 現在添付されている画像と動画の数をカウント
@@ -266,34 +276,125 @@ export function CommentForm({
     }
 
     /**
-     * アップロード開始
+     * 動画のファイルサイズチェック（R2直接アップロードで256MBまで対応）
      */
-    setUploading(true)
-    setError(null)
-
-    /**
-     * FormDataを作成してServer Actionに送信
-     */
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const result = await uploadCommentMedia(formData)
-
-    /**
-     * 結果の処理
-     */
-    if (result.error) {
-      setError(result.error)
-    } else if (result.url) {
-      setMediaFiles([...mediaFiles, { url: result.url, type: result.type || 'image' }])
+    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+      setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
     }
 
     /**
-     * アップロード完了処理
+     * 画像のファイルサイズチェック（圧縮前）
      */
-    setUploading(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    if (!isVideo && file.size > MAX_IMAGE_SIZE) {
+      setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    /**
+     * アップロード開始
+     */
+    setUploading(true)
+    setUploadProgress(0)
+    setError(null)
+
+    try {
+      /**
+       * 動画の場合はR2に直接アップロード
+       */
+      if (isVideo) {
+        const result = await uploadVideoToR2(file, 'comments', (progress) => {
+          setUploadProgress(progress)
+        })
+
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: 'video' }])
+        }
+      } else {
+        /**
+         * 画像の場合はクライアントサイドで圧縮
+         */
+        setError('画像を圧縮中...')
+        const originalSize = file.size
+        const fileToUpload = await prepareFileForUpload(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        })
+        const compressedSize = fileToUpload.size
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+        if (ratio > 0) {
+          console.log(`圧縮完了: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+        }
+        setError(null)
+
+        /**
+         * FormDataを作成
+         */
+        const formData = new FormData()
+        formData.append('file', fileToUpload)
+
+        /**
+         * XMLHttpRequestを使用して進捗を追跡
+         */
+        const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100)
+              setUploadProgress(progress)
+            }
+          })
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText)
+                resolve(response)
+              } catch {
+                resolve({ error: 'アップロードに失敗しました' })
+              }
+            } else {
+              resolve({ error: 'アップロードに失敗しました' })
+            }
+          })
+
+          xhr.addEventListener('error', () => {
+            resolve({ error: 'アップロードに失敗しました' })
+          })
+
+          xhr.open('POST', '/api/upload')
+          xhr.send(formData)
+        })
+
+        /**
+         * 結果の処理
+         */
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+        }
+      }
+    } catch {
+      setError('アップロードに失敗しました')
+    } finally {
+      /**
+       * アップロード完了処理
+       */
+      setUploading(false)
+      setUploadProgress(0)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -442,7 +543,17 @@ export function CommentForm({
           >
             <ImageIcon className="w-5 h-5" />
           </Button>
-          {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+          {uploading && (
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-bonsai-green transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">{uploadProgress}%</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">

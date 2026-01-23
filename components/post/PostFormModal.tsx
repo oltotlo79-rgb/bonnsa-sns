@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createPost, uploadPostMedia } from '@/lib/actions/post'
 import { saveDraft } from '@/lib/actions/draft'
 import { GenreSelector } from './GenreSelector'
+import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 type Genre = {
   id: string
@@ -74,9 +75,6 @@ const DEFAULT_LIMITS: MembershipLimits = {
   maxVideos: 2,
 }
 
-// 動画の最大ファイルサイズ（50MB）
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024
-
 export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose, draftCount = 0, bonsais = [] }: PostFormModalProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -100,7 +98,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     if (!files || files.length === 0) return
 
     const file = files[0]
-    const isVideo = file.type.startsWith('video/')
+    const isVideo = isVideoFile(file)
 
     const currentImageCount = mediaFiles.filter(m => m.type === 'image').length
     const currentVideoCount = mediaFiles.filter(m => m.type === 'video').length
@@ -115,9 +113,18 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       return
     }
 
-    // 動画のファイルサイズチェック
+    // 動画のファイルサイズチェック（256MB）
     if (isVideo && file.size > MAX_VIDEO_SIZE) {
       setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    // 画像のファイルサイズチェック（圧縮前4MB）
+    if (!isVideo && file.size > MAX_IMAGE_SIZE) {
+      setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -132,59 +139,84 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     abortControllerRef.current = new AbortController()
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // XMLHttpRequestを使用して進捗を追跡
-      const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
-        const xhr = new XMLHttpRequest()
-
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const progress = Math.round((event.loaded / event.total) * 100)
-            setUploadProgress(progress)
-          }
+      // 動画の場合はR2に直接アップロード
+      if (isVideo) {
+        const result = await uploadVideoToR2(file, 'posts', (progress) => {
+          setUploadProgress(progress)
         })
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText)
-              resolve(response)
-            } catch {
+        if (abortControllerRef.current?.signal.aborted) return
+
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: 'video' }])
+        }
+      } else {
+        // 画像の場合は圧縮してからアップロード
+        setError('画像を圧縮中...')
+        const originalSize = file.size
+        const fileToUpload = await prepareFileForUpload(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        })
+        const compressedSize = fileToUpload.size
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+        if (ratio > 0) {
+          console.log(`圧縮完了: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+        }
+        setError(null)
+
+        const formData = new FormData()
+        formData.append('file', fileToUpload)
+
+        // XMLHttpRequestを使用して進捗を追跡
+        const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100)
+              setUploadProgress(progress)
+            }
+          })
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText)
+                resolve(response)
+              } catch {
+                resolve({ error: 'アップロードに失敗しました' })
+              }
+            } else {
               resolve({ error: 'アップロードに失敗しました' })
             }
-          } else {
+          })
+
+          xhr.addEventListener('error', () => {
             resolve({ error: 'アップロードに失敗しました' })
-          }
+          })
+
+          xhr.addEventListener('abort', () => {
+            resolve({ error: 'アップロードがキャンセルされました' })
+          })
+
+          abortControllerRef.current?.signal.addEventListener('abort', () => {
+            xhr.abort()
+          })
+
+          xhr.open('POST', '/api/upload')
+          xhr.send(formData)
         })
 
-        xhr.addEventListener('error', () => {
-          resolve({ error: 'アップロードに失敗しました' })
-        })
+        if (abortControllerRef.current?.signal.aborted) return
 
-        xhr.addEventListener('abort', () => {
-          resolve({ error: 'アップロードがキャンセルされました' })
-        })
-
-        // AbortControllerと連携
-        abortControllerRef.current?.signal.addEventListener('abort', () => {
-          xhr.abort()
-        })
-
-        xhr.open('POST', '/api/upload')
-        xhr.send(formData)
-      })
-
-      if (abortControllerRef.current?.signal.aborted) {
-        // キャンセルされた場合は何もしない
-        return
-      }
-
-      if (result.error) {
-        setError(result.error)
-      } else if (result.url) {
-        setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+        }
       }
     } catch {
       if (!abortControllerRef.current?.signal.aborted) {

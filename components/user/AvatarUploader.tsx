@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { prepareFileForUpload, formatFileSize } from '@/lib/client-image-compression'
 
 type AvatarUploaderProps = {
   currentUrl: string | null
@@ -45,10 +46,22 @@ export function AvatarUploader({ currentUrl, nickname }: AvatarUploaderProps) {
     setLoading(true)
     setError(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     try {
+      // 画像を圧縮（アバターは小さいサイズで十分）
+      const originalSize = file.size
+      const compressedFile = await prepareFileForUpload(file, {
+        maxSizeMB: 0.5, // アバターは500KB以下
+        maxWidthOrHeight: 512, // アバターは512px以下
+      })
+      const compressedSize = compressedFile.size
+      const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+      if (ratio > 0) {
+        console.log(`アバター圧縮: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+      }
+
+      const formData = new FormData()
+      formData.append('file', compressedFile)
+
       const response = await fetch('/api/upload/avatar', {
         method: 'POST',
         body: formData,

@@ -6,7 +6,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import { deleteReview, updateReview, uploadReviewImage } from '@/lib/actions/review'
+import { deleteReview, updateReview } from '@/lib/actions/review'
+import { prepareFileForUpload, formatFileSize, MAX_IMAGE_SIZE } from '@/lib/client-image-compression'
 import { StarRatingDisplay, StarRatingInput } from './StarRating'
 import { ReportButton } from '@/components/report/ReportButton'
 
@@ -138,18 +139,64 @@ export function ReviewCard({ review, currentUserId }: ReviewCardProps) {
       return
     }
 
+    // 画像のファイルサイズチェック（圧縮前）
+    if (file.size > MAX_IMAGE_SIZE) {
+      setEditError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      e.target.value = ''
+      return
+    }
+
     setUploading(true)
     setEditError(null)
 
-    const formData = new FormData()
-    formData.append('file', file)
+    try {
+      // 画像を圧縮
+      const originalSize = file.size
+      const compressedFile = await prepareFileForUpload(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+      })
+      const compressedSize = compressedFile.size
+      const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+      if (ratio > 0) {
+        console.log(`圧縮: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+      }
 
-    const result = await uploadReviewImage(formData)
+      const formData = new FormData()
+      formData.append('file', compressedFile)
 
-    if (result.error) {
-      setEditError(result.error)
-    } else if (result.url) {
-      setNewImages([...newImages, result.url])
+      // XMLHttpRequestでアップロード
+      const result = await new Promise<{ url?: string; error?: string }>((resolve) => {
+        const xhr = new XMLHttpRequest()
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText)
+              resolve(response)
+            } catch {
+              resolve({ error: 'アップロードに失敗しました' })
+            }
+          } else {
+            resolve({ error: 'アップロードに失敗しました' })
+          }
+        })
+
+        xhr.addEventListener('error', () => {
+          resolve({ error: 'アップロードに失敗しました' })
+        })
+
+        xhr.open('POST', '/api/upload')
+        xhr.send(formData)
+      })
+
+      if (result.error) {
+        setEditError(result.error)
+      } else if (result.url) {
+        setNewImages([...newImages, result.url])
+      }
+    } catch {
+      setEditError('アップロードに失敗しました')
     }
 
     setUploading(false)

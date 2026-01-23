@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { addBonsaiRecord } from '@/lib/actions/bonsai'
 import Image from 'next/image'
+import { prepareFileForUpload, formatFileSize, MAX_IMAGE_SIZE } from '@/lib/client-image-compression'
 
 interface BonsaiRecordFormProps {
   bonsaiId: string
@@ -39,7 +40,17 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
     const files = e.target.files
     if (!files) return
 
-    const newImages = Array.from(files).map((file) => ({
+    // ファイルサイズチェック
+    const validFiles: File[] = []
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（${file.name}: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+        continue
+      }
+      validFiles.push(file)
+    }
+
+    const newImages = validFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
     }))
@@ -71,11 +82,23 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
     setError(null)
 
     try {
-      // 画像をアップロード
+      // 画像をアップロード（圧縮してから）
       const imageUrls: string[] = []
       for (const image of images) {
+        // 画像を圧縮
+        const originalSize = image.file.size
+        const compressedFile = await prepareFileForUpload(image.file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        })
+        const compressedSize = compressedFile.size
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+        if (ratio > 0) {
+          console.log(`圧縮: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+        }
+
         const formData = new FormData()
-        formData.append('file', image.file)
+        formData.append('file', compressedFile)
 
         const response = await fetch('/api/upload/avatar', {
           method: 'POST',

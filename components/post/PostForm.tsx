@@ -69,9 +69,15 @@ import { Textarea } from '@/components/ui/textarea'
  * Server Actions
  *
  * createPost: 投稿を作成する
- * uploadPostMedia: メディアファイルをアップロードする
  */
-import { createPost, uploadPostMedia } from '@/lib/actions/post'
+import { createPost } from '@/lib/actions/post'
+
+/**
+ * クライアントサイド画像圧縮ユーティリティ
+ *
+ * アップロード前にブラウザ上で画像を圧縮してファイルサイズを削減
+ */
+import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 /**
  * 下書き保存用Server Action
@@ -198,6 +204,7 @@ const DEFAULT_LIMITS: MembershipLimits = {
   maxVideos: 2,
 }
 
+
 // ============================================================
 // メインコンポーネント
 // ============================================================
@@ -285,6 +292,11 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
   const [uploading, setUploading] = useState(false)
 
   /**
+   * アップロード進捗（0-100%）
+   */
+  const [uploadProgress, setUploadProgress] = useState(0)
+
+  /**
    * エラーメッセージ（nullの場合はエラーなし）
    */
   const [error, setError] = useState<string | null>(null)
@@ -320,8 +332,9 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
    * ## 処理フロー
    * 1. ファイルの種類（画像/動画）を判定
    * 2. 現在の添付数と上限をチェック
-   * 3. Server Actionでアップロード
-   * 4. 成功時にmediaFiles配列に追加
+   * 3. 動画の場合はR2に直接アップロード（Vercel制限回避）
+   * 4. 画像の場合はクライアントサイドで圧縮してアップロード
+   * 5. 成功時にmediaFiles配列に追加
    *
    * @param e - ファイル入力のchangeイベント
    */
@@ -335,7 +348,7 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
      * ファイルが動画かどうかを判定
      * MIMEタイプが 'video/' で始まる場合は動画
      */
-    const isVideo = file.type.startsWith('video/')
+    const isVideo = isVideoFile(file)
 
     /**
      * 現在添付されている画像と動画の数をカウント
@@ -362,42 +375,132 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
     }
 
     /**
+     * 動画のファイルサイズチェック
+     * R2直接アップロードで256MBまで対応
+     */
+    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+      setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    /**
+     * 画像のファイルサイズチェック（圧縮前）
+     */
+    if (!isVideo && file.size > MAX_IMAGE_SIZE) {
+      setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
+    /**
      * アップロード開始
      * ローディング状態をtrueにしてエラーをクリア
      */
     setUploading(true)
+    setUploadProgress(0)
     setError(null)
 
-    /**
-     * FormDataを作成してファイルを追加
-     * Server Actionに送信するため
-     */
-    const formData = new FormData()
-    formData.append('file', file)
+    try {
+      /**
+       * 動画の場合はR2に直接アップロード
+       * Vercelの4.5MB制限を回避して256MBまで対応
+       */
+      if (isVideo) {
+        const result = await uploadVideoToR2(file, 'posts', (progress) => {
+          setUploadProgress(progress)
+        })
 
-    /**
-     * Server Actionでアップロードを実行
-     */
-    const result = await uploadPostMedia(formData)
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: 'video' }])
+        }
+      } else {
+        /**
+         * 画像の場合はクライアントサイドで圧縮
+         * 通信量とストレージコストを削減
+         */
+        setError('画像を圧縮中...')
+        const originalSize = file.size
+        const fileToUpload = await prepareFileForUpload(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        })
+        const compressedSize = fileToUpload.size
+        const ratio = Math.round((1 - compressedSize / originalSize) * 100)
+        if (ratio > 0) {
+          console.log(`圧縮完了: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
+        }
+        setError(null)
 
-    /**
-     * 結果の処理
-     * - エラーの場合: エラーメッセージを表示
-     * - 成功の場合: mediaFiles配列に追加
-     */
-    if (result.error) {
-      setError(result.error)
-    } else if (result.url) {
-      setMediaFiles([...mediaFiles, { url: result.url, type: result.type || 'image' }])
-    }
+        /**
+         * FormDataを作成してファイルを追加
+         */
+        const formData = new FormData()
+        formData.append('file', fileToUpload)
 
-    /**
-     * アップロード完了
-     * ローディング状態を解除し、ファイル入力をリセット
-     */
-    setUploading(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+        /**
+         * XMLHttpRequestを使用して進捗を追跡しながらアップロード
+         */
+        const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
+          const xhr = new XMLHttpRequest()
+
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100)
+              setUploadProgress(progress)
+            }
+          })
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText)
+                resolve(response)
+              } catch {
+                resolve({ error: 'アップロードに失敗しました' })
+              }
+            } else {
+              resolve({ error: 'アップロードに失敗しました' })
+            }
+          })
+
+          xhr.addEventListener('error', () => {
+            resolve({ error: 'アップロードに失敗しました' })
+          })
+
+          xhr.open('POST', '/api/upload')
+          xhr.send(formData)
+        })
+
+        /**
+         * 結果の処理
+         * - エラーの場合: エラーメッセージを表示
+         * - 成功の場合: mediaFiles配列に追加
+         */
+        if (result.error) {
+          setError(result.error)
+        } else if (result.url) {
+          setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+        }
+      }
+    } catch {
+      setError('アップロードに失敗しました')
+    } finally {
+      /**
+       * アップロード完了
+       * ローディング状態を解除し、ファイル入力をリセット
+       */
+      setUploading(false)
+      setUploadProgress(0)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -600,7 +703,17 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
           >
             <ImageIcon className="w-5 h-5" />
           </Button>
-          {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+          {uploading && (
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-bonsai-green transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+            </div>
+          )}
           {limits.maxPostLength > 500 && (
             <span className="text-xs text-amber-600 font-medium">Premium</span>
           )}
