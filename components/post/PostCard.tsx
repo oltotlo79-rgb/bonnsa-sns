@@ -410,7 +410,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
 
   return (
     <article
-      className={`bg-washi/80 backdrop-blur-sm border-b border-border/30 p-4 hover:bg-matcha/5 transition-all duration-200 ${!disableNavigation ? 'cursor-pointer' : ''}`}
+      className={`bg-tonoko/80 backdrop-blur-sm border-b border-kitsune/20 p-4 hover:bg-kitsune/10 transition-all duration-200 ${!disableNavigation ? 'cursor-pointer' : ''}`}
       onClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
     >
       {/* リポスト表示 */}
@@ -419,7 +419,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
           <RepeatIcon className="w-3 h-3" />
           <Link
             href={`/users/${post.user.id}`}
-            className="hover:text-matcha"
+            className="hover:text-kitsune"
             onClick={(e) => e.stopPropagation()}
           >
             {post.user.nickname}
@@ -435,7 +435,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
           className="flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-10 h-10 bg-muted overflow-hidden border-2 border-border/50 hover:border-matcha/50 transition-all duration-200">
+          <div className="w-10 h-10 bg-muted overflow-hidden border-2 border-kitsune/30 hover:border-kitsune/50 transition-all duration-200">
             {displayPost.user.avatarUrl ? (
               <Image
                 src={displayPost.user.avatarUrl}
@@ -455,7 +455,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Link
             href={`/users/${displayPost.user.id}`}
-            className="font-medium text-sumi hover:text-matcha truncate transition-colors"
+            className="font-medium text-sumi hover:text-kitsune truncate transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             {displayPost.user.nickname}
@@ -539,7 +539,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
             <Link
               key={genre.id}
               href={`/search?genre=${genre.id}`}
-              className="inline-flex items-center px-2.5 py-1 text-xs bg-matcha/10 border border-matcha/20 text-matcha hover:bg-matcha/20 transition-colors"
+              className="inline-flex items-center px-2.5 py-1 text-xs bg-kitsune/10 border border-kitsune/20 text-kitsune hover:bg-kitsune/20 transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               {genre.name}

@@ -439,17 +439,18 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
   // ------------------------------------------------------------
 
   return (
-    <aside className="sticky top-0 h-screen w-64 border-r border-border/30 bg-washi/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
-      {/* ロゴ - 和風デザイン */}
-      <div className="p-5 border-b border-border/30">
-        <Link href="/feed" className="flex items-center gap-3">
-          <div className="w-10 h-10 border-2 border-matcha flex items-center justify-center bg-washi">
-            <span className="text-matcha font-serif text-base font-bold">盆</span>
-          </div>
-          <div>
-            <span className="font-serif text-lg tracking-wider text-sumi">BON-LOG</span>
-            <p className="text-[10px] text-muted-foreground tracking-wider">盆栽愛好家のコミュニティ</p>
-          </div>
+    <aside className="sticky top-0 h-screen w-64 border-r border-kitsune/20 bg-tonoko/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
+      {/* ロゴ */}
+      <div className="p-4 border-b border-kitsune/20">
+        <Link href="/feed" className="flex items-center justify-center">
+          <Image
+            src="/logo.png"
+            alt="BON-LOG"
+            width={140}
+            height={56}
+            className="h-12 w-auto"
+            priority
+          />
         </Link>
       </div>
 
@@ -466,8 +467,8 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-2.5 transition-all duration-200 ${
                     isActive
-                      ? 'bg-matcha/10 text-matcha font-medium border-l-2 border-matcha'
-                      : 'text-sumi/80 hover:bg-matcha/5 hover:text-matcha hover:translate-x-0.5'
+                      ? 'bg-kitsune/15 text-kitsune font-medium border-l-2 border-kitsune'
+                      : 'text-sumi/70 hover:bg-kitsune/10 hover:text-sumi hover:translate-x-0.5'
                   }`}
                 >
                   <div className="relative">
@@ -492,24 +493,18 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
         </ul>
       </nav>
 
-      {/* 装飾ライン - 金茶色 */}
-      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-kincha/30 to-transparent" />
+      {/* 装飾ライン */}
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-kitsune/30 to-transparent" />
 
       {/* ログアウトボタン */}
       <div className="p-3">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-3 px-4 py-2.5 w-full text-sumi/60 hover:bg-aka/5 hover:text-aka transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-2.5 w-full text-sumi/50 hover:bg-aka/10 hover:text-aka transition-all duration-200"
         >
           <LogOutIcon className="w-5 h-5" />
           <span className="text-sm">ログアウト</span>
         </button>
-      </div>
-
-      {/* 底部装飾 */}
-      <div className="px-5 pb-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent mb-3" />
-        <p className="text-[10px] text-muted-foreground/50 text-center font-serif tracking-widest">侘寂</p>
       </div>
     </aside>
   )

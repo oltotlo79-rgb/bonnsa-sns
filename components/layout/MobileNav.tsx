@@ -381,7 +381,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-washi/95 backdrop-blur-sm border-t border-border/30 lg:hidden z-50 shadow-washi">
+    <nav className="fixed bottom-0 left-0 right-0 bg-tonoko/95 backdrop-blur-sm border-t border-kitsune/20 lg:hidden z-50 shadow-washi">
       <div className="flex items-center justify-around h-16">
         {baseNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -393,12 +393,12 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 ${
                 isActive
-                  ? 'text-matcha'
+                  ? 'text-kitsune'
                   : 'text-sumi/50 hover:text-sumi/80'
               }`}
             >
               <div className={`relative p-1.5 transition-all duration-200 ${
-                isActive ? 'bg-matcha/10' : ''
+                isActive ? 'bg-kitsune/10' : ''
               }`}>
                 <Icon className="w-5 h-5" />
                 {item.href === '/notifications' && (
@@ -419,12 +419,12 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
             onClick={() => setShowMoreMenu(!showMoreMenu)}
             className={`flex flex-col items-center justify-center w-full h-full transition-all duration-200 ${
               isMoreMenuActive || showMoreMenu
-                ? 'text-matcha'
+                ? 'text-kitsune'
                 : 'text-sumi/50 hover:text-sumi/80'
             }`}
           >
             <div className={`relative p-1.5 transition-all duration-200 ${
-              isMoreMenuActive || showMoreMenu ? 'bg-matcha/10' : ''
+              isMoreMenuActive || showMoreMenu ? 'bg-kitsune/10' : ''
             }`}>
               <MoreIcon className="w-5 h-5" />
             </div>
@@ -433,13 +433,13 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
 
           {/* もっと見るメニュー */}
           {showMoreMenu && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 bg-washi border border-border/50 shadow-washi-lg overflow-hidden">
+            <div className="absolute bottom-full right-0 mb-2 w-48 bg-tonoko border border-kitsune/20 shadow-washi-lg overflow-hidden">
               {/* プロフィール */}
               <Link
                 href={profileItem.href}
-                className={`flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 hover:bg-kitsune/10 transition-colors ${
                   pathname === profileItem.href || pathname.startsWith(profileItem.href + '/')
-                    ? 'text-matcha bg-matcha/5'
+                    ? 'text-kitsune bg-kitsune/10'
                     : 'text-sumi'
                 }`}
               >
@@ -450,7 +450,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
               {/* プレミアム会員専用メニュー */}
               {premiumMenuItems.length > 0 && (
                 <>
-                  <div className="border-t border-border/30" />
+                  <div className="border-t border-kitsune/20" />
                   {premiumMenuItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                     const Icon = item.icon
@@ -459,8 +459,8 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors ${
-                          isActive ? 'text-matcha bg-matcha/5' : 'text-sumi'
+                        className={`flex items-center gap-3 px-4 py-3 hover:bg-kitsune/10 transition-colors ${
+                          isActive ? 'text-kitsune bg-kitsune/10' : 'text-sumi'
                         }`}
                       >
                         <Icon className="w-5 h-5" />
@@ -472,7 +472,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                 </>
               )}
 
-              <div className="border-t border-border/30" />
+              <div className="border-t border-kitsune/20" />
 
               {/* その他のメニュー項目 */}
               {moreMenuItems.map((item) => {
@@ -493,7 +493,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                 )
               })}
 
-              <div className="border-t border-border/30" />
+              <div className="border-t border-kitsune/20" />
 
               {/* フッターリンク */}
               {footerLinks.map((item) => {
@@ -503,7 +503,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors text-sumi/60"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-kitsune/10 transition-colors text-sumi/60"
                   >
                     <Icon className="w-4 h-4" />
                     <span className="text-sm">{item.label}</span>

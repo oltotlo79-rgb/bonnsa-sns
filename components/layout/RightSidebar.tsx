@@ -22,11 +22,11 @@ export async function RightSidebar() {
   const trendingGenres = genresResult.genres || []
 
   return (
-    <aside className="sticky top-0 h-screen w-80 border-l border-border/30 bg-washi/95 backdrop-blur-sm hidden xl:flex flex-col p-4 overflow-y-auto shadow-washi">
+    <aside className="sticky top-0 h-screen w-80 border-l border-kitsune/20 bg-tonoko/95 backdrop-blur-sm hidden xl:flex flex-col p-4 overflow-y-auto shadow-washi">
       {/* おすすめユーザー */}
-      <div className="bg-card border border-border/50 p-4 mb-4 shadow-washi">
+      <div className="bg-tonoko border border-kitsune/20 p-4 mb-4 shadow-washi">
         <h3 className="font-serif text-sm mb-4 flex items-center gap-2 text-sumi">
-          <span className="w-1 h-4 bg-matcha" />
+          <span className="w-1 h-4 bg-kitsune" />
           おすすめユーザー
         </h3>
         {recommendedUsers.length > 0 ? (
@@ -35,7 +35,7 @@ export async function RightSidebar() {
               <li key={user.id}>
                 <Link
                   href={`/users/${user.id}`}
-                  className="flex items-center gap-3 hover:bg-matcha/5 p-2 -m-2 transition-all duration-200"
+                  className="flex items-center gap-3 hover:bg-kitsune/10 p-2 -m-2 transition-all duration-200"
                 >
                   {user.avatarUrl ? (
                     <Image
@@ -69,14 +69,14 @@ export async function RightSidebar() {
         )}
         <Link
           href="/search?tab=users"
-          className="block text-sm text-matcha hover:text-matcha/80 mt-4 transition-colors"
+          className="block text-sm text-kitsune hover:text-kitsune/80 mt-4 transition-colors"
         >
           もっと見る →
         </Link>
       </div>
 
       {/* トレンドジャンル */}
-      <div className="bg-card border border-border/50 p-4 shadow-washi">
+      <div className="bg-tonoko border border-kitsune/20 p-4 shadow-washi">
         <h3 className="font-serif text-sm mb-4 flex items-center gap-2 text-sumi">
           <TrendingIcon className="w-4 h-4 text-kincha" />
           人気のジャンル
@@ -87,7 +87,7 @@ export async function RightSidebar() {
               <li key={genre.id}>
                 <Link
                   href={`/search?genre=${genre.id}`}
-                  className="flex items-center gap-3 hover:bg-matcha/5 p-2 -m-2 transition-all duration-200"
+                  className="flex items-center gap-3 hover:bg-kitsune/10 p-2 -m-2 transition-all duration-200"
                 >
                   <span className="w-6 h-6 bg-kincha/10 text-kincha text-xs flex items-center justify-center font-serif border border-kincha/20">
                     {['壱', '弐', '参', '肆', '伍'][index] || index + 1}
@@ -118,13 +118,13 @@ export async function RightSidebar() {
       <div className="mt-auto pt-6 text-xs text-muted-foreground">
         <div className="h-px bg-gradient-to-r from-transparent via-kincha/20 to-transparent mb-4" />
         <div className="flex flex-wrap gap-3">
-          <Link href="/terms" className="hover:text-matcha transition-colors">利用規約</Link>
-          <span className="text-border/50">·</span>
-          <Link href="/privacy" className="hover:text-matcha transition-colors">プライバシー</Link>
-          <span className="text-border/50">·</span>
-          <Link href="/tokushoho" className="hover:text-matcha transition-colors">特商法表記</Link>
-          <span className="text-border/50">·</span>
-          <Link href="/help" className="hover:text-matcha transition-colors">ヘルプ</Link>
+          <Link href="/terms" className="hover:text-kitsune transition-colors">利用規約</Link>
+          <span className="text-kitsune/30">·</span>
+          <Link href="/privacy" className="hover:text-kitsune transition-colors">プライバシー</Link>
+          <span className="text-kitsune/30">·</span>
+          <Link href="/tokushoho" className="hover:text-kitsune transition-colors">特商法表記</Link>
+          <span className="text-kitsune/30">·</span>
+          <Link href="/help" className="hover:text-kitsune transition-colors">ヘルプ</Link>
         </div>
         <p className="mt-3 text-muted-foreground/50 font-serif tracking-wider">&copy; 2026 BON-LOG</p>
       </div>

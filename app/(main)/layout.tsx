@@ -21,9 +21,9 @@ export default async function MainLayout({
   const isPremium = await isPremiumUser(session.user.id)
 
   return (
-    <div className="min-h-screen bg-bonsai-cream washi-texture">
+    <div className="min-h-screen bg-tsuchikabe">
       {/* 装飾パターン */}
-      <div className="fixed inset-0 asanoha-pattern opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 asanoha-pattern opacity-20 pointer-events-none" />
 
       {/* モバイルヘッダー */}
       <Header userId={session.user.id} isPremium={isPremium} />
