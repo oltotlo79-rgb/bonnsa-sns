@@ -36,87 +36,91 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
   try {
     const usage: ServiceUsage['usage'] = []
 
-    // v1/usage APIで帯域幅を取得
-    const usageUrl = teamId
-      ? `https://api.vercel.com/v1/usage?teamId=${teamId}`
-      : 'https://api.vercel.com/v1/usage'
+    // ユーザー情報からチームIDを取得（設定されていない場合）
+    let resolvedTeamId = teamId
+    if (!resolvedTeamId) {
+      const userRes = await fetch('https://api.vercel.com/www/user', {
+        headers: { Authorization: `Bearer ${token}` },
+        next: { revalidate: 300 },
+      })
+      if (userRes.ok) {
+        const userData = await userRes.json()
+        resolvedTeamId = userData.user?.defaultTeamId
+      }
+    }
 
-    const usageRes = await fetch(usageUrl, {
+    // デプロイ数を取得（今月）
+    const deploymentsUrl = resolvedTeamId
+      ? `https://api.vercel.com/v6/deployments?teamId=${resolvedTeamId}&limit=100`
+      : 'https://api.vercel.com/v6/deployments?limit=100'
+
+    const deploymentsRes = await fetch(deploymentsUrl, {
       headers: { Authorization: `Bearer ${token}` },
       next: { revalidate: 300 },
     })
 
-    if (usageRes.ok) {
-      const usageData = await usageRes.json()
+    if (deploymentsRes.ok) {
+      const deploymentsData = await deploymentsRes.json()
+      const deployments = deploymentsData.deployments || []
 
-      // 帯域幅 (Hobby: 100GB/月, Pro: 1TB/月)
-      if (usageData.bandwidth) {
-        const currentGB = (usageData.bandwidth.value || 0) / (1024 * 1024 * 1024)
-        const limitGB = 100 // Hobby plan
-        usage.push({
-          current: Math.round(currentGB * 100) / 100,
-          limit: limitGB,
-          unit: 'GB (データ転送量/月)',
-          percentage: Math.round((currentGB / limitGB) * 100),
-        })
-      }
+      // 今月のデプロイ数をカウント
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthlyDeployments = deployments.filter(
+        (d: { created: number }) => new Date(d.created) >= monthStart
+      ).length
 
-      // Function実行時間 (Hobby: 100GB-hours/月)
-      if (usageData.serverlessFunctionExecution) {
-        const currentHours = (usageData.serverlessFunctionExecution.value || 0) / 3600
-        const limitHours = 100
-        usage.push({
-          current: Math.round(currentHours * 100) / 100,
-          limit: limitHours,
-          unit: 'GB-hours (Function)',
-          percentage: Math.round((currentHours / limitHours) * 100),
-        })
-      }
+      // Hobby: 無制限だが目安として表示
+      usage.push({
+        current: monthlyDeployments,
+        limit: 100, // 目安
+        unit: 'デプロイ (今月)',
+        percentage: Math.min(monthlyDeployments, 100),
+      })
     }
 
-    // 使用量APIが使えない場合、別のエンドポイントを試す
-    if (usage.length === 0) {
-      const projectsUrl = teamId
-        ? `https://api.vercel.com/v9/projects?teamId=${teamId}&limit=10`
-        : 'https://api.vercel.com/v9/projects?limit=10'
+    // プロジェクト数を取得
+    const projectsUrl = resolvedTeamId
+      ? `https://api.vercel.com/v9/projects?teamId=${resolvedTeamId}&limit=100`
+      : 'https://api.vercel.com/v9/projects?limit=100'
 
-      const projectsRes = await fetch(projectsUrl, {
+    const projectsRes = await fetch(projectsUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      next: { revalidate: 300 },
+    })
+
+    if (projectsRes.ok) {
+      const projectsData = await projectsRes.json()
+      const projectCount = projectsData.projects?.length || 0
+
+      usage.push({
+        current: projectCount,
+        limit: 200, // Hobby目安
+        unit: 'プロジェクト',
+        percentage: Math.round((projectCount / 200) * 100),
+      })
+    }
+
+    // ダッシュボードURL（チームの場合はチームページ）
+    let dashboardUrl = 'https://vercel.com/account/usage'
+    if (resolvedTeamId) {
+      // チーム名を取得してURLを構築
+      const teamsRes = await fetch(`https://api.vercel.com/v2/teams/${resolvedTeamId}`, {
         headers: { Authorization: `Bearer ${token}` },
         next: { revalidate: 300 },
       })
-
-      if (projectsRes.ok) {
-        const projectsData = await projectsRes.json()
-
-        usage.push({
-          current: projectsData.projects?.length || 0,
-          limit: 200,
-          unit: 'プロジェクト',
-          percentage: Math.round(((projectsData.projects?.length || 0) / 200) * 100),
-        })
-      }
-
-      return {
-        name: 'Vercel',
-        status: 'ok',
-        usage: usage.length > 0 ? usage : undefined,
-        helpText: '詳細な帯域幅はダッシュボードで確認',
-        dashboardUrl: teamId
-          ? `https://vercel.com/teams/${teamId}/usage`
-          : 'https://vercel.com/account/usage',
-        lastUpdated: new Date().toISOString(),
+      if (teamsRes.ok) {
+        const teamData = await teamsRes.json()
+        dashboardUrl = `https://vercel.com/${teamData.slug || teamData.name}/~/usage`
       }
     }
 
-    const maxPercentage = Math.max(...usage.map(u => u.percentage))
-
     return {
       name: 'Vercel',
-      status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
-      usage,
-      dashboardUrl: teamId
-        ? `https://vercel.com/teams/${teamId}/usage`
-        : 'https://vercel.com/account/usage',
+      status: 'ok',
+      usage: usage.length > 0 ? usage : undefined,
+      helpText: 'データ転送量はダッシュボードで確認 (Hobby: 100GB/月)',
+      dashboardUrl,
       lastUpdated: new Date().toISOString(),
     }
   } catch (error) {
