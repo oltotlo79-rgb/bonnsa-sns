@@ -74,6 +74,9 @@ const DEFAULT_LIMITS: MembershipLimits = {
   maxVideos: 2,
 }
 
+// 動画の最大ファイルサイズ（50MB）
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024
+
 export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose, draftCount = 0, bonsais = [] }: PostFormModalProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -84,8 +87,10 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
   const [loading, setLoading] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const maxChars = limits.maxPostLength
   const remainingChars = maxChars - content.length
@@ -110,23 +115,90 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       return
     }
 
-    setUploading(true)
-    setError(null)
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const result = await uploadPostMedia(formData)
-
-    if (result.error) {
-      setError(result.error)
-    } else if (result.url) {
-      setMediaFiles([...mediaFiles, { url: result.url, type: result.type || 'image' }])
+    // 動画のファイルサイズチェック
+    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+      setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
     }
 
-    setUploading(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    setUploading(true)
+    setUploadProgress(0)
+    setError(null)
+
+    // AbortControllerを作成
+    abortControllerRef.current = new AbortController()
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // XMLHttpRequestを使用して進捗を追跡
+      const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
+        const xhr = new XMLHttpRequest()
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100)
+            setUploadProgress(progress)
+          }
+        })
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText)
+              resolve(response)
+            } catch {
+              resolve({ error: 'アップロードに失敗しました' })
+            }
+          } else {
+            resolve({ error: 'アップロードに失敗しました' })
+          }
+        })
+
+        xhr.addEventListener('error', () => {
+          resolve({ error: 'アップロードに失敗しました' })
+        })
+
+        xhr.addEventListener('abort', () => {
+          resolve({ error: 'アップロードがキャンセルされました' })
+        })
+
+        // AbortControllerと連携
+        abortControllerRef.current?.signal.addEventListener('abort', () => {
+          xhr.abort()
+        })
+
+        xhr.open('POST', '/api/upload')
+        xhr.send(formData)
+      })
+
+      if (abortControllerRef.current?.signal.aborted) {
+        // キャンセルされた場合は何もしない
+        return
+      }
+
+      if (result.error) {
+        setError(result.error)
+      } else if (result.url) {
+        setMediaFiles(prev => [...prev, { url: result.url!, type: result.type || 'image' }])
+      }
+    } catch {
+      if (!abortControllerRef.current?.signal.aborted) {
+        setError('アップロードに失敗しました')
+      }
+    } finally {
+      if (!abortControllerRef.current?.signal.aborted) {
+        setUploading(false)
+        setUploadProgress(0)
+      }
+      abortControllerRef.current = null
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -167,15 +239,26 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
   }
 
   function handleClose() {
-    if (content.length > 0 || mediaFiles.length > 0) {
+    if (uploading) {
+      if (!confirm('アップロード中です。キャンセルしてもよろしいですか？')) {
+        return
+      }
+      // アップロードをキャンセル
+      abortControllerRef.current?.abort()
+    } else if (content.length > 0 || mediaFiles.length > 0) {
       if (!confirm('入力内容が破棄されます。閉じてもよろしいですか？')) {
         return
       }
     }
+    // 全ての状態をリセット
     setContent('')
     setSelectedGenres([])
     setMediaFiles([])
+    setSelectedBonsaiId('')
     setError(null)
+    setUploading(false)
+    setUploadProgress(0)
+    abortControllerRef.current = null
     onClose()
   }
 
@@ -316,7 +399,17 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
                 <ImageIcon className="w-5 h-5" />
                 <span className="ml-1 text-sm">画像/動画</span>
               </Button>
-              {uploading && <span className="text-sm text-muted-foreground">アップロード中...</span>}
+              {uploading && (
+                <div className="flex items-center gap-2">
+                  <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-bonsai-green transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                </div>
+              )}
             </div>
 
             <span className={`text-sm ${remainingChars < 0 ? 'text-destructive' : remainingChars < 50 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
