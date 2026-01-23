@@ -187,33 +187,39 @@ function UsageCard({ service }: { service: ServiceUsage }) {
       {/* 使用量表示 */}
       {service.usage && service.usage.length > 0 && (
         <div className="space-y-3">
-          {service.usage.map((item, index) => (
-            <div key={index}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">{item.unit}</span>
-                <span className="font-medium">
-                  {item.limit > 0
-                    ? `${item.current.toLocaleString()} / ${item.limit.toLocaleString()}`
-                    : item.current.toLocaleString()
-                  }
-                </span>
-              </div>
-              {item.limit > 0 && (
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      item.percentage >= 90
-                        ? 'bg-red-500'
-                        : item.percentage >= 70
-                        ? 'bg-yellow-500'
-                        : 'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(item.percentage, 100)}%` }}
-                  />
+          {service.usage.map((item, index) => {
+            const current = item.current ?? 0
+            const limit = item.limit ?? 0
+            const percentage = item.percentage ?? 0
+
+            return (
+              <div key={index}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-muted-foreground">{item.unit ?? '不明'}</span>
+                  <span className="font-medium">
+                    {limit > 0
+                      ? `${current.toLocaleString()} / ${limit.toLocaleString()}`
+                      : current.toLocaleString()
+                    }
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
+                {limit > 0 && (
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        percentage >= 90
+                          ? 'bg-red-500'
+                          : percentage >= 70
+                          ? 'bg-yellow-500'
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

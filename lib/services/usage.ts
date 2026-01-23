@@ -219,36 +219,54 @@ export async function getCloudflareR2Usage(): Promise<ServiceUsage> {
 
     let storageGB = 0
     let objectCount = 0
+    let graphqlError = ''
 
     if (graphqlRes.ok) {
-      const graphqlData = await graphqlRes.json()
-      const storageData = graphqlData.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups?.[0]
+      try {
+        const graphqlData = await graphqlRes.json()
 
-      if (storageData?.max) {
-        const payloadBytes = storageData.max.payloadSize || 0
-        const metadataBytes = storageData.max.metadataSize || 0
-        const totalBytes = payloadBytes + metadataBytes
-        storageGB = totalBytes / (1024 * 1024 * 1024)
-        objectCount = storageData.max.objectCount || 0
+        // エラーチェック
+        if (graphqlData.errors && graphqlData.errors.length > 0) {
+          graphqlError = graphqlData.errors[0]?.message || 'GraphQL error'
+        }
+
+        const storageData = graphqlData.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups?.[0]
+
+        if (storageData?.max) {
+          const payloadBytes = Number(storageData.max.payloadSize) || 0
+          const metadataBytes = Number(storageData.max.metadataSize) || 0
+          const totalBytes = payloadBytes + metadataBytes
+          storageGB = totalBytes / (1024 * 1024 * 1024)
+          objectCount = Number(storageData.max.objectCount) || 0
+        }
+      } catch {
+        graphqlError = 'GraphQL parse error'
       }
+    } else {
+      graphqlError = `GraphQL HTTP ${graphqlRes.status}`
     }
 
     // Free tier: 10GB/月
     const FREE_TIER_GB = 10
     const PRICE_PER_GB = 0.015 // $0.015/GB-month
 
+    // 数値を確実に保証
+    const safeStorageGB = Number.isFinite(storageGB) ? storageGB : 0
+    const safeObjectCount = Number.isFinite(objectCount) ? objectCount : 0
+    const safeBucketCount = Array.isArray(buckets) ? buckets.length : 0
+
     // ストレージ使用量
     usage.push({
-      current: Math.round(storageGB * 100) / 100,
+      current: Math.round(safeStorageGB * 100) / 100,
       limit: FREE_TIER_GB,
       unit: 'GB (ストレージ)',
-      percentage: Math.round((storageGB / FREE_TIER_GB) * 100),
+      percentage: Math.round((safeStorageGB / FREE_TIER_GB) * 100),
     })
 
     // オブジェクト数
-    if (objectCount > 0) {
+    if (safeObjectCount > 0) {
       usage.push({
-        current: objectCount,
+        current: safeObjectCount,
         limit: 0, // 制限なし
         unit: 'オブジェクト',
         percentage: 0,
@@ -257,25 +275,37 @@ export async function getCloudflareR2Usage(): Promise<ServiceUsage> {
 
     // バケット数
     usage.push({
-      current: buckets.length,
+      current: safeBucketCount,
       limit: 100,
       unit: 'バケット',
-      percentage: Math.round((buckets.length / 100) * 100),
+      percentage: Math.round((safeBucketCount / 100) * 100),
     })
 
     // 推定コスト計算（無料枠超過分のみ）
-    const billableGB = Math.max(0, storageGB - FREE_TIER_GB)
+    const billableGB = Math.max(0, safeStorageGB - FREE_TIER_GB)
     const estimatedCost = billableGB * PRICE_PER_GB
 
-    const maxPercentage = Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage))
+    // maxPercentageの安全な計算
+    const usageWithLimits = usage.filter(u => u.limit > 0)
+    const maxPercentage = usageWithLimits.length > 0
+      ? Math.max(...usageWithLimits.map(u => u.percentage ?? 0))
+      : 0
+
+    // ヘルプテキスト構築
+    let helpText = ''
+    if (graphqlError) {
+      helpText = `Analytics取得エラー: Account Analytics権限を追加してください`
+    } else if (estimatedCost > 0) {
+      helpText = `推定コスト: $${estimatedCost.toFixed(2)}/月 (10GB超過分)`
+    } else {
+      helpText = '無料枠内 (10GB/月)'
+    }
 
     return {
       name: 'Cloudflare R2',
       status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
       usage,
-      helpText: estimatedCost > 0
-        ? `推定コスト: $${estimatedCost.toFixed(2)}/月 (10GB超過分)`
-        : '無料枠内 (10GB/月)',
+      helpText,
       dashboardUrl: `https://dash.cloudflare.com/${accountId}/r2/overview`,
       lastUpdated: new Date().toISOString(),
     }
