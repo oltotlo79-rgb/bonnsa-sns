@@ -2,12 +2,136 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { isAdmin } from '@/lib/actions/admin'
 import { prisma } from '@/lib/db'
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import {
   getVercelUsage,
-  getCloudflareR2Usage,
   getResendUsage,
   type ServiceUsage,
 } from '@/lib/services/usage'
+
+// Cloudflare R2使用量をS3 APIで正確に取得
+async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
+  const accountId = process.env.R2_ACCOUNT_ID
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+  const bucketName = process.env.R2_BUCKET_NAME
+
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
+    const missing = []
+    if (!accountId) missing.push('R2_ACCOUNT_ID')
+    if (!accessKeyId) missing.push('R2_ACCESS_KEY_ID')
+    if (!secretAccessKey) missing.push('R2_SECRET_ACCESS_KEY')
+    if (!bucketName) missing.push('R2_BUCKET_NAME')
+
+    return {
+      name: 'Cloudflare R2',
+      status: 'unconfigured',
+      error: `${missing.join(', ')} が未設定`,
+      helpText: 'R2 API認証情報を設定してください',
+      helpUrl: 'https://dash.cloudflare.com/?to=/:account/r2/api-tokens',
+      dashboardUrl: `https://dash.cloudflare.com/${accountId || ''}/r2/overview`,
+      lastUpdated: new Date().toISOString(),
+    }
+  }
+
+  try {
+    // S3クライアントを作成（R2のエンドポイントを指定）
+    const s3Client = new S3Client({
+      region: 'auto',
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    })
+
+    // 全オブジェクトを列挙してサイズを合計
+    let totalSize = 0
+    let totalObjects = 0
+    let continuationToken: string | undefined
+
+    do {
+      const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      })
+
+      const response = await s3Client.send(command)
+
+      if (response.Contents) {
+        for (const obj of response.Contents) {
+          totalSize += obj.Size || 0
+          totalObjects++
+        }
+      }
+
+      continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined
+    } while (continuationToken)
+
+    const FREE_TIER_GB = 10
+    const PRICE_PER_GB = 0.015
+
+    const storageGB = totalSize / (1024 * 1024 * 1024)
+    const storageMB = totalSize / (1024 * 1024)
+
+    const usage: ServiceUsage['usage'] = []
+
+    // ストレージ使用量（MBまたはGBで表示）
+    if (storageGB >= 1) {
+      usage.push({
+        current: Math.round(storageGB * 100) / 100,
+        limit: FREE_TIER_GB,
+        unit: 'GB (ストレージ)',
+        percentage: Math.round((storageGB / FREE_TIER_GB) * 100),
+      })
+    } else {
+      usage.push({
+        current: Math.round(storageMB * 100) / 100,
+        limit: FREE_TIER_GB * 1024,
+        unit: 'MB (ストレージ)',
+        percentage: Math.round((storageMB / (FREE_TIER_GB * 1024)) * 100),
+      })
+    }
+
+    // オブジェクト数
+    usage.push({
+      current: totalObjects,
+      limit: 0,
+      unit: 'オブジェクト',
+      percentage: 0,
+    })
+
+    // コスト計算
+    const billableGB = Math.max(0, storageGB - FREE_TIER_GB)
+    const estimatedCost = billableGB * PRICE_PER_GB
+
+    const maxPercentage = Math.max(
+      ...usage.filter(u => u.limit > 0).map(u => u.percentage ?? 0),
+      0
+    )
+
+    return {
+      name: 'Cloudflare R2',
+      status: maxPercentage >= 100 ? 'error' : maxPercentage >= 90 ? 'warning' : 'ok',
+      usage,
+      helpText: estimatedCost > 0
+        ? `推定コスト: $${estimatedCost.toFixed(2)}/月 (10GB超過分)`
+        : '無料枠内 (10GB/月)',
+      dashboardUrl: `https://dash.cloudflare.com/${accountId}/r2/overview`,
+      lastUpdated: new Date().toISOString(),
+    }
+  } catch (error) {
+    console.error('R2 S3 API error:', error)
+    return {
+      name: 'Cloudflare R2',
+      status: 'error',
+      error: error instanceof Error ? error.message : 'S3 API接続エラー',
+      dashboardUrl: `https://dash.cloudflare.com/${accountId}/r2/overview`,
+      lastUpdated: new Date().toISOString(),
+    }
+  }
+}
 
 // Supabaseの使用量をPrismaで直接取得
 async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
@@ -124,7 +248,7 @@ export async function GET() {
     const results = await Promise.allSettled([
       getVercelUsage(),
       getSupabaseUsageFromDB(), // Prismaを使用
-      getCloudflareR2Usage(),
+      getCloudflareR2UsageWithS3(), // S3 APIで正確なストレージ取得
       getResendUsage(),
     ])
 
