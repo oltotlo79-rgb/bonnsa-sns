@@ -62,12 +62,14 @@ export default async function Home() {
 
           {/* コンテンツ */}
           <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-              盆栽愛好家のための<br />コミュニティSNS
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl leading-tight">
+              盆栽愛好家のための
+              <br className="hidden sm:inline" />
+              <span className="sm:hidden"> </span>
+              コミュニティSNS
             </h2>
-            <p className="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg">
-              BON-LOGは、盆栽を愛する全ての人が集まり、<br />
-              知識や経験を共有できるSNSプラットフォームです
+            <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
+              BON-LOGは、盆栽を愛する全ての人が集まり、知識や経験を共有できるSNSプラットフォームです
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {isLoggedIn ? (
@@ -94,8 +96,8 @@ export default async function Home() {
         </section>
 
         {/* 機能紹介 */}
-        <section className="container mx-auto px-4 py-20">
-          <h3 className="text-4xl font-bold text-center mb-16">主な機能</h3>
+        <section className="container mx-auto px-4 py-12 sm:py-20">
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16">主な機能</h3>
           <div className="grid md:grid-cols-3 gap-8">
             {/* 投稿・共有 */}
             <div className="group bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
@@ -173,14 +175,14 @@ export default async function Home() {
         </section>
 
         {/* ジャンル紹介 */}
-        <section className="container mx-auto px-4 py-20 bg-gradient-to-b from-bonsai-bg/30 to-white">
-          <h3 className="text-4xl font-bold text-center mb-6">豊富なジャンル</h3>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+        <section className="container mx-auto px-4 py-12 sm:py-20 bg-gradient-to-b from-bonsai-bg/30 to-white">
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-4 sm:mb-6">豊富なジャンル</h3>
+          <p className="text-sm sm:text-base text-center text-muted-foreground mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed">
             松柏類から雑木類、草ものまで、あらゆるジャンルの盆栽を取り扱っています
           </p>
-          <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 max-w-4xl mx-auto">
             {['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント', 'その他'].map((genre) => (
-              <span key={genre} className="px-6 py-3 bg-white border-2 border-bonsai-green/20 hover:border-bonsai-green text-bonsai-green rounded-full text-base font-medium shadow-sm hover:shadow-md transition-all">
+              <span key={genre} className="px-4 sm:px-6 py-2 sm:py-3 bg-white border-2 border-bonsai-green/20 hover:border-bonsai-green text-bonsai-green rounded-full text-sm sm:text-base font-medium shadow-sm hover:shadow-md transition-all">
                 {genre}
               </span>
             ))}
@@ -188,7 +190,7 @@ export default async function Home() {
         </section>
 
         {/* CTA */}
-        <section className="relative overflow-hidden py-20 my-20">
+        <section className="relative overflow-hidden py-12 sm:py-20 my-12 sm:my-20">
           <div className="absolute inset-0 z-0">
             <Image
               src="https://images.unsplash.com/photo-1604537466608-109fa2f16c3b?q=80&w=2069"
@@ -202,10 +204,10 @@ export default async function Home() {
           <div className="relative z-10 container mx-auto px-4 text-center">
             {isLoggedIn ? (
               <>
-                <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-2xl">
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-2xl leading-tight">
                   タイムラインをチェック
                 </h3>
-                <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg">
+                <p className="text-lg sm:text-xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
                   フォロー中のユーザーの最新投稿を確認しましょう
                 </p>
                 <Button asChild size="lg" className="bg-bonsai-green hover:bg-bonsai-green/90 text-lg px-10 py-6 shadow-2xl">
@@ -214,10 +216,10 @@ export default async function Home() {
               </>
             ) : (
               <>
-                <h3 className="text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-2xl">
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 text-white drop-shadow-2xl leading-tight">
                   今すぐ始めよう
                 </h3>
-                <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg">
+                <p className="text-lg sm:text-xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg leading-relaxed">
                   無料で登録して、盆栽愛好家のコミュニティに参加しましょう
                 </p>
                 <Button asChild size="lg" className="bg-bonsai-green hover:bg-bonsai-green/90 text-lg px-10 py-6 shadow-2xl">
@@ -230,14 +232,14 @@ export default async function Home() {
       </main>
 
       {/* フッター */}
-      <footer className="border-t bg-bonsai-bg/20 py-12">
+      <footer className="border-t bg-bonsai-bg/20 py-8 sm:py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-8">
             <div className="text-center md:text-left">
               <h3 className="text-2xl font-bold text-bonsai-green mb-2">BON-LOG</h3>
               <p className="text-sm text-muted-foreground">盆栽愛好家のためのコミュニティSNS</p>
             </div>
-            <div className="flex gap-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-8">
               <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 サービスについて
               </Link>
