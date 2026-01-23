@@ -217,8 +217,26 @@ function UsageCard({ service }: { service: ServiceUsage }) {
         </div>
       )}
 
-      {/* ヘルプテキスト（正常時） */}
-      {service.status === 'ok' && service.helpText && (
+      {/* Vercel特別表示：データ転送量確認の案内 */}
+      {service.name === 'Vercel' && service.status === 'ok' && (
+        <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded text-xs">
+          <p className="text-amber-700 dark:text-amber-400 mb-1">
+            データ転送量(100GB/月)はHobby版APIでは取得できません
+          </p>
+          <a
+            href={service.dashboardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-500 hover:underline font-medium"
+          >
+            ダッシュボードで確認
+            <ExternalLinkIcon className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+
+      {/* ヘルプテキスト（正常時・Vercel以外） */}
+      {service.status === 'ok' && service.helpText && service.name !== 'Vercel' && (
         <p className="text-xs text-muted-foreground mt-3">{service.helpText}</p>
       )}
 

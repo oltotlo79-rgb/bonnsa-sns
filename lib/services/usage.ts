@@ -119,7 +119,7 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
       name: 'Vercel',
       status: 'ok',
       usage: usage.length > 0 ? usage : undefined,
-      helpText: 'データ転送量はダッシュボードで確認 (Hobby: 100GB/月)',
+      helpText: 'bandwidth_check_dashboard',  // UsageCardsで特別処理
       dashboardUrl,
       lastUpdated: new Date().toISOString(),
     }
@@ -137,13 +137,13 @@ export async function getVercelUsage(): Promise<ServiceUsage> {
 // Cloudflare R2使用量を取得
 export async function getCloudflareR2Usage(): Promise<ServiceUsage> {
   const token = process.env.CLOUDFLARE_API_TOKEN
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
 
   if (!token || !accountId) {
     return {
       name: 'Cloudflare R2',
       status: 'unconfigured',
-      error: !token ? 'CLOUDFLARE_API_TOKEN が未設定' : 'CLOUDFLARE_ACCOUNT_ID が未設定',
+      error: !token ? 'CLOUDFLARE_API_TOKEN が未設定' : 'R2_ACCOUNT_ID が未設定',
       helpText: 'My Profile → API Tokens で作成（R2の権限が必要）',
       helpUrl: 'https://dash.cloudflare.com/profile/api-tokens',
       dashboardUrl: 'https://dash.cloudflare.com',
