@@ -20,19 +20,15 @@ function CrownIcon({ className }: { className?: string }) {
 
 export function Header({ userId, isPremium }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/50 bg-card/95 backdrop-blur-sm lg:hidden shadow-washi">
+    <header className="sticky top-0 z-40 border-b border-border/30 bg-washi/95 backdrop-blur-sm lg:hidden shadow-washi">
       <div className="flex items-center justify-between h-14 px-4">
         <Link href="/feed" className="flex items-center gap-2">
-          <Image
-            src="/logo.png"
-            alt="BON-LOG"
-            width={100}
-            height={40}
-            className="h-8 w-auto"
-            priority
-          />
+          <div className="w-8 h-8 border-2 border-matcha flex items-center justify-center bg-washi">
+            <span className="text-matcha font-serif text-sm font-bold">盆</span>
+          </div>
+          <span className="font-serif text-lg tracking-wider text-sumi">BON-LOG</span>
           {isPremium && (
-            <span className="text-amber-500" title="プレミアム会員">
+            <span className="text-kincha" title="プレミアム会員">
               <CrownIcon className="w-4 h-4" />
             </span>
           )}
@@ -41,7 +37,7 @@ export function Header({ userId, isPremium }: HeaderProps) {
           {userId && (
             <Link
               href="/settings"
-              className="p-2.5 text-muted-foreground hover:text-primary hover:bg-muted/50 rounded transition-all duration-200"
+              className="p-2.5 text-sumi/60 hover:text-matcha hover:bg-matcha/5 transition-all duration-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />

@@ -439,25 +439,23 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
   // ------------------------------------------------------------
 
   return (
-    <aside className="sticky top-0 h-screen w-64 border-r bg-card/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
-      {/* ロゴ */}
-      <div className="p-5 border-b border-border/50">
+    <aside className="sticky top-0 h-screen w-64 border-r border-border/30 bg-washi/95 backdrop-blur-sm hidden lg:flex flex-col shadow-washi">
+      {/* ロゴ - 和風デザイン */}
+      <div className="p-5 border-b border-border/30">
         <Link href="/feed" className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="BON-LOG"
-            width={120}
-            height={48}
-            className="h-10 w-auto"
-            priority
-          />
+          <div className="w-10 h-10 border-2 border-matcha flex items-center justify-center bg-washi">
+            <span className="text-matcha font-serif text-base font-bold">盆</span>
+          </div>
+          <div>
+            <span className="font-serif text-lg tracking-wider text-sumi">BON-LOG</span>
+            <p className="text-[10px] text-muted-foreground tracking-wider">盆栽愛好家のコミュニティ</p>
+          </div>
         </Link>
-        <p className="text-[10px] text-muted-foreground mt-1 tracking-wider">盆栽愛好家のコミュニティ</p>
       </div>
 
       {/* ナビゲーション */}
       <nav className="flex-1 p-3 overflow-y-auto">
-        <ul className="space-y-1">
+        <ul className="space-y-0.5">
           {allNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -466,10 +464,10 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded transition-all duration-200 ${
+                  className={`flex items-center gap-3 px-4 py-2.5 transition-all duration-200 ${
                     isActive
-                      ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary'
-                      : 'text-foreground hover:bg-muted/70 hover:translate-x-1'
+                      ? 'bg-matcha/10 text-matcha font-medium border-l-2 border-matcha'
+                      : 'text-sumi/80 hover:bg-matcha/5 hover:text-matcha hover:translate-x-0.5'
                   }`}
                 >
                   <div className="relative">
@@ -484,7 +482,7 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
                   <span className="text-sm flex items-center gap-1.5">
                     {item.label}
                     {item.premium && (
-                      <CrownIcon className="w-3.5 h-3.5 text-amber-500" />
+                      <CrownIcon className="w-3.5 h-3.5 text-kincha" />
                     )}
                   </span>
                 </Link>
@@ -494,18 +492,24 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
         </ul>
       </nav>
 
-      {/* 装飾ライン */}
-      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      {/* 装飾ライン - 金茶色 */}
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-kincha/30 to-transparent" />
 
       {/* ログアウトボタン */}
       <div className="p-3">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-2.5 w-full text-sumi/60 hover:bg-aka/5 hover:text-aka transition-all duration-200"
         >
           <LogOutIcon className="w-5 h-5" />
           <span className="text-sm">ログアウト</span>
         </button>
+      </div>
+
+      {/* 底部装飾 */}
+      <div className="px-5 pb-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent mb-3" />
+        <p className="text-[10px] text-muted-foreground/50 text-center font-serif tracking-widest">侘寂</p>
       </div>
     </aside>
   )

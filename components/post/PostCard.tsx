@@ -410,16 +410,16 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
 
   return (
     <article
-      className={`bg-card/80 backdrop-blur-sm border-b border-border/50 p-4 hover:bg-muted/40 transition-all duration-200 ${!disableNavigation ? 'cursor-pointer' : ''}`}
+      className={`bg-washi/80 backdrop-blur-sm border-b border-border/30 p-4 hover:bg-matcha/5 transition-all duration-200 ${!disableNavigation ? 'cursor-pointer' : ''}`}
       onClick={!disableNavigation ? () => router.push(`/posts/${displayPost.id}`) : undefined}
     >
       {/* リポスト表示 */}
       {isRepost && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+        <div className="flex items-center gap-2 text-xs text-sumi/50 mb-2">
           <RepeatIcon className="w-3 h-3" />
           <Link
             href={`/users/${post.user.id}`}
-            className="hover:underline"
+            className="hover:text-matcha"
             onClick={(e) => e.stopPropagation()}
           >
             {post.user.nickname}
@@ -435,7 +435,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
           className="flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-10 h-10 rounded-full bg-muted overflow-hidden ring-2 ring-border/50 hover:ring-primary/50 transition-all duration-200">
+          <div className="w-10 h-10 bg-muted overflow-hidden border-2 border-border/50 hover:border-matcha/50 transition-all duration-200">
             {displayPost.user.avatarUrl ? (
               <Image
                 src={displayPost.user.avatarUrl}
@@ -445,7 +445,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
                 className="object-cover w-full h-full"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground font-medium bg-gradient-to-br from-muted to-secondary">
+              <div className="w-full h-full flex items-center justify-center text-sumi/60 font-serif bg-gradient-to-br from-muted to-secondary">
                 {displayPost.user.nickname.charAt(0)}
               </div>
             )}
@@ -455,12 +455,12 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Link
             href={`/users/${displayPost.user.id}`}
-            className="font-medium hover:underline truncate"
+            className="font-medium text-sumi hover:text-matcha truncate transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             {displayPost.user.nickname}
           </Link>
-          <span className="text-sm text-muted-foreground flex-shrink-0">{timeAgo}</span>
+          <span className="text-sm text-sumi/40 flex-shrink-0">{timeAgo}</span>
         </div>
 
         <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -539,7 +539,7 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
             <Link
               key={genre.id}
               href={`/search?genre=${genre.id}`}
-              className="tag-washi"
+              className="inline-flex items-center px-2.5 py-1 text-xs bg-matcha/10 border border-matcha/20 text-matcha hover:bg-matcha/20 transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               {genre.name}

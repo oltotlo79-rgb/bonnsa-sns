@@ -381,7 +381,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border/50 lg:hidden z-50 shadow-washi">
+    <nav className="fixed bottom-0 left-0 right-0 bg-washi/95 backdrop-blur-sm border-t border-border/30 lg:hidden z-50 shadow-washi">
       <div className="flex items-center justify-around h-16">
         {baseNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -393,12 +393,12 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 ${
                 isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-matcha'
+                  : 'text-sumi/50 hover:text-sumi/80'
               }`}
             >
-              <div className={`relative p-1.5 rounded transition-all duration-200 ${
-                isActive ? 'bg-primary/10' : ''
+              <div className={`relative p-1.5 transition-all duration-200 ${
+                isActive ? 'bg-matcha/10' : ''
               }`}>
                 <Icon className="w-5 h-5" />
                 {item.href === '/notifications' && (
@@ -419,12 +419,12 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
             onClick={() => setShowMoreMenu(!showMoreMenu)}
             className={`flex flex-col items-center justify-center w-full h-full transition-all duration-200 ${
               isMoreMenuActive || showMoreMenu
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'text-matcha'
+                : 'text-sumi/50 hover:text-sumi/80'
             }`}
           >
-            <div className={`relative p-1.5 rounded transition-all duration-200 ${
-              isMoreMenuActive || showMoreMenu ? 'bg-primary/10' : ''
+            <div className={`relative p-1.5 transition-all duration-200 ${
+              isMoreMenuActive || showMoreMenu ? 'bg-matcha/10' : ''
             }`}>
               <MoreIcon className="w-5 h-5" />
             </div>
@@ -433,14 +433,14 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
 
           {/* もっと見るメニュー */}
           {showMoreMenu && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 bg-card rounded-lg shadow-lg border overflow-hidden">
+            <div className="absolute bottom-full right-0 mb-2 w-48 bg-washi border border-border/50 shadow-washi-lg overflow-hidden">
               {/* プロフィール */}
               <Link
                 href={profileItem.href}
-                className={`flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors ${
                   pathname === profileItem.href || pathname.startsWith(profileItem.href + '/')
-                    ? 'text-primary bg-primary/5'
-                    : ''
+                    ? 'text-matcha bg-matcha/5'
+                    : 'text-sumi'
                 }`}
               >
                 <UserIcon className="w-5 h-5" />
@@ -450,7 +450,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
               {/* プレミアム会員専用メニュー */}
               {premiumMenuItems.length > 0 && (
                 <>
-                  <div className="border-t" />
+                  <div className="border-t border-border/30" />
                   {premiumMenuItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                     const Icon = item.icon
@@ -459,20 +459,20 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors ${
-                          isActive ? 'text-primary bg-primary/5' : ''
+                        className={`flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors ${
+                          isActive ? 'text-matcha bg-matcha/5' : 'text-sumi'
                         }`}
                       >
                         <Icon className="w-5 h-5" />
                         <span className="text-sm flex-1">{item.label}</span>
-                        <CrownIcon className="w-4 h-4 text-yellow-500" />
+                        <CrownIcon className="w-4 h-4 text-kincha" />
                       </Link>
                     )
                   })}
                 </>
               )}
 
-              <div className="border-t" />
+              <div className="border-t border-border/30" />
 
               {/* その他のメニュー項目 */}
               {moreMenuItems.map((item) => {
@@ -483,8 +483,8 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors ${
-                      isActive ? 'text-primary bg-primary/5' : ''
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors ${
+                      isActive ? 'text-matcha bg-matcha/5' : 'text-sumi'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -493,7 +493,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                 )
               })}
 
-              <div className="border-t" />
+              <div className="border-t border-border/30" />
 
               {/* フッターリンク */}
               {footerLinks.map((item) => {
@@ -503,7 +503,7 @@ export function MobileNav({ userId, isPremium = false }: MobileNavProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-muted-foreground"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-matcha/5 transition-colors text-sumi/60"
                   >
                     <Icon className="w-4 h-4" />
                     <span className="text-sm">{item.label}</span>

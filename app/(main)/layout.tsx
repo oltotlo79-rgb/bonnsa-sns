@@ -21,17 +21,20 @@ export default async function MainLayout({
   const isPremium = await isPremiumUser(session.user.id)
 
   return (
-    <div className="min-h-screen bg-background asanoha-pattern">
+    <div className="min-h-screen bg-bonsai-cream washi-texture">
+      {/* 装飾パターン */}
+      <div className="fixed inset-0 asanoha-pattern opacity-30 pointer-events-none" />
+
       {/* モバイルヘッダー */}
       <Header userId={session.user.id} isPremium={isPremium} />
 
-      <div className="flex">
+      <div className="relative flex">
         {/* 左サイドバー（デスクトップのみ） */}
         <Sidebar userId={session.user.id} isPremium={isPremium} />
 
         {/* メインコンテンツ */}
         <main className="flex-1 min-h-screen pb-16 lg:pb-0">
-          <div className="max-w-2xl mx-auto px-4 py-4 lg:py-6">
+          <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 lg:py-6">
             {children}
           </div>
         </main>
