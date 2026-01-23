@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function AuthLayout({
   children,
@@ -33,10 +34,14 @@ export default function AuthLayout({
         {/* ロゴ */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex flex-col items-center gap-3">
-            <div className="w-16 h-16 border-2 border-kincha flex items-center justify-center bg-sumi">
-              <span className="text-kincha font-serif text-2xl font-bold">盆</span>
-            </div>
-            <span className="font-serif text-2xl tracking-widest text-washi">BON-LOG</span>
+            <Image
+              src="/logo.png"
+              alt="BON-LOG"
+              width={160}
+              height={64}
+              className="h-14 w-auto"
+              priority
+            />
           </Link>
           <p className="text-washi/50 mt-3 text-sm tracking-wider">
             盆栽愛好家のためのコミュニティ

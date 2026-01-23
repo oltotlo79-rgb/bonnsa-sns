@@ -21,7 +21,7 @@ export default async function MainLayout({
   const isPremium = await isPremiumUser(session.user.id)
 
   return (
-    <div className="min-h-screen bg-tsuchikabe">
+    <div className="min-h-screen bg-tsuchikabe-wall">
       {/* 装飾パターン */}
       <div className="fixed inset-0 asanoha-pattern opacity-20 pointer-events-none" />
 

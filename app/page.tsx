@@ -16,11 +16,15 @@ export default async function Home() {
       {/* ヘッダー */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-sumi/95 backdrop-blur-sm border-b border-washi/10">
         <div className="container mx-auto px-4 py-3 sm:py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 border-2 border-kincha rounded-sm flex items-center justify-center">
-              <span className="text-kincha font-serif text-sm sm:text-base font-bold">盆</span>
-            </div>
-            <span className="text-washi font-serif text-xl sm:text-2xl tracking-wider">BON-LOG</span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="BON-LOG"
+              width={120}
+              height={48}
+              className="h-8 sm:h-10 w-auto"
+              priority
+            />
           </Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <Link
@@ -71,12 +75,15 @@ export default async function Home() {
 
           {/* メインコンテンツ */}
           <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-            {/* 印鑑風ロゴ */}
+            {/* ロゴ */}
             <div className="mb-8 sm:mb-12 flex justify-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 border-3 border-aka rounded-full flex items-center justify-center relative">
-                <span className="text-aka font-serif text-2xl sm:text-3xl font-bold">盆栽</span>
-                <div className="absolute inset-0 border border-aka/30 rounded-full scale-110" />
-              </div>
+              <Image
+                src="/logo.png"
+                alt="BON-LOG"
+                width={200}
+                height={80}
+                className="h-20 sm:h-24 w-auto"
+              />
             </div>
 
             {/* タイトル */}
@@ -295,14 +302,14 @@ export default async function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             {/* ロゴ */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 border-2 border-kincha/70 rounded-sm flex items-center justify-center">
-                <span className="text-kincha font-serif text-sm font-bold">盆</span>
-              </div>
-              <div>
-                <span className="text-washi font-serif text-xl tracking-wider block">BON-LOG</span>
-                <span className="text-washi/40 text-xs tracking-wider">盆栽愛好家のためのSNS</span>
-              </div>
+            <div className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="BON-LOG"
+                width={140}
+                height={56}
+                className="h-12 w-auto"
+              />
             </div>
 
             {/* リンク */}

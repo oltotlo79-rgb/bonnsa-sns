@@ -176,6 +176,53 @@
     url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
 }
 
+/* 土壁テクスチャ - リアルな土壁の質感 */
+.tsuchikabe-texture {
+  position: relative;
+  background-color: var(--tsuchikabe);
+}
+.tsuchikabe-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.08;
+  pointer-events: none;
+}
+.tsuchikabe-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 120% 80% at 30% 20%, rgba(180, 160, 120, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 60% at 70% 80%, rgba(140, 120, 90, 0.1) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(200, 180, 140, 0.05) 0%, rgba(160, 140, 100, 0.08) 50%, rgba(180, 160, 120, 0.05) 100%);
+  pointer-events: none;
+}
+
+/* 土壁の背景クラス */
+.bg-tsuchikabe-wall {
+  background:
+    linear-gradient(180deg,
+      oklch(0.84 0.045 72) 0%,
+      oklch(0.81 0.05 70) 30%,
+      oklch(0.83 0.045 73) 60%,
+      oklch(0.80 0.05 68) 100%
+    );
+  position: relative;
+}
+.bg-tsuchikabe-wall::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
 /* 麻の葉模様 */
 .asanoha-pattern {
   background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='none' stroke='%23d4c4a8' stroke-width='0.5' opacity='0.3'/%3E%3Cpath d='M20 0L20 40M0 20L40 20' stroke='%23d4c4a8' stroke-width='0.3' opacity='0.2'/%3E%3C/svg%3E");

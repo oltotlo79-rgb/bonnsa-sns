@@ -86,6 +86,15 @@ function TrendUpIcon({ className }: { className?: string }) {
   )
 }
 
+function GaugeIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m12 14 4-4"/>
+      <path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+    </svg>
+  )
+}
+
 function EyeOffIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -124,6 +133,7 @@ const navItems = [
   { href: '/admin/shops', label: '盆栽園管理', icon: MapPinIcon },
   { href: '/admin/shop-requests', label: '変更リクエスト', icon: MessageSquareIcon },
   { href: '/admin/stats', label: '統計情報', icon: TrendUpIcon },
+  { href: '/admin/usage', label: 'サービス使用量', icon: GaugeIcon },
   { href: '/admin/logs', label: '操作ログ', icon: ScrollTextIcon },
 ]
 
