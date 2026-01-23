@@ -1,13 +1,11 @@
 /**
  * クライアントサイド画像圧縮ユーティリティ
  *
- * ブラウザ上で画像を圧縮してからアップロードすることで、
- * 通信量とストレージコストを削減します。
+ * Canvas APIを使用してブラウザ上で高速に画像を圧縮します。
+ * 外部ライブラリ不要で、数十〜数百ミリ秒で処理完了。
  *
  * @module lib/client-image-compression
  */
-
-import imageCompression from 'browser-image-compression'
 
 /**
  * 画像圧縮オプションの型
@@ -17,12 +15,8 @@ export interface CompressionOptions {
   maxSizeMB?: number
   /** 最大幅または高さ（px） */
   maxWidthOrHeight?: number
-  /** 圧縮に使用するCPUコア数 */
-  maxIteration?: number
-  /** WebWorkerを使用するか */
-  useWebWorker?: boolean
-  /** 元のファイル形式を維持するか */
-  preserveExif?: boolean
+  /** JPEG品質（0-1） */
+  quality?: number
 }
 
 /**
@@ -41,23 +35,18 @@ export interface CompressionResult {
 
 /**
  * デフォルトの圧縮オプション
- *
- * - 最大1MB（ストレージコスト削減）
- * - 最大1920px（Full HD相当）
- * - WebWorkerで非同期処理
  */
 const DEFAULT_OPTIONS: CompressionOptions = {
   maxSizeMB: 1,
   maxWidthOrHeight: 1920,
-  useWebWorker: true,
-  preserveExif: false,
+  quality: 0.8,
 }
 
 /**
  * 画像の最大ファイルサイズ（圧縮前）
  * ユーザーがアップロードできる画像の上限
  */
-export const MAX_IMAGE_SIZE = 4 * 1024 * 1024 // 4MB
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB（圧縮前）
 
 /**
  * 動画の最大ファイルサイズ
@@ -66,17 +55,17 @@ export const MAX_IMAGE_SIZE = 4 * 1024 * 1024 // 4MB
 export const MAX_VIDEO_SIZE = 256 * 1024 * 1024 // 256MB
 
 /**
- * 画像を圧縮する
+ * 圧縮をスキップするファイルサイズの閾値
+ * これ以下のファイルは圧縮しない
+ */
+const SKIP_COMPRESSION_THRESHOLD = 500 * 1024 // 500KB
+
+/**
+ * Canvas APIを使用して画像を高速圧縮
  *
  * @param file - 圧縮する画像ファイル
  * @param options - 圧縮オプション
  * @returns 圧縮結果
- *
- * @example
- * ```typescript
- * const result = await compressImage(file)
- * console.log(`${result.originalSize} → ${result.compressedSize} (${result.compressionRatio}%削減)`)
- * ```
  */
 export async function compressImage(
   file: File,
@@ -85,14 +74,63 @@ export async function compressImage(
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options }
   const originalSize = file.size
 
-  try {
-    const compressedFile = await imageCompression(file, {
-      maxSizeMB: mergedOptions.maxSizeMB,
-      maxWidthOrHeight: mergedOptions.maxWidthOrHeight,
-      useWebWorker: mergedOptions.useWebWorker,
-      preserveExif: mergedOptions.preserveExif,
-    })
+  // 小さいファイルは圧縮をスキップ
+  if (originalSize <= SKIP_COMPRESSION_THRESHOLD) {
+    return {
+      file,
+      originalSize,
+      compressedSize: originalSize,
+      compressionRatio: 0,
+    }
+  }
 
+  try {
+    // 画像をロード
+    const img = await loadImage(file)
+
+    // リサイズ後のサイズを計算
+    const { width, height } = calculateDimensions(
+      img.width,
+      img.height,
+      mergedOptions.maxWidthOrHeight || 1920
+    )
+
+    // Canvasで描画
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Canvas context not available')
+    }
+
+    // 高品質なリサイズ設定
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, width, height)
+
+    // 目標サイズに収まるまで品質を調整
+    const targetSize = (mergedOptions.maxSizeMB || 1) * 1024 * 1024
+    let quality = mergedOptions.quality || 0.8
+    let blob: Blob | null = null
+
+    // 最大3回試行して目標サイズに近づける
+    for (let i = 0; i < 3; i++) {
+      blob = await canvasToBlob(canvas, 'image/jpeg', quality)
+      if (blob.size <= targetSize) {
+        break
+      }
+      quality *= 0.7 // 品質を30%下げる
+    }
+
+    if (!blob) {
+      throw new Error('Failed to create blob')
+    }
+
+    // FileオブジェクトにJPEG拡張子をつける
+    const fileName = file.name.replace(/\.[^/.]+$/, '') + '.jpg'
+    const compressedFile = new File([blob], fileName, { type: 'image/jpeg' })
     const compressedSize = compressedFile.size
     const compressionRatio = Math.round((1 - compressedSize / originalSize) * 100)
 
@@ -115,10 +153,73 @@ export async function compressImage(
 }
 
 /**
+ * 画像ファイルをImageElementとしてロード
+ */
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src)
+      reject(new Error('Failed to load image'))
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
+/**
+ * アスペクト比を維持してリサイズ後のサイズを計算
+ */
+function calculateDimensions(
+  width: number,
+  height: number,
+  maxSize: number
+): { width: number; height: number } {
+  if (width <= maxSize && height <= maxSize) {
+    return { width, height }
+  }
+
+  if (width > height) {
+    return {
+      width: maxSize,
+      height: Math.round((height / width) * maxSize),
+    }
+  } else {
+    return {
+      width: Math.round((width / height) * maxSize),
+      height: maxSize,
+    }
+  }
+}
+
+/**
+ * CanvasをBlobに変換（Promise版）
+ */
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error('Failed to create blob'))
+        }
+      },
+      type,
+      quality
+    )
+  })
+}
+
+/**
  * 画像ファイルかどうかを判定
- *
- * @param file - 判定するファイル
- * @returns 画像ファイルならtrue
  */
 export function isImageFile(file: File): boolean {
   return file.type.startsWith('image/')
@@ -126,9 +227,6 @@ export function isImageFile(file: File): boolean {
 
 /**
  * 動画ファイルかどうかを判定
- *
- * @param file - 判定するファイル
- * @returns 動画ファイルならtrue
  */
 export function isVideoFile(file: File): boolean {
   return file.type.startsWith('video/')
@@ -136,15 +234,6 @@ export function isVideoFile(file: File): boolean {
 
 /**
  * ファイルサイズを人間が読みやすい形式に変換
- *
- * @param bytes - バイト数
- * @returns フォーマットされた文字列
- *
- * @example
- * ```typescript
- * formatFileSize(1024) // "1.0 KB"
- * formatFileSize(1048576) // "1.0 MB"
- * ```
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -155,11 +244,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * 画像を圧縮してFormDataに追加するヘルパー
- *
- * @param file - 元のファイル
- * @param options - 圧縮オプション
- * @returns 圧縮後のファイル（動画の場合はそのまま返す）
+ * 画像を圧縮してアップロード準備
  */
 export async function prepareFileForUpload(
   file: File,
@@ -195,13 +280,6 @@ export interface VideoUploadResult {
 
 /**
  * 動画をR2に直接アップロード（Presigned URL使用）
- *
- * Vercelの4.5MB制限を回避して、大きな動画ファイルを直接R2にアップロードします。
- *
- * @param file - アップロードする動画ファイル
- * @param folder - 保存先フォルダ（デフォルト: 'posts'）
- * @param onProgress - 進捗コールバック（0-100）
- * @returns アップロード結果（URLまたはエラー）
  */
 export async function uploadVideoToR2(
   file: File,
