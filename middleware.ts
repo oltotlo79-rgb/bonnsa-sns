@@ -83,6 +83,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org",
     "media-src 'self' blob: https://*.blob.core.windows.net https://*.r2.dev",
     "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com",
+    "worker-src 'self' blob:", // 画像圧縮ライブラリのWeb Workerに必要
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

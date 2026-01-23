@@ -1,11 +1,18 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 
 export default async function Home() {
   const session = await auth()
-  const isLoggedIn = !!session?.user
+
+  // ログイン済みの場合はフィードにリダイレクト
+  if (session?.user) {
+    redirect('/feed')
+  }
+
+  const isLoggedIn = false // リダイレクト後は到達しないが、型の整合性のため
 
   return (
     <div className="min-h-screen bg-white">
