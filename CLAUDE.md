@@ -16,15 +16,42 @@ npx prisma db push    # スキーマをDBに反映（開発用）
 npx prisma migrate dev # マイグレーション作成・実行（開発用）
 npx prisma studio     # DB管理GUI起動
 
-# Docker（開発環境）
-docker compose up -d       # PostgreSQL + Next.js起動
-docker compose down        # コンテナ停止
-docker compose down -v     # コンテナ停止 + データ削除
-docker compose logs -f     # ログ確認
+# Docker（PostgreSQLのみ起動 - 推奨）
+docker compose up -d postgres  # PostgreSQLのみ起動
+docker compose down            # コンテナ停止
+docker compose down -v         # コンテナ停止 + データ削除
+docker compose logs -f         # ログ確認
 
-# Docker（本番ビルド）
-docker build -t bonsai-sns .   # イメージビルド
+# Docker（開発環境フル起動）
+docker compose --profile dev up -d    # PostgreSQL + Next.js(dev)起動
+docker compose --profile dev down     # コンテナ停止
+
+# Docker（本番ビルド・テスト）
+docker compose --profile prod up -d   # PostgreSQL + Next.js(prod)起動
+docker build -t bonsai-sns .          # イメージのみビルド
+
+# ヘルスチェック
+curl http://localhost:3000/api/health
+
+# テスト
+npm test                # ユニットテスト
+npm run test:coverage   # カバレッジ付き
+npm run test:e2e        # E2Eテスト
+npm run test:all        # 全テスト実行
 ```
+
+## CI/CD（GitHub Actions）
+
+プルリクエスト・mainブランチへのプッシュ時に自動実行:
+
+| ジョブ | 内容 | 実行タイミング |
+|--------|------|--------------|
+| lint | ESLint + TypeScript型チェック | 常時 |
+| test | ユニットテスト | 常時 |
+| build | ビルド確認 | 常時 |
+| e2e | E2Eテスト（Playwright） | mainのみ |
+
+ワークフロー: `.github/workflows/ci.yml`
 
 ## 技術スタック
 

@@ -205,6 +205,163 @@ export const mockAdminNotification = {
   createdAt: new Date('2024-01-01'),
 }
 
+// メッセージ関連のモック
+export const mockMessage = {
+  id: 'message-1',
+  conversationId: 'conversation-1',
+  senderId: mockUser.id,
+  content: 'テストメッセージです',
+  isRead: false,
+  createdAt: new Date('2024-01-01'),
+  sender: {
+    id: mockUser.id,
+    nickname: mockUser.nickname,
+    avatarUrl: mockUser.avatarUrl,
+  },
+}
+
+// 下書き関連のモック
+export const mockDraft = {
+  id: 'draft-1',
+  userId: mockUser.id,
+  content: '下書きの内容',
+  mediaUrls: [],
+  genreIds: ['genre-1'],
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+}
+
+// 予約投稿関連のモック
+export const mockScheduledPost = {
+  id: 'scheduled-1',
+  userId: mockUser.id,
+  content: '予約投稿の内容',
+  mediaUrls: [],
+  genreIds: ['genre-1'],
+  scheduledAt: new Date('2024-02-01T10:00:00Z'),
+  status: 'pending' as const,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+}
+
+// 盆栽関連のモック
+export const mockBonsai = {
+  id: 'bonsai-1',
+  userId: mockUser.id,
+  name: 'テスト黒松',
+  species: '黒松',
+  acquisitionDate: new Date('2020-01-01'),
+  acquisitionType: 'purchase' as const,
+  description: 'テスト盆栽の説明',
+  imageUrl: '/bonsai-image.jpg',
+  isPublic: true,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+  user: {
+    id: mockUser.id,
+    nickname: mockUser.nickname,
+    avatarUrl: mockUser.avatarUrl,
+  },
+}
+
+export const mockBonsaiRecord = {
+  id: 'record-1',
+  bonsaiId: 'bonsai-1',
+  userId: mockUser.id,
+  recordType: 'watering' as const,
+  title: '水やり記録',
+  description: '朝の水やりを行いました',
+  imageUrls: [],
+  recordDate: new Date('2024-01-15'),
+  createdAt: new Date('2024-01-15'),
+  updatedAt: new Date('2024-01-15'),
+}
+
+// パスワードリセット関連のモック
+export const mockPasswordResetToken = {
+  id: 'token-1',
+  email: mockUser.email,
+  token: 'reset-token-123',
+  expires: new Date(Date.now() + 60 * 60 * 1000), // 1時間後
+  createdAt: new Date('2024-01-01'),
+}
+
+// ハッシュタグ関連のモック
+export const mockHashtag = {
+  id: 'hashtag-1',
+  name: 'テスト',
+  postCount: 10,
+  createdAt: new Date('2024-01-01'),
+}
+
+// ユーザー分析関連のモック
+export const mockUserAnalytics = {
+  id: 'analytics-1',
+  userId: mockUser.id,
+  date: new Date('2024-01-01'),
+  profileViews: 100,
+  postViews: 500,
+  likesReceived: 50,
+  newFollowers: 10,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+}
+
+// ブロック関連のモック
+export const mockBlock = {
+  id: 'block-1',
+  blockerId: mockUser.id,
+  blockedId: 'other-user-id',
+  createdAt: new Date('2024-01-01'),
+  blocked: {
+    id: 'other-user-id',
+    nickname: '他のユーザー',
+    avatarUrl: '/other-avatar.jpg',
+  },
+}
+
+// ミュート関連のモック
+export const mockMute = {
+  id: 'mute-1',
+  muterId: mockUser.id,
+  mutedId: 'other-user-id',
+  createdAt: new Date('2024-01-01'),
+  muted: {
+    id: 'other-user-id',
+    nickname: '他のユーザー',
+    avatarUrl: '/other-avatar.jpg',
+  },
+}
+
+// フォロー関連のモック
+export const mockFollow = {
+  id: 'follow-1',
+  followerId: mockUser.id,
+  followingId: 'other-user-id',
+  createdAt: new Date('2024-01-01'),
+  following: {
+    id: 'other-user-id',
+    nickname: '他のユーザー',
+    avatarUrl: '/other-avatar.jpg',
+  },
+}
+
+// いいね関連のモック
+export const mockLike = {
+  id: 'like-1',
+  userId: mockUser.id,
+  postId: mockPost.id,
+  createdAt: new Date('2024-01-01'),
+}
+
+// ブックマーク関連のモック
+export const mockBookmark = {
+  id: 'bookmark-1',
+  userId: mockUser.id,
+  postId: mockPost.id,
+  createdAt: new Date('2024-01-01'),
+}
+
 // カスタムレンダラー
 interface AllProvidersProps {
   children: React.ReactNode
@@ -269,6 +426,13 @@ export const createMockPrismaClient = () => ({
     delete: jest.fn(),
     count: jest.fn(),
   },
+  postMedia: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
   comment: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
@@ -290,6 +454,7 @@ export const createMockPrismaClient = () => ({
     findMany: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
+    deleteMany: jest.fn(),
     count: jest.fn(),
   },
   bookmark: {
@@ -299,19 +464,26 @@ export const createMockPrismaClient = () => ({
     delete: jest.fn(),
   },
   notification: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
+    createMany: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
     count: jest.fn(),
   },
   block: {
+    findUnique: jest.fn(),
     findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
   },
   mute: {
+    findUnique: jest.fn(),
     findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
@@ -379,21 +551,211 @@ export const createMockPrismaClient = () => ({
   adminLog: {
     create: jest.fn(),
     findMany: jest.fn(),
+    count: jest.fn(),
   },
-  $transaction: jest.fn((callback) => {
-    if (typeof callback === 'function') {
-      return callback({
-        post: { update: jest.fn() },
-        comment: { update: jest.fn() },
-        event: { update: jest.fn() },
-        bonsaiShop: { update: jest.fn() },
-        shopReview: { update: jest.fn() },
-        user: { update: jest.fn() },
-        report: { update: jest.fn(), updateMany: jest.fn() },
-        adminNotification: { create: jest.fn() },
-        adminLog: { create: jest.fn() },
+  // メッセージ関連
+  conversation: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  conversationParticipant: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  message: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    updateMany: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  // 下書き・予約投稿関連
+  draftPost: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  draftPostMedia: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  draftPostGenre: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  scheduledPost: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  scheduledPostMedia: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  scheduledPostGenre: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  // 盆栽関連
+  bonsai: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  bonsaiRecord: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  },
+  // ハッシュタグ関連
+  hashtag: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    upsert: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+    count: jest.fn(),
+  },
+  postHashtag: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    upsert: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  // パスワードリセット関連
+  passwordResetToken: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  // ユーザー分析関連
+  userAnalytics: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    upsert: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    groupBy: jest.fn(),
+    aggregate: jest.fn(),
+  },
+  // PostGenre関連
+  postGenre: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  // サブスクリプション関連
+  subscription: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  paymentHistory: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+  },
+  payment: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+  },
+  $transaction: jest.fn().mockImplementation((callbackOrArray) => {
+    // Array form: resolve each operation and return results
+    if (Array.isArray(callbackOrArray)) {
+      return Promise.all(callbackOrArray)
+    }
+    // Function form: call with mock tx client
+    if (typeof callbackOrArray === 'function') {
+      return callbackOrArray({
+        post: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        postMedia: { createMany: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({}) },
+        postGenre: { createMany: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({}) },
+        postHashtag: { createMany: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({}) },
+        comment: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        event: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        bonsaiShop: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        shopReview: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        user: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        report: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
+        adminNotification: { create: jest.fn().mockResolvedValue({}) },
+        adminLog: { create: jest.fn().mockResolvedValue({}) },
+        notification: { create: jest.fn().mockResolvedValue({}), createMany: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({}) },
+        like: { deleteMany: jest.fn().mockResolvedValue({}) },
+        bookmark: { deleteMany: jest.fn().mockResolvedValue({}) },
+        follow: { deleteMany: jest.fn().mockResolvedValue({}) },
+        block: { deleteMany: jest.fn().mockResolvedValue({}), create: jest.fn().mockResolvedValue({}) },
+        mute: { deleteMany: jest.fn().mockResolvedValue({}) },
+        conversation: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+        conversationParticipant: { create: jest.fn().mockResolvedValue({}), createMany: jest.fn().mockResolvedValue({}) },
+        message: { create: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
+        draftPost: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        scheduledPost: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        bonsai: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        bonsaiRecord: { create: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        hashtag: { upsert: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+        userAnalytics: { upsert: jest.fn().mockResolvedValue({}) },
+        subscription: { update: jest.fn().mockResolvedValue({}) },
       })
     }
-    return Promise.resolve(callback)
+    return Promise.resolve(callbackOrArray)
   }),
+  $queryRaw: jest.fn(),
+  $executeRaw: jest.fn(),
 })

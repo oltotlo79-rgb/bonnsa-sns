@@ -23,6 +23,13 @@ jest.mock('@/lib/search/fulltext', () => ({
   fulltextSearchUsers: jest.fn().mockResolvedValue([]),
 }))
 
+// next/headers モック
+jest.mock('next/headers', () => ({
+  headers: jest.fn().mockResolvedValue({
+    get: jest.fn().mockReturnValue(null),
+  }),
+}))
+
 // キャッシュモック（unstable_cacheはテスト環境で動作しないため）
 jest.mock('@/lib/cache', () => ({
   getCachedGenres: jest.fn().mockImplementation(async () => {

@@ -258,23 +258,9 @@ async function getSupabaseUsageFromDBDirect(
       SELECT pg_database_size(current_database()) as size
     `
 
-    // 全スキーマのテーブルサイズ（auth, storage, public等すべて含む）
-    const allTablesResult = await prisma.$queryRaw<{ total_size: bigint }[]>`
-      SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0)::bigint as total_size
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE c.relkind IN ('r', 'm', 'p')
-        AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-    `
-
     if (dbSizeResult && dbSizeResult[0]) {
-      const dbSizeBytes = Number(dbSizeResult[0].size)
-      const allTablesBytes = allTablesResult?.[0]?.total_size
-        ? Number(allTablesResult[0].total_size)
-        : 0
-
       // pg_database_sizeを使用（これがダッシュボードに最も近い）
-      const sizeBytes = dbSizeBytes
+      const sizeBytes = Number(dbSizeResult[0].size)
       const currentGB = sizeBytes / (1000 * 1000 * 1000)
 
       usage.push({

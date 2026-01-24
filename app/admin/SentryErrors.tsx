@@ -106,7 +106,7 @@ export function SentryErrors() {
       const res = await fetch('/api/admin/sentry')
       const json = await res.json()
       setData(json)
-    } catch (error) {
+    } catch {
       setData({ success: false, error: '取得に失敗しました' })
     } finally {
       setLoading(false)

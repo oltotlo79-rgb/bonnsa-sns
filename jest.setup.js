@@ -2,6 +2,23 @@
 import '@testing-library/jest-dom'
 
 // グローバルモック
+// Logger mock
+jest.mock('@/lib/logger', () => ({
+  __esModule: true,
+  default: {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+  logger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}))
+
 // Next.js navigation
 jest.mock('next/navigation', () => ({
   useRouter: () => ({

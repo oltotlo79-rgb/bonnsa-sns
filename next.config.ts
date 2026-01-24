@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  // Vercelではstandalone出力は不要（Dockerを使う場合はコメントを解除）
-  // output: 'standalone',
+  // Docker/コンテナ環境ではstandalone出力を使用
+  // Vercelでは自動的に無視される
+  output: 'standalone',
 
   images: {
     remotePatterns: [

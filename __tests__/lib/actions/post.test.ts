@@ -21,12 +21,20 @@ jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
 }))
 
+// レート制限モック
+jest.mock('@/lib/rate-limit', () => ({
+  checkUserRateLimit: jest.fn().mockResolvedValue({ success: true }),
+  checkDailyLimit: jest.fn().mockResolvedValue({ allowed: true, count: 0 }),
+}))
+
 describe('Post Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockAuth.mockResolvedValue({
       user: { id: mockUser.id },
     })
+    // isSuspended check用
+    mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
   })
 
   describe('createPost', () => {
