@@ -264,8 +264,10 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
 
     // データが取得できなかった場合はフォールバック
     if (usage.length === 0) {
-      console.error('Supabase API returned no usable data:', JSON.stringify(usageData).slice(0, 500))
-      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, 'データ形式不明')
+      // 利用可能なキーを表示
+      const availableKeys = Object.keys(projectUsage || usageData || {}).join(', ')
+      console.error('Supabase API data:', JSON.stringify(usageData).slice(0, 1000))
+      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, `キー: ${availableKeys.slice(0, 100)}`)
     }
 
     const maxPercentage = Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage), 0)
