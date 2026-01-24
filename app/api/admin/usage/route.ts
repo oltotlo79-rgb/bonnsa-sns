@@ -136,11 +136,11 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
 }
 
 // Supabaseの使用量を取得
-// 注: Supabase Management APIは使用量データを公開していないため、
-// pg_database_size()を使用（ダッシュボードの値とは異なる）
+// 内部APIとpg_database_size()の両方を試す
 async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   const projectRef = extractProjectRef()
   const orgId = process.env.SUPABASE_ORG_ID
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN
 
   // Free tier制限値
   const LIMITS = {
@@ -154,7 +154,94 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     ? `https://supabase.com/dashboard/org/${orgId}/usage?projectRef=${projectRef}`
     : 'https://supabase.com/dashboard'
 
+  // 内部APIを試す（ダッシュボードと同じデータソース）
+  if (accessToken && projectRef) {
+    try {
+      const platformUsage = await getSupabaseUsageFromPlatformAPI(projectRef, accessToken, LIMITS, dashboardUrl)
+      if (platformUsage.status !== 'error') {
+        return platformUsage
+      }
+      console.log('Platform API failed, falling back to pg_database_size()')
+    } catch (error) {
+      console.log('Platform API error, falling back to pg_database_size():', error)
+    }
+  }
+
   return getSupabaseUsageFromDBDirect(projectRef, LIMITS, dashboardUrl)
+}
+
+// Supabase内部Platform APIから使用量を取得
+async function getSupabaseUsageFromPlatformAPI(
+  projectRef: string,
+  accessToken: string,
+  LIMITS: { dbSizeGB: number; storageSizeGB: number; egressGB: number; mau: number },
+  dashboardUrl: string
+): Promise<ServiceUsage> {
+  // 内部APIエンドポイント（ダッシュボードが使用しているもの）
+  const usageUrl = `https://api.supabase.io/platform/projects/${projectRef}/usage`
+
+  const response = await fetch(usageUrl, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    console.log(`Platform API response: ${response.status}`)
+    throw new Error(`Platform API: ${response.status}`)
+  }
+
+  const data = await response.json()
+  console.log('Platform API response:', JSON.stringify(data, null, 2))
+
+  const usage: ServiceUsage['usage'] = []
+
+  // レスポンス構造を解析
+  if (data.db_size !== undefined) {
+    const dbSizeGB = data.db_size / (1000 * 1000 * 1000)
+    usage.push({
+      current: Math.round(dbSizeGB * 1000) / 1000,
+      limit: LIMITS.dbSizeGB,
+      unit: 'GB (データベース)',
+      percentage: Math.round((dbSizeGB / LIMITS.dbSizeGB) * 100),
+    })
+  }
+
+  if (data.disk_usage !== undefined) {
+    const diskGB = data.disk_usage / (1000 * 1000 * 1000)
+    usage.push({
+      current: Math.round(diskGB * 1000) / 1000,
+      limit: 8, // Pro default disk
+      unit: 'GB (ディスク)',
+      percentage: Math.round((diskGB / 8) * 100),
+    })
+  }
+
+  if (data.storage_size !== undefined) {
+    const storageGB = data.storage_size / (1000 * 1000 * 1000)
+    usage.push({
+      current: Math.round(storageGB * 1000) / 1000,
+      limit: LIMITS.storageSizeGB,
+      unit: 'GB (ストレージ)',
+      percentage: Math.round((storageGB / LIMITS.storageSizeGB) * 100),
+    })
+  }
+
+  if (usage.length === 0) {
+    throw new Error('Platform API: データ形式が不明')
+  }
+
+  const maxPercentage = Math.max(...usage.map(u => u.percentage))
+
+  return {
+    name: 'Supabase',
+    status: maxPercentage >= 100 ? 'error' : maxPercentage >= 90 ? 'warning' : 'ok',
+    usage,
+    helpText: 'Platform API経由で取得',
+    dashboardUrl,
+    lastUpdated: new Date().toISOString(),
+  }
 }
 
 // Prismaで直接取得
