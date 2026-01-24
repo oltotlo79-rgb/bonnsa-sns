@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { searchBonsais } from '@/lib/actions/bonsai'
 
 function SearchIcon({ className }: { className?: string }) {

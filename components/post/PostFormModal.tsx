@@ -7,10 +7,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { createPost, uploadPostMedia } from '@/lib/actions/post'
+import { createPost } from '@/lib/actions/post'
 import { saveDraft } from '@/lib/actions/draft'
 import { GenreSelector } from './GenreSelector'
-import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
+import { prepareFileForUpload, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 type Genre = {
   id: string

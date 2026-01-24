@@ -38,6 +38,7 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- クライアントサイドマウント検出のため必要
     setMounted(true)
     // モーダル表示中はbodyのスクロールを無効化
     document.body.style.overflow = 'hidden'

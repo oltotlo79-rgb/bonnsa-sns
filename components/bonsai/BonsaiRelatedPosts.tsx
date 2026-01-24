@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
@@ -63,7 +62,7 @@ function MessageCircleIcon({ className }: { className?: string }) {
   )
 }
 
-export function BonsaiRelatedPosts({ posts, currentUserId }: BonsaiRelatedPostsProps) {
+export function BonsaiRelatedPosts({ posts }: BonsaiRelatedPostsProps) {
   if (posts.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground">

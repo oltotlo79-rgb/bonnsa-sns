@@ -40,12 +40,12 @@ export default function GlobalError({
               >
                 再試行する
               </button>
-              <a
-                href="/"
+              <button
+                onClick={() => window.location.href = '/'}
                 className="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 ホームに戻る
-              </a>
+              </button>
             </div>
             {process.env.NODE_ENV === 'development' && (
               <details className="mt-8 text-left">

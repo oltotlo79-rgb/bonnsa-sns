@@ -55,7 +55,7 @@ import { createComment } from '@/lib/actions/comment'
 /**
  * クライアントサイド画像圧縮ユーティリティ
  */
-import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
+import { prepareFileForUpload, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 // ============================================================
 // 型定義

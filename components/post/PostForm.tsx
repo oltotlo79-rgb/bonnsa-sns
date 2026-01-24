@@ -77,7 +77,7 @@ import { createPost } from '@/lib/actions/post'
  *
  * アップロード前にブラウザ上で画像を圧縮してファイルサイズを削減
  */
-import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
+import { prepareFileForUpload, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
 /**
  * 下書き保存用Server Action

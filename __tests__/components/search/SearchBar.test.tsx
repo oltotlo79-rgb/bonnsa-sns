@@ -252,7 +252,7 @@ describe('SearchBar', () => {
 
   it('URLパラメータのqが変更されると入力値が更新される', async () => {
     mockSearchParams = new URLSearchParams('q=初期検索')
-    const { rerender } = render(<SearchBar />)
+    render(<SearchBar />)
 
     // URLパラメータの値が反映される
     await waitFor(() => {

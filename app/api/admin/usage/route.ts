@@ -158,14 +158,11 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   }
 
   try {
-    // Supabase Management APIで使用量を取得
-    // 日付範囲を指定（今月の1日から今日まで）
-    const now = new Date()
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const endDate = now.toISOString().split('T')[0]
+    const usage: ServiceUsage['usage'] = []
 
-    const response = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}/daily-stats?interval=day`,
+    // 1. プロジェクト情報からデータベースサイズを取得
+    const projectResponse = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -174,69 +171,85 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
       }
     )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Supabase API error:', response.status, errorText)
+    if (!projectResponse.ok) {
+      const errorText = await projectResponse.text()
+      console.error('Supabase project API error:', projectResponse.status, errorText)
       return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
     }
 
-    const data = await response.json()
-    const usage: ServiceUsage['usage'] = []
+    const projectData = await projectResponse.json()
 
-    // daily-statsの最新データを取得
-    const latestStats = Array.isArray(data) && data.length > 0 ? data[data.length - 1] : data
+    // プロジェクトからorg_idを取得
+    const orgId = projectData.organization_id
 
-    // データベースサイズ (バイト単位で返される場合とGB単位の場合がある)
-    const dbSize = latestStats?.total_db_size_bytes ?? latestStats?.db_size
-    if (dbSize !== undefined) {
-      // 値が1より小さければ既にGB単位、大きければバイト単位
-      const dbSizeGB = dbSize < 10 ? dbSize : dbSize / (1000 * 1000 * 1000)
-      usage.push({
-        current: Math.round(dbSizeGB * 1000) / 1000,
-        limit: LIMITS.dbSizeGB,
-        unit: 'GB (データベース)',
-        percentage: Math.round((dbSizeGB / LIMITS.dbSizeGB) * 100),
-      })
-    }
+    // 2. Organization usageエンドポイントを試す
+    if (orgId) {
+      const usageResponse = await fetch(
+        `https://api.supabase.com/v1/organizations/${orgId}/usage?project_ref=${projectRef}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          next: { revalidate: 300 },
+        }
+      )
 
-    // ストレージサイズ
-    const storageSize = latestStats?.total_storage_size_bytes ?? latestStats?.storage_size
-    if (storageSize !== undefined) {
-      const storageSizeGB = storageSize < 10 ? storageSize : storageSize / (1000 * 1000 * 1000)
-      usage.push({
-        current: Math.round(storageSizeGB * 1000) / 1000,
-        limit: LIMITS.storageSizeGB,
-        unit: 'GB (ストレージ)',
-        percentage: Math.round((storageSizeGB / LIMITS.storageSizeGB) * 100),
-      })
-    }
+      if (usageResponse.ok) {
+        const usageData = await usageResponse.json()
 
-    // 帯域幅 (Egress) - 月間合計
-    const egress = latestStats?.total_egress_modified ?? latestStats?.db_egress
-    if (egress !== undefined) {
-      const egressGB = egress < 100 ? egress : egress / (1000 * 1000 * 1000)
-      usage.push({
-        current: Math.round(egressGB * 1000) / 1000,
-        limit: LIMITS.egressGB,
-        unit: 'GB (帯域幅)',
-        percentage: Math.round((egressGB / LIMITS.egressGB) * 100),
-      })
-    }
+        // usageDataの構造に応じてパース
+        // DBサイズ
+        const dbSizeBytes = usageData.db_size ?? usageData.database_size ?? usageData.total_db_size_bytes
+        if (dbSizeBytes !== undefined) {
+          const dbSizeGB = dbSizeBytes > 1000 ? dbSizeBytes / (1000 * 1000 * 1000) : dbSizeBytes
+          usage.push({
+            current: Math.round(dbSizeGB * 1000) / 1000,
+            limit: LIMITS.dbSizeGB,
+            unit: 'GB (データベース)',
+            percentage: Math.round((dbSizeGB / LIMITS.dbSizeGB) * 100),
+          })
+        }
 
-    // MAU
-    const mau = latestStats?.total_auth_billing_period_mau ?? latestStats?.monthly_active_users
-    if (mau !== undefined) {
-      usage.push({
-        current: mau,
-        limit: LIMITS.mau,
-        unit: 'MAU',
-        percentage: Math.round((mau / LIMITS.mau) * 100),
-      })
+        // ストレージサイズ
+        const storageSizeBytes = usageData.storage_size ?? usageData.total_storage_size_bytes
+        if (storageSizeBytes !== undefined) {
+          const storageSizeGB = storageSizeBytes > 1000 ? storageSizeBytes / (1000 * 1000 * 1000) : storageSizeBytes
+          usage.push({
+            current: Math.round(storageSizeGB * 1000) / 1000,
+            limit: LIMITS.storageSizeGB,
+            unit: 'GB (ストレージ)',
+            percentage: Math.round((storageSizeGB / LIMITS.storageSizeGB) * 100),
+          })
+        }
+
+        // Egress
+        const egressBytes = usageData.db_egress ?? usageData.egress ?? usageData.total_egress
+        if (egressBytes !== undefined) {
+          const egressGB = egressBytes > 1000 ? egressBytes / (1000 * 1000 * 1000) : egressBytes
+          usage.push({
+            current: Math.round(egressGB * 1000) / 1000,
+            limit: LIMITS.egressGB,
+            unit: 'GB (帯域幅)',
+            percentage: Math.round((egressGB / LIMITS.egressGB) * 100),
+          })
+        }
+
+        // MAU
+        const mau = usageData.monthly_active_users ?? usageData.mau
+        if (mau !== undefined) {
+          usage.push({
+            current: mau,
+            limit: LIMITS.mau,
+            unit: 'MAU',
+            percentage: Math.round((mau / LIMITS.mau) * 100),
+          })
+        }
+      }
     }
 
     // データが取得できなかった場合はフォールバック
     if (usage.length === 0) {
-      console.error('Supabase API returned no usable data:', JSON.stringify(data).slice(0, 500))
+      console.error('Supabase API returned no usable data. ProjectData:', JSON.stringify(projectData).slice(0, 300))
       return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
     }
 
@@ -326,6 +339,11 @@ async function getSupabaseUsageFromDBFallback(
 
 // DATABASE_URLからproject refを抽出
 function extractProjectRef(): string | undefined {
+  // 直接指定があればそれを使用
+  if (process.env.SUPABASE_PROJECT_REF) {
+    return process.env.SUPABASE_PROJECT_REF
+  }
+
   const dbUrl = process.env.DATABASE_URL
   if (!dbUrl) return undefined
 

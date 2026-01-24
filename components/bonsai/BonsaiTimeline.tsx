@@ -113,7 +113,7 @@ function LeafIcon({ className }: { className?: string }) {
   )
 }
 
-export function BonsaiTimeline({ records, posts, isOwner, currentUserId }: BonsaiTimelineProps) {
+export function BonsaiTimeline({ records, posts, isOwner }: BonsaiTimelineProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)

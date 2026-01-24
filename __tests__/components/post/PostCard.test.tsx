@@ -298,7 +298,7 @@ describe('PostCard', () => {
     }
     render(<PostCard {...props} />)
     // 0は表示されないことを確認
-    const article = screen.getByRole('article')
+    screen.getByRole('article')
     // コメント数の3は表示される
     expect(screen.getByText('3')).toBeInTheDocument()
   })

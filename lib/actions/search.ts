@@ -72,7 +72,7 @@ import { getCachedGenres, getCachedPopularTags } from '@/lib/cache'
  *
  * 検索はDB負荷が高いため、レート制限を適用
  */
-import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
+import { rateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { headers } from 'next/headers'
 
 // ============================================================

@@ -57,7 +57,7 @@ import { Label } from '@/components/ui/label'
  */
 import Link from 'next/link'
 
-import { checkLoginAllowed, recordLoginFailure, clearLoginAttempts } from '@/lib/actions/auth'
+import { checkLoginAllowed } from '@/lib/actions/auth'
 
 // ============================================================
 // アイコンコンポーネント

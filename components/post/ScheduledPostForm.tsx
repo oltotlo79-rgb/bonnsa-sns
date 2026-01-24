@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createScheduledPost, updateScheduledPost } from '@/lib/actions/scheduled-post'
 import { GenreSelector } from './GenreSelector'
-import { prepareFileForUpload, isImageFile, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
+import { prepareFileForUpload, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 import { Calendar, Clock, ImageIcon, X } from 'lucide-react'
 import { MembershipLimits } from '@/lib/premium'
 

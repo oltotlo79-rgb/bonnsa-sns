@@ -55,14 +55,23 @@ export function ShopGenreEditor({ shopId, currentGenres, isLoggedIn }: ShopGenre
   // 編集モード開始時にジャンル一覧を取得
   useEffect(() => {
     if (isEditing && availableGenres.length === 0) {
+      let isCancelled = false
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 非同期データ取得のローディング状態管理
       setIsLoading(true)
       getShopGenres()
         .then((result) => {
-          if (result.genres) {
+          if (!isCancelled && result.genres) {
             setAvailableGenres(result.genres)
           }
         })
-        .finally(() => setIsLoading(false))
+        .finally(() => {
+          if (!isCancelled) {
+            setIsLoading(false)
+          }
+        })
+      return () => {
+        isCancelled = true
+      }
     }
   }, [isEditing, availableGenres.length])
 
