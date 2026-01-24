@@ -139,62 +139,59 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
 async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   const projectRef = extractProjectRef()
 
-  // Free tier制限値
+  // Free tier制限値 (Supabaseは10進法で表示: 500MB = 0.5GB)
   const LIMITS = {
-    dbSize: 500, // 500MB
-    storageSize: 1024, // 1GB = 1024MB
+    dbSizeGB: 0.5, // 500MB = 0.5GB
     mau: 50000, // 50,000 MAU
   }
 
   const usage: ServiceUsage['usage'] = []
 
   try {
-    // データベースサイズを取得
+    // データベースサイズを取得（全テーブル+インデックスの合計）
+    // Supabaseダッシュボードと同じ計算方法を使用
     const dbSizeResult = await prisma.$queryRaw<{ size: bigint }[]>`
-      SELECT pg_database_size(current_database()) as size
+      SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0) as size
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+        AND c.relkind IN ('r', 'i', 'm')
     `
+
     if (dbSizeResult && dbSizeResult[0]) {
       const sizeBytes = Number(dbSizeResult[0].size)
-      const currentMB = sizeBytes / (1024 * 1024)
-      usage.push({
-        current: Math.round(currentMB * 100) / 100,
-        limit: LIMITS.dbSize,
-        unit: 'MB (データベース)',
-        percentage: Math.round((currentMB / LIMITS.dbSize) * 100),
-      })
+      // Supabaseと同じ10進法で計算 (1GB = 1,000,000,000 bytes)
+      const currentGB = sizeBytes / (1000 * 1000 * 1000)
+
+      // GBまたはMBで表示
+      if (currentGB >= 0.1) {
+        usage.push({
+          current: Math.round(currentGB * 1000) / 1000,
+          limit: LIMITS.dbSizeGB,
+          unit: 'GB (データベース)',
+          percentage: Math.round((currentGB / LIMITS.dbSizeGB) * 100),
+        })
+      } else {
+        const currentMB = sizeBytes / (1000 * 1000)
+        usage.push({
+          current: Math.round(currentMB * 100) / 100,
+          limit: LIMITS.dbSizeGB * 1000,
+          unit: 'MB (データベース)',
+          percentage: Math.round((currentMB / (LIMITS.dbSizeGB * 1000)) * 100),
+        })
+      }
     }
 
-    // テーブルごとのサイズ詳細（参考情報）
-    const tableSizes = await prisma.$queryRaw<{ table_name: string; size: bigint }[]>`
-      SELECT
-        relname as table_name,
-        pg_total_relation_size(relid) as size
-      FROM pg_catalog.pg_statio_user_tables
-      ORDER BY pg_total_relation_size(relid) DESC
-      LIMIT 5
-    `
-
-    // ユーザー数（MAUの代わりに総ユーザー数を表示）
+    // ユーザー数（MAU）
     const userCount = await prisma.user.count()
     usage.push({
       current: userCount,
       limit: LIMITS.mau,
-      unit: 'ユーザー (MAU参考)',
+      unit: 'MAU (ユーザー数)',
       percentage: Math.round((userCount / LIMITS.mau) * 100),
     })
 
-    // Storageバケットのサイズを取得（Supabase Storage使用時）
-    // 注: Storage APIが別途必要なため、ここではスキップ
-    // 代わりにPostMediaテーブルのファイル数を表示
-    const mediaCount = await prisma.postMedia.count()
-    const avgMediaSize = 0.5 // 平均0.5MB/ファイルと仮定
-    const estimatedStorageMB = mediaCount * avgMediaSize
-    usage.push({
-      current: Math.round(estimatedStorageMB * 100) / 100,
-      limit: LIMITS.storageSize,
-      unit: `MB (推定: ${mediaCount}ファイル)`,
-      percentage: Math.round((estimatedStorageMB / LIMITS.storageSize) * 100),
-    })
+    // ※ファイルストレージはR2を使用しているため、Supabase Storageは表示しない
 
   } catch (error) {
     console.error('Supabase usage error:', error)
@@ -215,7 +212,7 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     name: 'Supabase',
     status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
     usage,
-    helpText: '帯域幅はダッシュボードで確認',
+    helpText: '帯域幅(5GB/月)はダッシュボードで確認',
     dashboardUrl: projectRef
       ? `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`
       : 'https://supabase.com/dashboard',
