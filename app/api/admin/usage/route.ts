@@ -159,29 +159,38 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
 
   try {
     // Supabase Management APIで使用量を取得
+    // 日付範囲を指定（今月の1日から今日まで）
+    const now = new Date()
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const endDate = now.toISOString().split('T')[0]
+
     const response = await fetch(
-      `https://api.supabase.com/v1/projects/${projectRef}/usage`,
+      `https://api.supabase.com/v1/projects/${projectRef}/daily-stats?interval=day`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
         },
         next: { revalidate: 300 },
       }
     )
 
     if (!response.ok) {
-      // APIエラーの場合はフォールバック
-      console.error('Supabase API error:', response.status)
+      const errorText = await response.text()
+      console.error('Supabase API error:', response.status, errorText)
       return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
     }
 
     const data = await response.json()
     const usage: ServiceUsage['usage'] = []
 
-    // データベースサイズ
-    if (data.db_size !== undefined) {
-      const dbSizeGB = data.db_size / (1000 * 1000 * 1000)
+    // daily-statsの最新データを取得
+    const latestStats = Array.isArray(data) && data.length > 0 ? data[data.length - 1] : data
+
+    // データベースサイズ (バイト単位で返される場合とGB単位の場合がある)
+    const dbSize = latestStats?.total_db_size_bytes ?? latestStats?.db_size
+    if (dbSize !== undefined) {
+      // 値が1より小さければ既にGB単位、大きければバイト単位
+      const dbSizeGB = dbSize < 10 ? dbSize : dbSize / (1000 * 1000 * 1000)
       usage.push({
         current: Math.round(dbSizeGB * 1000) / 1000,
         limit: LIMITS.dbSizeGB,
@@ -191,8 +200,9 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     }
 
     // ストレージサイズ
-    if (data.storage_size !== undefined) {
-      const storageSizeGB = data.storage_size / (1000 * 1000 * 1000)
+    const storageSize = latestStats?.total_storage_size_bytes ?? latestStats?.storage_size
+    if (storageSize !== undefined) {
+      const storageSizeGB = storageSize < 10 ? storageSize : storageSize / (1000 * 1000 * 1000)
       usage.push({
         current: Math.round(storageSizeGB * 1000) / 1000,
         limit: LIMITS.storageSizeGB,
@@ -201,9 +211,10 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
       })
     }
 
-    // 帯域幅 (Egress)
-    if (data.db_egress !== undefined) {
-      const egressGB = data.db_egress / (1000 * 1000 * 1000)
+    // 帯域幅 (Egress) - 月間合計
+    const egress = latestStats?.total_egress_modified ?? latestStats?.db_egress
+    if (egress !== undefined) {
+      const egressGB = egress < 100 ? egress : egress / (1000 * 1000 * 1000)
       usage.push({
         current: Math.round(egressGB * 1000) / 1000,
         limit: LIMITS.egressGB,
@@ -213,18 +224,23 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     }
 
     // MAU
-    if (data.monthly_active_users !== undefined) {
+    const mau = latestStats?.total_auth_billing_period_mau ?? latestStats?.monthly_active_users
+    if (mau !== undefined) {
       usage.push({
-        current: data.monthly_active_users,
+        current: mau,
         limit: LIMITS.mau,
         unit: 'MAU',
-        percentage: Math.round((data.monthly_active_users / LIMITS.mau) * 100),
+        percentage: Math.round((mau / LIMITS.mau) * 100),
       })
     }
 
-    const maxPercentage = usage.length > 0
-      ? Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage))
-      : 0
+    // データが取得できなかった場合はフォールバック
+    if (usage.length === 0) {
+      console.error('Supabase API returned no usable data:', JSON.stringify(data).slice(0, 500))
+      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
+    }
+
+    const maxPercentage = Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage), 0)
 
     return {
       name: 'Supabase',
