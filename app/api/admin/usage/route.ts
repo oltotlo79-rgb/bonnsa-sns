@@ -166,25 +166,40 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   try {
     const usage: ServiceUsage['usage'] = []
 
-    // Organization billing usageエンドポイントを使用
-    const usageResponse = await fetch(
-      `https://api.supabase.com/v1/organizations/${orgId}/billing/usage`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        next: { revalidate: 300 },
-      }
-    )
+    // 複数のエンドポイントを試す
+    let usageData: Record<string, unknown> | null = null
 
-    if (!usageResponse.ok) {
-      const errorText = await usageResponse.text()
-      console.error('Supabase billing API error:', usageResponse.status, errorText)
-      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, `API error: ${usageResponse.status}`)
+    // 1. Organization usageエンドポイント
+    const endpoints = [
+      `https://api.supabase.com/v1/organizations/${orgId}/usage`,
+      `https://api.supabase.com/v1/projects/${projectRef}/usage`,
+      `https://api.supabase.com/v1/projects/${projectRef}`,
+    ]
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          next: { revalidate: 300 },
+        })
+
+        if (response.ok) {
+          usageData = await response.json()
+          console.log(`Supabase API success (${endpoint}):`, JSON.stringify(usageData).slice(0, 500))
+          break
+        } else {
+          console.log(`Supabase API ${endpoint}: ${response.status}`)
+        }
+      } catch (e) {
+        console.log(`Supabase API ${endpoint} error:`, e)
+      }
     }
 
-    const usageData = await usageResponse.json()
-    console.log('Supabase usage data:', JSON.stringify(usageData).slice(0, 1000))
+    if (!usageData) {
+      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, '全APIエンドポイント失敗')
+    }
 
     // usageDataは配列の場合がある（各プロジェクトのデータ）
     const projectUsage = Array.isArray(usageData)
