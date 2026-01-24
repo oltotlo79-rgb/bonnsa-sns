@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { createMockPrismaClient, mockUser, mockDraft, mockPost } from '../../utils/test-utils'
+import { createMockPrismaClient, mockUser, mockDraft } from '../../utils/test-utils'
 
 // Prismaモック
 const mockPrisma = createMockPrismaClient()

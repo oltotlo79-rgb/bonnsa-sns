@@ -17,10 +17,6 @@ jest.mock('@/lib/actions/subscription', () => ({
   createCheckoutSession: (...args: unknown[]) => mockCreateCheckoutSession(...args),
 }))
 
-// window.location.assign モック
-const mockLocationAssign = jest.fn()
-const originalLocation = window.location
-
 const defaultProps = {
   isPremium: false,
   priceId: 'price_monthly',

@@ -90,7 +90,6 @@ describe('BonsaiRecordForm', () => {
   })
 
   it('テキストも画像もない場合はエラー', async () => {
-    const user = userEvent.setup()
     render(<BonsaiRecordForm bonsaiId="bonsai-1" />)
 
     // ボタンは無効なのでクリックしても何も起きない

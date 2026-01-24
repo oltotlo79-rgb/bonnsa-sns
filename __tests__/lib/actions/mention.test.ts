@@ -229,7 +229,7 @@ describe('Mention Actions', () => {
       ])
 
       const { getRecentMentionedUsers } = await import('@/lib/actions/mention')
-      const result = await getRecentMentionedUsers(3)
+      await getRecentMentionedUsers(3)
 
       expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

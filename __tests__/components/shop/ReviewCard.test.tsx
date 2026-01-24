@@ -27,9 +27,8 @@ jest.mock('@/components/report/ReportButton', () => ({
 import { ReviewCard } from '@/components/shop/ReviewCard'
 
 // モック関数にアクセス
-import { deleteReview, updateReview } from '@/lib/actions/review'
+import { deleteReview } from '@/lib/actions/review'
 const mockDeleteReview = deleteReview as jest.Mock
-const mockUpdateReview = updateReview as jest.Mock
 
 // Next-Auth モック
 jest.mock('next-auth/react', () => ({

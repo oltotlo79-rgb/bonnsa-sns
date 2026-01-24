@@ -169,10 +169,45 @@ export const logger = {
     if (isDevelopment) {
       console.error(...args)
     }
-    // TODO: 本番環境では Sentry などの外部サービスに送信
-    // if (!isDevelopment) {
-    //   sendToExternalService('error', args)
-    // }
+
+    // 本番環境では Sentry にエラーを送信
+    if (!isDevelopment && typeof window !== 'undefined') {
+      // クライアントサイドでのSentry送信
+      import('@sentry/nextjs').then((Sentry) => {
+        const error = args.find((arg) => arg instanceof Error)
+        if (error) {
+          Sentry.captureException(error, {
+            extra: { args: args.filter((arg) => !(arg instanceof Error)) },
+          })
+        } else {
+          Sentry.captureMessage(args.map(String).join(' '), {
+            level: 'error',
+            extra: { args },
+          })
+        }
+      }).catch(() => {
+        // Sentryが利用できない場合は無視
+      })
+    } else if (!isDevelopment) {
+      // サーバーサイドでのSentry送信
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Sentry = require('@sentry/nextjs')
+        const error = args.find((arg) => arg instanceof Error)
+        if (error) {
+          Sentry.captureException(error, {
+            extra: { args: args.filter((arg) => !(arg instanceof Error)) },
+          })
+        } else {
+          Sentry.captureMessage(args.map(String).join(' '), {
+            level: 'error',
+            extra: { args },
+          })
+        }
+      } catch {
+        // Sentryが利用できない場合は無視
+      }
+    }
   },
 
   /**

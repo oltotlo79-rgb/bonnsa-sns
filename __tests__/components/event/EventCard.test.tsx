@@ -9,9 +9,6 @@ tomorrow.setDate(tomorrow.getDate() + 1)
 const yesterday = new Date()
 yesterday.setDate(yesterday.getDate() - 1)
 
-// 今日の日付を作成
-const today = new Date()
-
 const mockEvent = {
   id: 'event-1',
   title: '春の盆栽展示会',
