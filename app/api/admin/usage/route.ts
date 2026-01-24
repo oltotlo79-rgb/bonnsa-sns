@@ -72,8 +72,9 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
     const FREE_TIER_GB = 10
     const PRICE_PER_GB = 0.015
 
-    const storageGB = totalSize / (1024 * 1024 * 1024)
-    const storageMB = totalSize / (1024 * 1024)
+    // Cloudflareと同じ10進法で計算 (1GB = 1,000,000,000 bytes)
+    const storageGB = totalSize / (1000 * 1000 * 1000)
+    const storageMB = totalSize / (1000 * 1000)
 
     const usage: ServiceUsage['usage'] = []
 
@@ -86,11 +87,12 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
         percentage: Math.round((storageGB / FREE_TIER_GB) * 100),
       })
     } else {
+      // 10進法: 10GB = 10,000 MB
       usage.push({
         current: Math.round(storageMB * 100) / 100,
-        limit: FREE_TIER_GB * 1024,
+        limit: FREE_TIER_GB * 1000,
         unit: 'MB (ストレージ)',
-        percentage: Math.round((storageMB / (FREE_TIER_GB * 1024)) * 100),
+        percentage: Math.round((storageMB / (FREE_TIER_GB * 1000)) * 100),
       })
     }
 
