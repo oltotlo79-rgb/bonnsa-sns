@@ -148,14 +148,11 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   const usage: ServiceUsage['usage'] = []
 
   try {
-    // データベースサイズを取得（全テーブル+インデックスの合計）
-    // Supabaseダッシュボードと同じ計算方法を使用
+    // データベースサイズを取得
+    // pg_database_sizeはPostgreSQLの標準関数だが、Supabaseダッシュボードの値とは
+    // マネージドサービスのオーバーヘッド分だけ差異が生じる場合がある
     const dbSizeResult = await prisma.$queryRaw<{ size: bigint }[]>`
-      SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0) as size
-      FROM pg_class c
-      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-        AND c.relkind IN ('r', 'i', 'm')
+      SELECT pg_database_size(current_database()) as size
     `
 
     if (dbSizeResult && dbSizeResult[0]) {
@@ -212,7 +209,7 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     name: 'Supabase',
     status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
     usage,
-    helpText: '帯域幅(5GB/月)はダッシュボードで確認',
+    helpText: 'DBサイズはダッシュボードと異なる場合あり。帯域幅(5GB/月)も要確認',
     dashboardUrl: projectRef
       ? `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`
       : 'https://supabase.com/dashboard',
