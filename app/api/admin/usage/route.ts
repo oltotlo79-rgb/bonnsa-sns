@@ -244,7 +244,7 @@ async function getSupabaseUsageFromPlatformAPI(
   }
 }
 
-// Prismaで直接取得
+// Prismaで直接取得（より正確なディスク使用量）
 async function getSupabaseUsageFromDBDirect(
   projectRef: string | undefined,
   LIMITS: { dbSizeGB: number; storageSizeGB: number; egressGB: number; mau: number },
@@ -253,13 +253,28 @@ async function getSupabaseUsageFromDBDirect(
   const usage: ServiceUsage['usage'] = []
 
   try {
-    // データベースサイズ（pg_database_size）
+    // pg_database_size: データベース全体のサイズ
     const dbSizeResult = await prisma.$queryRaw<{ size: bigint }[]>`
       SELECT pg_database_size(current_database()) as size
     `
 
+    // 全スキーマのテーブルサイズ（auth, storage, public等すべて含む）
+    const allTablesResult = await prisma.$queryRaw<{ total_size: bigint }[]>`
+      SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0)::bigint as total_size
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE c.relkind IN ('r', 'm', 'p')
+        AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+    `
+
     if (dbSizeResult && dbSizeResult[0]) {
-      const sizeBytes = Number(dbSizeResult[0].size)
+      const dbSizeBytes = Number(dbSizeResult[0].size)
+      const allTablesBytes = allTablesResult?.[0]?.total_size
+        ? Number(allTablesResult[0].total_size)
+        : 0
+
+      // pg_database_sizeを使用（これがダッシュボードに最も近い）
+      const sizeBytes = dbSizeBytes
       const currentGB = sizeBytes / (1000 * 1000 * 1000)
 
       usage.push({
@@ -296,7 +311,7 @@ async function getSupabaseUsageFromDBDirect(
     name: 'Supabase',
     status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
     usage,
-    helpText: '※APIでは取得不可。正確な値はダッシュボードで確認',
+    helpText: '※pg_database_size()による概算値',
     dashboardUrl,
     lastUpdated: new Date().toISOString(),
   }
