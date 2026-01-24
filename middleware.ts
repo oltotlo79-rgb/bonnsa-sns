@@ -116,13 +116,14 @@ export default auth((req) => {
 
   const isLoggedIn = !!req.auth
 
-  // 認証済みユーザーが認証ページにアクセスした場合 → フィードへリダイレクト
+  // 認証済みユーザーがトップページまたは認証ページにアクセスした場合 → フィードへリダイレクト
   const authOnlyPaths = ['/login', '/register', '/password-reset']
   const isAuthPage = authOnlyPaths.some((path) =>
     nextUrl.pathname.startsWith(path)
   )
+  const isTopPage = nextUrl.pathname === '/'
 
-  if (isAuthPage && isLoggedIn) {
+  if ((isAuthPage || isTopPage) && isLoggedIn) {
     return addSecurityHeaders(NextResponse.redirect(new URL('/feed', nextUrl)))
   }
 
