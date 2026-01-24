@@ -29,6 +29,7 @@ interface SentryResponse {
   debug?: {
     url?: string
     tokenLength?: number
+    tokenPrefix?: string
     org?: string
     project?: string
   }
@@ -159,7 +160,7 @@ export function SentryErrors() {
           {data?.debug && (
             <div className="mt-2 text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded">
               <p>URL: {data.debug.url}</p>
-              <p>Token長: {data.debug.tokenLength}</p>
+              <p>Token: {data.debug.tokenPrefix}... (長さ: {data.debug.tokenLength})</p>
               <p>Org: {data.debug.org} / Project: {data.debug.project}</p>
             </div>
           )}

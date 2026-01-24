@@ -49,13 +49,19 @@ export async function GET() {
     // sntrys_ トークンの場合、埋め込まれたリージョンURLを使用
     if (authToken.startsWith('sntrys_')) {
       try {
-        const payloadBase64 = authToken.split('_')[1].split('_')[0]
-        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString())
-        if (payload.region_url) {
-          baseUrl = payload.region_url
+        // sntrys_<base64payload>_<signature> の形式
+        const parts = authToken.split('_')
+        if (parts.length >= 2) {
+          const payloadBase64 = parts[1]
+          const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString())
+          console.log('Parsed token payload:', payload)
+          if (payload.region_url) {
+            baseUrl = payload.region_url
+            console.log('Using region URL:', baseUrl)
+          }
         }
       } catch (e) {
-        console.log('Could not parse token payload, using default URL')
+        console.log('Could not parse token payload, using default URL:', e)
       }
     }
 
@@ -89,6 +95,8 @@ export async function GET() {
         helpMessage = 'トークンの権限不足です。Internal Integrationで作成してください。'
       } else if (response.status === 401) {
         helpMessage = `トークンが無効です。詳細: ${errorDetail}`
+      } else if (response.status === 400) {
+        helpMessage = `リクエストエラー: ${errorDetail}`
       } else if (response.status === 404) {
         helpMessage = 'プロジェクトが見つかりません。SENTRY_ORG/SENTRY_PROJECTを確認してください。'
       }
@@ -101,6 +109,7 @@ export async function GET() {
         debug: {
           url: apiUrl,
           tokenLength: authToken.length,
+          tokenPrefix: authToken.substring(0, 15),
           org,
           project,
         }
