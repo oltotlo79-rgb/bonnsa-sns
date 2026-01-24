@@ -43,9 +43,11 @@ export async function GET() {
     }
 
     // Sentry API: 組織のIssue一覧を取得（プロジェクトでフィルタ）
-    // Organization Issues APIは新しく、より多くの機能をサポート
-    const apiUrl = `https://sentry.io/api/0/organizations/${org}/issues/?query=is:unresolved+project:${project}&limit=10`
+    // USリージョンの場合は us.sentry.io を使用
+    const baseUrl = process.env.SENTRY_API_URL || 'https://us.sentry.io'
+    const apiUrl = `${baseUrl}/api/0/organizations/${org}/issues/?query=is:unresolved+project:${project}&limit=10`
     console.log('Sentry API URL:', apiUrl)
+    console.log('Token prefix:', authToken.substring(0, 10) + '...')
 
     const response = await fetch(apiUrl, {
         headers: {
