@@ -43,8 +43,22 @@ export async function GET() {
     }
 
     // Sentry API: 組織のIssue一覧を取得（プロジェクトでフィルタ）
-    // USリージョンの場合は us.sentry.io を使用
-    const baseUrl = process.env.SENTRY_API_URL || 'https://us.sentry.io'
+    // sntrys_トークンからリージョンURLを抽出、または環境変数から取得
+    let baseUrl = process.env.SENTRY_API_URL || 'https://sentry.io'
+
+    // sntrys_ トークンの場合、埋め込まれたリージョンURLを使用
+    if (authToken.startsWith('sntrys_')) {
+      try {
+        const payloadBase64 = authToken.split('_')[1].split('_')[0]
+        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString())
+        if (payload.region_url) {
+          baseUrl = payload.region_url
+        }
+      } catch (e) {
+        console.log('Could not parse token payload, using default URL')
+      }
+    }
+
     const apiUrl = `${baseUrl}/api/0/organizations/${org}/issues/?query=is:unresolved+project:${project}&limit=10`
     console.log('Sentry API URL:', apiUrl)
     console.log('Token prefix:', authToken.substring(0, 10) + '...')
