@@ -42,10 +42,12 @@ export async function GET() {
       })
     }
 
-    // Sentry API: プロジェクトのIssue一覧を取得
-    const response = await fetch(
-      `https://sentry.io/api/0/projects/${org}/${project}/issues/?query=is:unresolved&limit=10`,
-      {
+    // Sentry API: 組織のIssue一覧を取得（プロジェクトでフィルタ）
+    // Organization Issues APIは新しく、より多くの機能をサポート
+    const apiUrl = `https://sentry.io/api/0/organizations/${org}/issues/?query=is:unresolved+project:${project}&limit=10`
+    console.log('Sentry API URL:', apiUrl)
+
+    const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
@@ -55,10 +57,21 @@ export async function GET() {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Sentry API error:', response.status, errorText)
+
+      let helpMessage = ''
+      if (response.status === 403) {
+        helpMessage = 'トークンの権限不足です。Internal Integrationで作成してください。'
+      } else if (response.status === 401) {
+        helpMessage = 'トークンが無効です。'
+      } else if (response.status === 404) {
+        helpMessage = 'プロジェクトが見つかりません。SENTRY_ORG/SENTRY_PROJECTを確認してください。'
+      }
+
       return NextResponse.json({
         success: false,
         error: `Sentry API: ${response.status}`,
-        details: errorText,
+        helpText: helpMessage,
+        helpUrl: 'https://bon-log.sentry.io/settings/developer-settings/',
       })
     }
 
