@@ -454,7 +454,6 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
             priority
           />
         </Link>
-        <p className="text-[10px] text-muted-foreground mt-1 tracking-wider">盆栽愛好家のコミュニティ</p>
       </div>
 
       {/* ナビゲーション */}
