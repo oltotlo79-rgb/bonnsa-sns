@@ -128,6 +128,9 @@ model User {
   // 盆栽園変更リクエスト
   shopChangeRequests ShopChangeRequest[]
 
+  // アナリティクス
+  analytics UserAnalytics[]
+
   @@map("users")
 }
 
@@ -737,6 +740,8 @@ model UserAnalytics {
   likesReceived Int      @default(0) @map("likes_received")
   newFollowers  Int      @default(0) @map("new_followers")
   createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId])

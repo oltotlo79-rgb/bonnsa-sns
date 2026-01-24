@@ -666,21 +666,49 @@ export async function deleteAccount() {
     return { error: '認証が必要です' }
   }
 
+  const userId = session.user.id
+
   // ------------------------------------------------------------
-  // アカウント削除
+  // トランザクションで全データを削除
   // ------------------------------------------------------------
 
-  /**
-   * Prismaのカスケード削除により関連データも削除される
-   *
-   * onDelete: Cascade がスキーマで設定されているため、
-   * User を削除すると関連する全てのデータが自動削除
-   */
-  await prisma.user.delete({
-    where: { id: session.user.id },
-  })
+  try {
+    await prisma.$transaction(async (tx) => {
+      // UserAnalytics を明示的に削除（リレーションが後から追加されたため）
+      await tx.userAnalytics.deleteMany({
+        where: { userId },
+      })
 
-  return { success: true }
+      // メッセージ関連
+      await tx.message.deleteMany({
+        where: { senderId: userId },
+      })
+
+      await tx.conversationParticipant.deleteMany({
+        where: { userId },
+      })
+
+      // 通知関連（actor として送った通知も削除）
+      await tx.notification.deleteMany({
+        where: {
+          OR: [
+            { userId },
+            { actorId: userId },
+          ],
+        },
+      })
+
+      // ユーザーを削除（カスケード削除で残りのデータも削除される）
+      await tx.user.delete({
+        where: { id: userId },
+      })
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Account deletion error:', error)
+    return { error: 'アカウントの削除に失敗しました' }
+  }
 }
 
 // ============================================================
