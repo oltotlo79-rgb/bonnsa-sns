@@ -206,10 +206,19 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
       ? usageData.find((u: { project_ref?: string }) => u.project_ref === projectRef) || usageData[0]
       : usageData
 
-    // 様々なフィールド名に対応
+    // databaseフィールドの中身を確認
+    const dbField = (projectUsage as Record<string, unknown>)?.database as Record<string, unknown> | undefined
+    if (dbField) {
+      console.log('Database field keys:', Object.keys(dbField).join(', '))
+      console.log('Database field:', JSON.stringify(dbField).slice(0, 500))
+    }
+
+    // 様々なフィールド名に対応（databaseフィールド内も検索）
     const dbSize = projectUsage?.db_size ?? projectUsage?.database_size ??
+                   dbField?.size ?? dbField?.db_size ?? dbField?.disk_size ??
                    projectUsage?.usage?.db_size ?? projectUsage?.metrics?.db_size
     const storageSize = projectUsage?.storage_size ?? projectUsage?.storage ??
+                        dbField?.storage_size ??
                         projectUsage?.usage?.storage_size ?? projectUsage?.metrics?.storage_size
     const egress = projectUsage?.egress ?? projectUsage?.db_egress ??
                    projectUsage?.usage?.egress ?? projectUsage?.metrics?.egress
@@ -264,10 +273,11 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
 
     // データが取得できなかった場合はフォールバック
     if (usage.length === 0) {
-      // 利用可能なキーを表示
-      const availableKeys = Object.keys(projectUsage || usageData || {}).join(', ')
+      // 利用可能なキーを表示（databaseフィールドも含む）
+      const topKeys = Object.keys(projectUsage || usageData || {}).join(', ')
+      const dbKeys = dbField ? `db:{${Object.keys(dbField).join(',')}}` : ''
       console.error('Supabase API data:', JSON.stringify(usageData).slice(0, 1000))
-      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, `キー: ${availableKeys.slice(0, 100)}`)
+      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, `${topKeys.slice(0, 60)} ${dbKeys}`.trim())
     }
 
     const maxPercentage = Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage), 0)
