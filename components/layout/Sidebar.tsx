@@ -422,15 +422,17 @@ export function Sidebar({ userId, isPremium }: SidebarProps) {
   /**
    * 全ナビゲーション項目を動的に構築
    *
-   * 1. 基本ナビゲーション
-   * 2. プレミアム会員専用（isPremiumの場合）
-   * 3. プロフィールリンク（userIdがある場合）
-   * 4. 設定リンク
+   * 1. ホーム
+   * 2. プロフィール（userIdがある場合）
+   * 3. その他の基本ナビゲーション
+   * 4. プレミアム会員専用（isPremiumの場合）
+   * 5. 設定リンク
    */
   const allNavItems: NavItem[] = [
-    ...navItems,
-    ...(isPremium ? premiumNavItems : []),
+    navItems[0], // ホーム
     ...(userId ? [{ href: `/users/${userId}`, icon: UserIcon, label: 'プロフィール' }] : []),
+    ...navItems.slice(1), // 検索、通知、メッセージ、ブックマーク、マイ盆栽、盆栽園マップ、イベント
+    ...(isPremium ? premiumNavItems : []),
     { href: '/settings', icon: SettingsIcon, label: '設定' },
   ]
 
