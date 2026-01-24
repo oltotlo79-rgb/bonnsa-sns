@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getAdminStats } from '@/lib/actions/admin'
 import { getReportStats } from '@/lib/actions/report'
 import { getPendingShopChangeRequestCount } from '@/lib/actions/shop'
+import { SentryErrors } from './SentryErrors'
 
 function UsersIcon({ className }: { className?: string }) {
   return (
@@ -274,6 +275,9 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Sentryエラー */}
+      <SentryErrors />
     </div>
   )
 }
