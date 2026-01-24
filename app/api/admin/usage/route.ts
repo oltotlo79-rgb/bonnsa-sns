@@ -135,10 +135,11 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
   }
 }
 
-// Supabaseの使用量をManagement APIで取得
+// Supabaseの使用量を取得
+// 注: Supabase Management APIは使用量データを公開していないため、
+// pg_database_size()を使用（ダッシュボードの値とは異なる）
 async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   const projectRef = extractProjectRef()
-  const accessToken = process.env.SUPABASE_ACCESS_TOKEN
   const orgId = process.env.SUPABASE_ORG_ID
 
   // Free tier制限値
@@ -153,155 +154,14 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     ? `https://supabase.com/dashboard/org/${orgId}/usage?projectRef=${projectRef}`
     : 'https://supabase.com/dashboard'
 
-  // 必要な設定がない場合はDB直接クエリにフォールバック
-  if (!accessToken || !projectRef || !orgId) {
-    const missing = []
-    if (!accessToken) missing.push('SUPABASE_ACCESS_TOKEN')
-    if (!projectRef) missing.push('SUPABASE_PROJECT_REF')
-    if (!orgId) missing.push('SUPABASE_ORG_ID')
-
-    return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, missing.join(', '))
-  }
-
-  try {
-    const usage: ServiceUsage['usage'] = []
-
-    // 複数のエンドポイントを試す
-    let usageData: Record<string, unknown> | null = null
-
-    // 1. Organization usageエンドポイント
-    const endpoints = [
-      `https://api.supabase.com/v1/organizations/${orgId}/usage`,
-      `https://api.supabase.com/v1/projects/${projectRef}/usage`,
-      `https://api.supabase.com/v1/projects/${projectRef}`,
-    ]
-
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          next: { revalidate: 300 },
-        })
-
-        if (response.ok) {
-          usageData = await response.json()
-          console.log(`Supabase API success (${endpoint}):`, JSON.stringify(usageData).slice(0, 500))
-          break
-        } else {
-          console.log(`Supabase API ${endpoint}: ${response.status}`)
-        }
-      } catch (e) {
-        console.log(`Supabase API ${endpoint} error:`, e)
-      }
-    }
-
-    if (!usageData) {
-      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, '全APIエンドポイント失敗')
-    }
-
-    // usageDataは配列の場合がある（各プロジェクトのデータ）
-    const projectUsage = Array.isArray(usageData)
-      ? usageData.find((u: { project_ref?: string }) => u.project_ref === projectRef) || usageData[0]
-      : usageData
-
-    // databaseフィールドの中身を確認
-    const dbField = (projectUsage as Record<string, unknown>)?.database as Record<string, unknown> | undefined
-    if (dbField) {
-      console.log('Database field keys:', Object.keys(dbField).join(', '))
-      console.log('Database field:', JSON.stringify(dbField).slice(0, 500))
-    }
-
-    // 様々なフィールド名に対応（databaseフィールド内も検索）
-    const dbSize = projectUsage?.db_size ?? projectUsage?.database_size ??
-                   dbField?.size ?? dbField?.db_size ?? dbField?.disk_size ??
-                   projectUsage?.usage?.db_size ?? projectUsage?.metrics?.db_size
-    const storageSize = projectUsage?.storage_size ?? projectUsage?.storage ??
-                        dbField?.storage_size ??
-                        projectUsage?.usage?.storage_size ?? projectUsage?.metrics?.storage_size
-    const egress = projectUsage?.egress ?? projectUsage?.db_egress ??
-                   projectUsage?.usage?.egress ?? projectUsage?.metrics?.egress
-    const mau = projectUsage?.mau ?? projectUsage?.monthly_active_users ??
-                projectUsage?.usage?.mau ?? projectUsage?.metrics?.mau
-
-    // DBサイズ (GB単位で返される想定)
-    if (dbSize !== undefined) {
-      const dbSizeGB = typeof dbSize === 'number' ?
-        (dbSize > 100 ? dbSize / (1000 * 1000 * 1000) : dbSize) : 0
-      usage.push({
-        current: Math.round(dbSizeGB * 1000) / 1000,
-        limit: LIMITS.dbSizeGB,
-        unit: 'GB (データベース)',
-        percentage: Math.round((dbSizeGB / LIMITS.dbSizeGB) * 100),
-      })
-    }
-
-    // ストレージサイズ
-    if (storageSize !== undefined) {
-      const storageSizeGB = typeof storageSize === 'number' ?
-        (storageSize > 100 ? storageSize / (1000 * 1000 * 1000) : storageSize) : 0
-      usage.push({
-        current: Math.round(storageSizeGB * 1000) / 1000,
-        limit: LIMITS.storageSizeGB,
-        unit: 'GB (ストレージ)',
-        percentage: Math.round((storageSizeGB / LIMITS.storageSizeGB) * 100),
-      })
-    }
-
-    // Egress
-    if (egress !== undefined) {
-      const egressGB = typeof egress === 'number' ?
-        (egress > 100 ? egress / (1000 * 1000 * 1000) : egress) : 0
-      usage.push({
-        current: Math.round(egressGB * 1000) / 1000,
-        limit: LIMITS.egressGB,
-        unit: 'GB (帯域幅)',
-        percentage: Math.round((egressGB / LIMITS.egressGB) * 100),
-      })
-    }
-
-    // MAU
-    if (mau !== undefined) {
-      usage.push({
-        current: mau,
-        limit: LIMITS.mau,
-        unit: 'MAU',
-        percentage: Math.round((mau / LIMITS.mau) * 100),
-      })
-    }
-
-    // データが取得できなかった場合はフォールバック
-    if (usage.length === 0) {
-      // 利用可能なキーを表示（databaseフィールドも含む）
-      const topKeys = Object.keys(projectUsage || usageData || {}).join(', ')
-      const dbKeys = dbField ? `db:{${Object.keys(dbField).join(',')}}` : ''
-      console.error('Supabase API data:', JSON.stringify(usageData).slice(0, 1000))
-      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl, `${topKeys.slice(0, 60)} ${dbKeys}`.trim())
-    }
-
-    const maxPercentage = Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage), 0)
-
-    return {
-      name: 'Supabase',
-      status: maxPercentage >= 100 ? 'error' : maxPercentage >= 90 ? 'warning' : 'ok',
-      usage,
-      dashboardUrl,
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    console.error('Supabase usage error:', error)
-    return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl,
-      error instanceof Error ? error.message : 'Unknown error')
-  }
+  return getSupabaseUsageFromDBDirect(projectRef, LIMITS, dashboardUrl)
 }
 
-// フォールバック: Prismaで直接取得
-async function getSupabaseUsageFromDBFallback(
+// Prismaで直接取得
+async function getSupabaseUsageFromDBDirect(
   projectRef: string | undefined,
   LIMITS: { dbSizeGB: number; storageSizeGB: number; egressGB: number; mau: number },
-  dashboardUrl: string,
-  reason?: string
+  dashboardUrl: string
 ): Promise<ServiceUsage> {
   const usage: ServiceUsage['usage'] = []
 
@@ -315,22 +175,12 @@ async function getSupabaseUsageFromDBFallback(
       const sizeBytes = Number(dbSizeResult[0].size)
       const currentGB = sizeBytes / (1000 * 1000 * 1000)
 
-      if (currentGB >= 0.01) {
-        usage.push({
-          current: Math.round(currentGB * 1000) / 1000,
-          limit: LIMITS.dbSizeGB,
-          unit: 'GB (DB・参考値)',
-          percentage: Math.round((currentGB / LIMITS.dbSizeGB) * 100),
-        })
-      } else {
-        const currentMB = sizeBytes / (1000 * 1000)
-        usage.push({
-          current: Math.round(currentMB * 100) / 100,
-          limit: LIMITS.dbSizeGB * 1000,
-          unit: 'MB (DB・参考値)',
-          percentage: Math.round((currentMB / (LIMITS.dbSizeGB * 1000)) * 100),
-        })
-      }
+      usage.push({
+        current: Math.round(currentGB * 1000) / 1000,
+        limit: LIMITS.dbSizeGB,
+        unit: 'GB (データベース)',
+        percentage: Math.round((currentGB / LIMITS.dbSizeGB) * 100),
+      })
     }
 
     // ユーザー数
@@ -343,7 +193,7 @@ async function getSupabaseUsageFromDBFallback(
     })
 
   } catch (error) {
-    console.error('Supabase DB fallback error:', error)
+    console.error('Supabase DB error:', error)
     return {
       name: 'Supabase',
       status: 'error',
@@ -355,17 +205,11 @@ async function getSupabaseUsageFromDBFallback(
 
   const maxPercentage = usage.length > 0 ? Math.max(...usage.map(u => u.percentage)) : 0
 
-  // ヘルプテキストを構築
-  let helpText = reason
-    ? `API: ${reason}`
-    : 'SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_ORG_ID を設定してください'
-
   return {
     name: 'Supabase',
     status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
     usage,
-    helpText,
-    helpUrl: 'https://supabase.com/dashboard/account/tokens',
+    helpText: '※APIでは取得不可。正確な値はダッシュボードで確認',
     dashboardUrl,
     lastUpdated: new Date().toISOString(),
   }
