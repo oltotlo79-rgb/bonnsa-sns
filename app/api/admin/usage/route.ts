@@ -135,37 +135,133 @@ async function getCloudflareR2UsageWithS3(): Promise<ServiceUsage> {
   }
 }
 
-// Supabaseの使用量をPrismaで直接取得
+// Supabaseの使用量をManagement APIで取得
 async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
   const projectRef = extractProjectRef()
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN
 
-  // Free tier制限値 (Supabaseは10進法で表示: 500MB = 0.5GB)
+  // Free tier制限値
   const LIMITS = {
-    dbSizeGB: 0.5, // 500MB = 0.5GB
-    mau: 50000, // 50,000 MAU
+    dbSizeGB: 0.5, // 500MB
+    storageSizeGB: 1, // 1GB
+    egressGB: 5, // 5GB
+    mau: 50000,
   }
 
+  const dashboardUrl = projectRef
+    ? `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`
+    : 'https://supabase.com/dashboard'
+
+  // Management APIトークンがない場合はDB直接クエリにフォールバック
+  if (!accessToken || !projectRef) {
+    return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
+  }
+
+  try {
+    // Supabase Management APIで使用量を取得
+    const response = await fetch(
+      `https://api.supabase.com/v1/projects/${projectRef}/usage`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 300 },
+      }
+    )
+
+    if (!response.ok) {
+      // APIエラーの場合はフォールバック
+      console.error('Supabase API error:', response.status)
+      return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
+    }
+
+    const data = await response.json()
+    const usage: ServiceUsage['usage'] = []
+
+    // データベースサイズ
+    if (data.db_size !== undefined) {
+      const dbSizeGB = data.db_size / (1000 * 1000 * 1000)
+      usage.push({
+        current: Math.round(dbSizeGB * 1000) / 1000,
+        limit: LIMITS.dbSizeGB,
+        unit: 'GB (データベース)',
+        percentage: Math.round((dbSizeGB / LIMITS.dbSizeGB) * 100),
+      })
+    }
+
+    // ストレージサイズ
+    if (data.storage_size !== undefined) {
+      const storageSizeGB = data.storage_size / (1000 * 1000 * 1000)
+      usage.push({
+        current: Math.round(storageSizeGB * 1000) / 1000,
+        limit: LIMITS.storageSizeGB,
+        unit: 'GB (ストレージ)',
+        percentage: Math.round((storageSizeGB / LIMITS.storageSizeGB) * 100),
+      })
+    }
+
+    // 帯域幅 (Egress)
+    if (data.db_egress !== undefined) {
+      const egressGB = data.db_egress / (1000 * 1000 * 1000)
+      usage.push({
+        current: Math.round(egressGB * 1000) / 1000,
+        limit: LIMITS.egressGB,
+        unit: 'GB (帯域幅)',
+        percentage: Math.round((egressGB / LIMITS.egressGB) * 100),
+      })
+    }
+
+    // MAU
+    if (data.monthly_active_users !== undefined) {
+      usage.push({
+        current: data.monthly_active_users,
+        limit: LIMITS.mau,
+        unit: 'MAU',
+        percentage: Math.round((data.monthly_active_users / LIMITS.mau) * 100),
+      })
+    }
+
+    const maxPercentage = usage.length > 0
+      ? Math.max(...usage.filter(u => u.limit > 0).map(u => u.percentage))
+      : 0
+
+    return {
+      name: 'Supabase',
+      status: maxPercentage >= 100 ? 'error' : maxPercentage >= 90 ? 'warning' : 'ok',
+      usage,
+      dashboardUrl,
+      lastUpdated: new Date().toISOString(),
+    }
+  } catch (error) {
+    console.error('Supabase usage error:', error)
+    return getSupabaseUsageFromDBFallback(projectRef, LIMITS, dashboardUrl)
+  }
+}
+
+// フォールバック: Prismaで直接取得
+async function getSupabaseUsageFromDBFallback(
+  projectRef: string | undefined,
+  LIMITS: { dbSizeGB: number; storageSizeGB: number; egressGB: number; mau: number },
+  dashboardUrl: string
+): Promise<ServiceUsage> {
   const usage: ServiceUsage['usage'] = []
 
   try {
-    // データベースサイズを取得
-    // pg_database_sizeはPostgreSQLの標準関数だが、Supabaseダッシュボードの値とは
-    // マネージドサービスのオーバーヘッド分だけ差異が生じる場合がある
+    // データベースサイズ（pg_database_size）
     const dbSizeResult = await prisma.$queryRaw<{ size: bigint }[]>`
       SELECT pg_database_size(current_database()) as size
     `
 
     if (dbSizeResult && dbSizeResult[0]) {
       const sizeBytes = Number(dbSizeResult[0].size)
-      // Supabaseと同じ10進法で計算 (1GB = 1,000,000,000 bytes)
       const currentGB = sizeBytes / (1000 * 1000 * 1000)
 
-      // GBまたはMBで表示
-      if (currentGB >= 0.1) {
+      if (currentGB >= 0.01) {
         usage.push({
           current: Math.round(currentGB * 1000) / 1000,
           limit: LIMITS.dbSizeGB,
-          unit: 'GB (データベース)',
+          unit: 'GB (DB・参考値)',
           percentage: Math.round((currentGB / LIMITS.dbSizeGB) * 100),
         })
       } else {
@@ -173,13 +269,13 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
         usage.push({
           current: Math.round(currentMB * 100) / 100,
           limit: LIMITS.dbSizeGB * 1000,
-          unit: 'MB (データベース)',
+          unit: 'MB (DB・参考値)',
           percentage: Math.round((currentMB / (LIMITS.dbSizeGB * 1000)) * 100),
         })
       }
     }
 
-    // ユーザー数（MAU）
+    // ユーザー数
     const userCount = await prisma.user.count()
     usage.push({
       current: userCount,
@@ -188,17 +284,13 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
       percentage: Math.round((userCount / LIMITS.mau) * 100),
     })
 
-    // ※ファイルストレージはR2を使用しているため、Supabase Storageは表示しない
-
   } catch (error) {
-    console.error('Supabase usage error:', error)
+    console.error('Supabase DB fallback error:', error)
     return {
       name: 'Supabase',
       status: 'error',
       error: error instanceof Error ? error.message : 'データベースクエリに失敗',
-      dashboardUrl: projectRef
-        ? `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`
-        : 'https://supabase.com/dashboard',
+      dashboardUrl,
       lastUpdated: new Date().toISOString(),
     }
   }
@@ -209,10 +301,9 @@ async function getSupabaseUsageFromDB(): Promise<ServiceUsage> {
     name: 'Supabase',
     status: maxPercentage >= 90 ? 'warning' : maxPercentage >= 100 ? 'error' : 'ok',
     usage,
-    helpText: 'DBサイズはダッシュボードと異なる場合あり。帯域幅(5GB/月)も要確認',
-    dashboardUrl: projectRef
-      ? `https://supabase.com/dashboard/project/${projectRef}/settings/billing/usage`
-      : 'https://supabase.com/dashboard',
+    helpText: '正確な値にはSUPABASE_ACCESS_TOKENが必要',
+    helpUrl: 'https://supabase.com/dashboard/account/tokens',
+    dashboardUrl,
     lastUpdated: new Date().toISOString(),
   }
 }
