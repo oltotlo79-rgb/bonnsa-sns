@@ -26,6 +26,12 @@ interface SentryResponse {
   helpUrl?: string
   dashboardUrl?: string
   fetchedAt?: string
+  debug?: {
+    url?: string
+    tokenLength?: number
+    org?: string
+    project?: string
+  }
 }
 
 function AlertCircleIcon({ className }: { className?: string }) {
@@ -149,6 +155,13 @@ export function SentryErrors() {
           <p className="text-sm text-yellow-700">{data?.error}</p>
           {data?.helpText && (
             <p className="text-sm text-yellow-600 mt-1">{data.helpText}</p>
+          )}
+          {data?.debug && (
+            <div className="mt-2 text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded">
+              <p>URL: {data.debug.url}</p>
+              <p>Token長: {data.debug.tokenLength}</p>
+              <p>Org: {data.debug.org} / Project: {data.debug.project}</p>
+            </div>
           )}
           {data?.helpUrl && (
             <a

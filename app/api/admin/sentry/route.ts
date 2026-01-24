@@ -59,12 +59,22 @@ export async function GET() {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('Sentry API error:', response.status, errorText)
+      console.error('Request URL:', apiUrl)
+      console.error('Token length:', authToken.length)
 
       let helpMessage = ''
+      let errorDetail = ''
+      try {
+        const errorJson = JSON.parse(errorText)
+        errorDetail = errorJson.detail || errorText
+      } catch {
+        errorDetail = errorText
+      }
+
       if (response.status === 403) {
         helpMessage = 'トークンの権限不足です。Internal Integrationで作成してください。'
       } else if (response.status === 401) {
-        helpMessage = 'トークンが無効です。'
+        helpMessage = `トークンが無効です。詳細: ${errorDetail}`
       } else if (response.status === 404) {
         helpMessage = 'プロジェクトが見つかりません。SENTRY_ORG/SENTRY_PROJECTを確認してください。'
       }
@@ -74,6 +84,12 @@ export async function GET() {
         error: `Sentry API: ${response.status}`,
         helpText: helpMessage,
         helpUrl: 'https://bon-log.sentry.io/settings/developer-settings/',
+        debug: {
+          url: apiUrl,
+          tokenLength: authToken.length,
+          org,
+          project,
+        }
       })
     }
 
