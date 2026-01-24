@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -19,7 +19,6 @@ import { deleteAccount } from '@/lib/actions/user'
 export function DeleteAccountButton() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   async function handleDelete() {
     setLoading(true)
@@ -31,7 +30,8 @@ export function DeleteAccountButton() {
       setError(result.error)
       setLoading(false)
     } else {
-      router.push('/login')
+      // アカウント削除後、ログアウトしてトップページへリダイレクト
+      await signOut({ callbackUrl: '/' })
     }
   }
 
