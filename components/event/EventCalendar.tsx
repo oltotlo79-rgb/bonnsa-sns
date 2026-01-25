@@ -42,6 +42,7 @@ import {
   endOfMonth,     // 月の末日を取得
   startOfWeek,    // 週の初日を取得
   endOfWeek,      // 週の末日を取得
+  startOfDay,     // 日付の時刻を00:00:00にリセット
   eachDayOfInterval, // 期間内の全日付を配列で取得
   isSameMonth,    // 2つの日付が同じ月かどうか判定
   addMonths,      // 月を加算
@@ -146,12 +147,14 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
    * @returns その日に開催されているイベントの配列
    */
   const getEventsForDay = (day: Date) => {
+    const dayStart = startOfDay(day)
     return events.filter((event) => {
-      const eventStart = new Date(event.startDate)
+      // 時刻部分を無視して日付のみで比較
+      const eventStart = startOfDay(new Date(event.startDate))
       // 終了日がない場合は開始日を終了日として扱う
-      const eventEnd = event.endDate ? new Date(event.endDate) : eventStart
+      const eventEnd = event.endDate ? startOfDay(new Date(event.endDate)) : eventStart
       // 日付が開始日〜終了日の範囲内にあるかチェック
-      return day >= eventStart && day <= eventEnd
+      return dayStart >= eventStart && dayStart <= eventEnd
     })
   }
 
