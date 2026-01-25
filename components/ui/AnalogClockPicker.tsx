@@ -264,9 +264,11 @@ export function AnalogClockPicker({
 
   /**
    * タッチ開始時の処理
+   * preventDefaultでマウスイベントへの変換を防止
    */
   const handleTouchStart = (e: React.TouchEvent) => {
     if (disabled) return
+    e.preventDefault() // マウスイベントへの変換を防止
     const touch = e.touches[0]
     handleClockInteraction(touch.clientX, touch.clientY)
   }
@@ -276,6 +278,7 @@ export function AnalogClockPicker({
    */
   const handleTouchMove = (e: React.TouchEvent) => {
     if (disabled) return
+    e.preventDefault() // スクロールを防止
     const touch = e.touches[0]
     handleClockInteraction(touch.clientX, touch.clientY)
   }
@@ -285,6 +288,7 @@ export function AnalogClockPicker({
    */
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (disabled) return
+    e.preventDefault() // マウスイベントへの変換を防止
     const touch = e.changedTouches[0]
     handleClockInteraction(touch.clientX, touch.clientY, true)
   }
