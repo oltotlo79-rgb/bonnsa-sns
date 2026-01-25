@@ -1,8 +1,57 @@
+/**
+ * 画像・動画ギャラリーコンポーネント
+ *
+ * このファイルは、投稿に添付された画像や動画を表示するギャラリーを提供します。
+ * PostCardや投稿詳細ページで使用されます。
+ *
+ * ## 機能概要
+ * - 1〜4枚の画像・動画のグリッド表示
+ * - 画像クリックでモーダル拡大表示
+ * - 複数画像の場合は前後ナビゲーション
+ * - 動画の再生コントロール
+ * - 遅延読み込みと最適化
+ *
+ * ## レイアウト
+ * - 1枚: 全幅表示
+ * - 2枚: 2列グリッド
+ * - 3枚: 2列グリッド（1枚目が縦に長い）
+ * - 4枚: 2x2グリッド
+ *
+ * @module components/post/ImageGallery
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * React useState Hook
+ * モーダルの選択状態と画像読み込み状態の管理
+ */
 import { useState } from 'react'
+
+/**
+ * Next.js Imageコンポーネント
+ * 画像の最適化（WebP変換、リサイズ）と遅延読み込みを提供
+ */
 import Image from 'next/image'
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * メディア型
+ *
+ * 投稿に添付された画像・動画の情報
+ *
+ * @property id - メディアの一意識別子
+ * @property url - メディアのURL
+ * @property type - メディアタイプ（'image' または 'video'）
+ * @property sortOrder - 表示順序（0から開始）
+ */
 type Media = {
   id: string
   url: string
@@ -10,11 +59,27 @@ type Media = {
   sortOrder: number
 }
 
+/**
+ * ImageGalleryコンポーネントのProps型
+ *
+ * @property images - 表示するメディアの配列
+ * @property onMediaClick - メディアクリック時のカスタムハンドラ（省略時はモーダル表示）
+ */
 type ImageGalleryProps = {
   images: Media[]
   onMediaClick?: (media: Media) => void
 }
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * バツ印アイコン
+ * モーダルの閉じるボタンに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function XIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -23,6 +88,12 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 拡大アイコン
+ * 動画の拡大ボタンに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function ExpandIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -34,6 +105,12 @@ function ExpandIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 左矢印アイコン
+ * モーダル内の前へボタンに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function ChevronLeftIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -42,6 +119,12 @@ function ChevronLeftIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 右矢印アイコン
+ * モーダル内の次へボタンに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function ChevronRightIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -50,13 +133,30 @@ function ChevronRightIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// サブコンポーネント
+// ============================================================
+
 /**
- * 最適化された画像アイテム
- * Next.js Imageを使用して遅延読み込みとサイズ最適化を実現
+ * 最適化されたメディアアイテムコンポーネント
+ *
+ * Next.js Imageを使用して遅延読み込みとサイズ最適化を実現。
+ * 読み込み中はスケルトン（プレースホルダー）を表示。
+ *
+ * @param media - 表示するメディア
+ * @param priority - 優先読み込みフラグ（LCP画像に使用）
  */
 function MediaItem({ media, priority = false }: { media: Media; priority?: boolean }) {
+  /**
+   * 画像読み込み状態
+   * trueの間はスケルトンを表示
+   */
   const [isLoading, setIsLoading] = useState(true)
 
+  /**
+   * 動画の場合
+   * controlsを付与してユーザーが操作可能に
+   */
   if (media.type === 'video') {
     return (
       <video
@@ -65,6 +165,10 @@ function MediaItem({ media, priority = false }: { media: Media; priority?: boole
         preload="metadata"
         className="absolute inset-0 w-full h-full object-cover"
         onClick={(e) => {
+          /**
+           * クリックイベントの伝播を停止
+           * 親要素のクリックハンドラが発火しないように
+           */
           e.stopPropagation()
           e.preventDefault()
         }}
@@ -72,8 +176,13 @@ function MediaItem({ media, priority = false }: { media: Media; priority?: boole
     )
   }
 
+  /**
+   * 画像の場合
+   * Next.js Imageで最適化
+   */
   return (
     <>
+      {/* ローディング中のスケルトン */}
       {isLoading && (
         <div className="absolute inset-0 bg-muted animate-pulse" />
       )}
@@ -81,11 +190,19 @@ function MediaItem({ media, priority = false }: { media: Media; priority?: boole
         src={media.url}
         alt=""
         fill
+        /**
+         * sizes属性
+         * レスポンシブに応じた適切なサイズの画像を取得
+         */
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
         className={`object-cover hover:opacity-90 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         onLoad={() => setIsLoading(false)}
+        /**
+         * priorityがtrueの場合は即座に読み込み
+         * それ以外は遅延読み込み
+         */
         priority={priority}
         loading={priority ? undefined : 'lazy'}
       />
@@ -94,9 +211,19 @@ function MediaItem({ media, priority = false }: { media: Media; priority?: boole
 }
 
 /**
- * モーダル内の画像/動画表示
+ * モーダル内のメディア表示コンポーネント
+ *
+ * 拡大表示用の画像・動画表示。
+ * 動画の場合は自動再生。
+ *
+ * @param media - 表示するメディア
+ * @param onClick - クリックイベントハンドラ
  */
 function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.MouseEvent) => void }) {
+  /**
+   * 動画の場合
+   * 自動再生でモーダル表示
+   */
   if (media.type === 'video') {
     return (
       <video
@@ -104,6 +231,10 @@ function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.M
         controls
         className="max-w-full max-h-full"
         onClick={(e) => {
+          /**
+           * クリックイベントの伝播を停止
+           * モーダルが閉じないように
+           */
           e.stopPropagation()
         }}
         autoPlay
@@ -111,6 +242,10 @@ function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.M
     )
   }
 
+  /**
+   * 画像の場合
+   * 画面いっぱいに表示
+   */
   return (
     <div className="relative max-w-full max-h-full" style={{ width: '100%', height: '100%' }}>
       <Image
@@ -126,19 +261,85 @@ function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.M
   )
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * 画像・動画ギャラリーコンポーネント
+ *
+ * ## 機能
+ * - 1〜4枚のメディアをグリッド表示
+ * - sortOrderでソートして表示
+ * - クリックでモーダル拡大表示
+ * - 複数枚の場合は前後ナビゲーション
+ *
+ * ## レイアウトルール
+ * - 1枚: 全幅表示（アスペクト比16:9）
+ * - 2枚: 2列グリッド
+ * - 3枚: 2列グリッド、1枚目が2行分の高さ
+ * - 4枚: 2x2グリッド
+ *
+ * ## モーダル機能
+ * - 背景クリックで閉じる
+ * - 前後ボタンでナビゲーション
+ * - ナビゲーションドットで直接選択
+ *
+ * @param images - 表示するメディアの配列
+ * @param onMediaClick - カスタムクリックハンドラ（省略時はモーダル表示）
+ *
+ * @example
+ * ```tsx
+ * <ImageGallery
+ *   images={[
+ *     { id: '1', url: '/image1.jpg', type: 'image', sortOrder: 0 },
+ *     { id: '2', url: '/video.mp4', type: 'video', sortOrder: 1 },
+ *   ]}
+ *   onMediaClick={(media) => console.log('Clicked:', media.id)}
+ * />
+ * ```
+ */
 export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
+  // ------------------------------------------------------------
+  // 状態管理
+  // ------------------------------------------------------------
+
+  /**
+   * モーダルで選択されているメディアのインデックス
+   * nullの場合はモーダルを表示しない
+   */
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  /**
+   * sortOrderでソートしたメディア配列
+   */
   const sortedImages = [...images].sort((a, b) => a.sortOrder - b.sortOrder)
 
-  // 1枚の場合は全幅、複数の場合はグリッド
-  const gridClass = images.length === 1
-    ? ''
-    : images.length === 2
-      ? 'grid grid-cols-2 gap-1'
-      : images.length === 3
-        ? 'grid grid-cols-2 gap-1'
-        : 'grid grid-cols-2 gap-1'
+  // ------------------------------------------------------------
+  // 計算値
+  // ------------------------------------------------------------
 
+  /**
+   * グリッドのCSSクラス
+   * 画像数に応じて異なるレイアウトを適用
+   */
+  const gridClass = images.length === 1
+    ? ''  // 1枚: グリッドなし（全幅）
+    : images.length === 2
+      ? 'grid grid-cols-2 gap-1'  // 2枚: 2列
+      : images.length === 3
+        ? 'grid grid-cols-2 gap-1'  // 3枚: 2列（1枚目は2行分）
+        : 'grid grid-cols-2 gap-1'  // 4枚: 2列（2x2）
+
+  // ------------------------------------------------------------
+  // イベントハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * 前へボタンクリックハンドラ
+   *
+   * @param e - クリックイベント
+   */
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (selectedIndex !== null && selectedIndex > 0) {
@@ -146,6 +347,11 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
     }
   }
 
+  /**
+   * 次へボタンクリックハンドラ
+   *
+   * @param e - クリックイベント
+   */
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (selectedIndex !== null && selectedIndex < sortedImages.length - 1) {
@@ -153,10 +359,20 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
     }
   }
 
+  // ------------------------------------------------------------
+  // レンダリング
+  // ------------------------------------------------------------
+
   return (
     <>
+      {/* メディアグリッド */}
       <div className={`${gridClass} rounded-lg overflow-hidden`}>
         {sortedImages.map((media, index) => {
+          /**
+           * メディアクリックハンドラ
+           * onMediaClickが指定されていればそれを呼び出し、
+           * なければモーダルを開く
+           */
           const handleClick = (e: React.MouseEvent) => {
             e.preventDefault()
             e.stopPropagation()
@@ -167,7 +383,10 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             }
           }
 
-          // 動画の場合はdivを使用（video要素にcontrolsがあるため）
+          /**
+           * 動画の場合
+           * divで囲んで拡大ボタンを追加
+           */
           if (media.type === 'video') {
             return (
               <div
@@ -176,6 +395,10 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
                   images.length === 3 && index === 0 ? 'row-span-2' : ''
                 }`}
                 style={{
+                  /**
+                   * アスペクト比
+                   * 3枚で1枚目の場合は正方形、それ以外は16:9
+                   */
                   paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%',
                 }}
               >
@@ -192,7 +415,10 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             )
           }
 
-          // 画像の場合はボタンを使用
+          /**
+           * 画像の場合
+           * ボタンとして全体がクリック可能
+           */
           return (
             <button
               key={media.id}
@@ -210,12 +436,13 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
         })}
       </div>
 
-      {/* モーダル（画像・動画） */}
+      {/* モーダル（画像・動画の拡大表示） */}
       {selectedIndex !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setSelectedIndex(null)}
         >
+          {/* 閉じるボタン */}
           <button
             onClick={() => setSelectedIndex(null)}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 z-10"
@@ -223,7 +450,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             <XIcon className="w-6 h-6 text-white" />
           </button>
 
-          {/* 前へボタン */}
+          {/* 前へボタン（複数枚で2枚目以降の場合のみ表示） */}
           {images.length > 1 && selectedIndex > 0 && (
             <button
               onClick={handlePrev}
@@ -233,7 +460,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             </button>
           )}
 
-          {/* 次へボタン */}
+          {/* 次へボタン（複数枚で最後以外の場合のみ表示） */}
           {images.length > 1 && selectedIndex < sortedImages.length - 1 && (
             <button
               onClick={handleNext}
@@ -243,6 +470,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             </button>
           )}
 
+          {/* メディア表示エリア */}
           <div className="flex items-center justify-center max-w-4xl max-h-[90vh] w-full h-full p-4">
             <ModalMediaItem
               media={sortedImages[selectedIndex]}
@@ -250,7 +478,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             />
           </div>
 
-          {/* ナビゲーションドット */}
+          {/* ナビゲーションドット（複数枚の場合のみ表示） */}
           {images.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
               {sortedImages.map((_, index) => (

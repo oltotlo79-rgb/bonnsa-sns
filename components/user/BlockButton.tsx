@@ -1,7 +1,55 @@
+/**
+ * ブロックボタンコンポーネント
+ *
+ * このファイルは、ユーザーをブロック/ブロック解除するボタンを提供します。
+ * プロフィールページやユーザーカードで使用されます。
+ *
+ * ## 機能概要
+ * - ブロック/ブロック解除のトグル
+ * - ブロック前に確認ダイアログを表示
+ * - Optimistic UI（即時レスポンス）でスムーズな操作感
+ * - トースト通知で操作結果をフィードバック
+ *
+ * ## ブロックの効果
+ * - 相互フォローが解除される
+ * - 相手の投稿が表示されなくなる
+ * - 相手からのコメントが表示されなくなる
+ * - 相手はあなたのプロフィールにアクセスできなくなる
+ *
+ * @module components/user/BlockButton
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * React useState Hook
+ * ブロック状態、ローディング状態、ダイアログ表示状態の管理に使用
+ */
 import { useState } from 'react'
+
+/**
+ * shadcn/ui Buttonコンポーネント
+ * クリック可能なボタンUI
+ */
 import { Button } from '@/components/ui/button'
+
+/**
+ * shadcn/ui AlertDialogコンポーネント群
+ * ブロック確認用のダイアログUI
+ *
+ * - AlertDialog: ダイアログのコンテナ
+ * - AlertDialogAction: 確認ボタン（ブロック実行）
+ * - AlertDialogCancel: キャンセルボタン
+ * - AlertDialogContent: ダイアログの内容エリア
+ * - AlertDialogDescription: 説明テキスト
+ * - AlertDialogFooter: ボタン配置エリア
+ * - AlertDialogHeader: タイトルエリア
+ * - AlertDialogTitle: ダイアログのタイトル
+ */
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,10 +60,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+
+/**
+ * ブロック/ブロック解除用Server Action
+ * - blockUser: ユーザーをブロック
+ * - unblockUser: ブロックを解除
+ */
 import { blockUser, unblockUser } from '@/lib/actions/block'
+
+/**
+ * Next.js useRouter Hook
+ * 操作後にページをリフレッシュして最新状態を反映するために使用
+ */
 import { useRouter } from 'next/navigation'
+
+/**
+ * トースト通知用カスタムHook
+ * 操作結果（成功/エラー）をユーザーに通知
+ */
 import { useToast } from '@/hooks/use-toast'
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * BlockButtonコンポーネントのprops型
+ *
+ * @property userId - ブロック対象のユーザーID
+ * @property nickname - ブロック対象のユーザー名（ダイアログ表示用）
+ * @property initialIsBlocked - 初期のブロック状態（true=ブロック中）
+ * @property variant - ボタンのスタイル（default, ghost, destructive）
+ * @property size - ボタンのサイズ（default, sm, lg, icon）
+ */
 type BlockButtonProps = {
   userId: string
   nickname: string
@@ -24,6 +101,40 @@ type BlockButtonProps = {
   size?: 'default' | 'sm' | 'lg' | 'icon'
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * ブロックボタンコンポーネント
+ *
+ * ## 機能
+ * - クリックでブロック/ブロック解除をトグル
+ * - ブロック時は確認ダイアログを表示
+ * - ブロック解除は確認なしで即実行
+ * - Optimistic UIで即時フィードバック
+ *
+ * ## ユーザー体験
+ * - ブロック時はダイアログで影響を説明
+ * - トースト通知で操作完了を確認
+ *
+ * @param userId - ブロック対象のユーザーID
+ * @param nickname - ユーザー名（表示用）
+ * @param initialIsBlocked - 初期ブロック状態
+ * @param variant - ボタンスタイル
+ * @param size - ボタンサイズ
+ *
+ * @example
+ * ```tsx
+ * <BlockButton
+ *   userId="user123"
+ *   nickname="盆栽太郎"
+ *   initialIsBlocked={false}
+ *   variant="ghost"
+ *   size="sm"
+ * />
+ * ```
+ */
 export function BlockButton({
   userId,
   nickname,
@@ -31,23 +142,67 @@ export function BlockButton({
   variant = 'ghost',
   size = 'default',
 }: BlockButtonProps) {
+  // ------------------------------------------------------------
+  // 状態管理
+  // ------------------------------------------------------------
+
+  /**
+   * ブロック状態
+   * true: ブロック中, false: ブロックしていない
+   */
   const [isBlocked, setIsBlocked] = useState(initialIsBlocked)
+
+  /**
+   * ローディング状態
+   * Server Action呼び出し中はtrueになり、ボタンが無効化される
+   */
   const [loading, setLoading] = useState(false)
+
+  /**
+   * ダイアログ表示状態
+   * ブロック確認ダイアログの開閉を制御
+   */
   const [showDialog, setShowDialog] = useState(false)
+
+  /**
+   * Next.jsルーター
+   * 操作後にページをリフレッシュするために使用
+   */
   const router = useRouter()
+
+  /**
+   * トースト通知
+   * 操作結果をユーザーに通知
+   */
   const { toast } = useToast()
 
+  // ------------------------------------------------------------
+  // イベントハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * ブロック実行ハンドラ
+   *
+   * ## 処理フロー
+   * 1. ローディング開始、ダイアログを閉じる
+   * 2. Optimistic UIで即座にブロック状態に更新
+   * 3. Server Actionでブロックを実行
+   * 4. エラー時はロールバックしてエラートーストを表示
+   * 5. 成功時は成功トーストを表示
+   * 6. ページをリフレッシュ
+   */
   async function handleBlock() {
     setLoading(true)
     setShowDialog(false)
 
-    // Optimistic UI
+    // Optimistic UI: 即座にブロック状態に更新
     setIsBlocked(true)
 
+    // Server Actionでブロックを実行
     const result = await blockUser(userId)
 
     if (result.error) {
-      // ロールバック
+      // エラー時: 元の状態にロールバック
       setIsBlocked(false)
       toast({
         title: 'エラー',
@@ -55,6 +210,7 @@ export function BlockButton({
         variant: 'destructive',
       })
     } else {
+      // 成功時: 成功トーストを表示
       toast({
         title: 'ブロックしました',
         description: `${nickname}さんをブロックしました`,
@@ -62,19 +218,32 @@ export function BlockButton({
     }
 
     setLoading(false)
+    // ページをリフレッシュして最新状態を反映
     router.refresh()
   }
 
+  /**
+   * ブロック解除ハンドラ
+   *
+   * ## 処理フロー
+   * 1. ローディング開始
+   * 2. Optimistic UIで即座にブロック解除状態に更新
+   * 3. Server Actionでブロック解除を実行
+   * 4. エラー時はロールバックしてエラートーストを表示
+   * 5. 成功時は成功トーストを表示
+   * 6. ページをリフレッシュ
+   */
   async function handleUnblock() {
     setLoading(true)
 
-    // Optimistic UI
+    // Optimistic UI: 即座にブロック解除状態に更新
     setIsBlocked(false)
 
+    // Server Actionでブロック解除を実行
     const result = await unblockUser(userId)
 
     if (result.error) {
-      // ロールバック
+      // エラー時: 元の状態にロールバック
       setIsBlocked(true)
       toast({
         title: 'エラー',
@@ -82,6 +251,7 @@ export function BlockButton({
         variant: 'destructive',
       })
     } else {
+      // 成功時: 成功トーストを表示
       toast({
         title: 'ブロックを解除しました',
         description: `${nickname}さんのブロックを解除しました`,
@@ -89,16 +259,24 @@ export function BlockButton({
     }
 
     setLoading(false)
+    // ページをリフレッシュして最新状態を反映
     router.refresh()
   }
 
+  // ------------------------------------------------------------
+  // レンダリング
+  // ------------------------------------------------------------
+
   return (
     <>
+      {/* ブロック/ブロック解除ボタン */}
       <Button
         onClick={() => {
           if (isBlocked) {
+            // ブロック中の場合: 確認なしでブロック解除
             handleUnblock()
           } else {
+            // 未ブロックの場合: 確認ダイアログを表示
             setShowDialog(true)
           }
         }}
@@ -106,13 +284,17 @@ export function BlockButton({
         variant={variant}
         size={size}
       >
+        {/* ボタンテキスト: ローディング中は「...」、それ以外は状態に応じて表示 */}
         {loading ? '...' : isBlocked ? 'ブロック解除' : 'ブロック'}
       </Button>
 
+      {/* ブロック確認ダイアログ */}
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
+            {/* ダイアログタイトル */}
             <AlertDialogTitle>{nickname}さんをブロックしますか?</AlertDialogTitle>
+            {/* ダイアログ説明: ブロックの影響を箇条書きで説明 */}
             <AlertDialogDescription>
               ブロックすると、以下の操作が行われます:
               <ul className="mt-2 space-y-1 list-disc list-inside">
@@ -124,7 +306,9 @@ export function BlockButton({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
+            {/* キャンセルボタン: ダイアログを閉じる */}
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            {/* ブロック実行ボタン: 赤色で強調 */}
             <AlertDialogAction
               onClick={handleBlock}
               className="bg-red-600 hover:bg-red-700"

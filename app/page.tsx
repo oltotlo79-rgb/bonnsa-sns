@@ -55,8 +55,9 @@ export default async function Home() {
 
           {/* コンテンツ */}
           <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-            <h2 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-              盆栽愛好家のための<br />コミュニティSNS
+            <h2 className="text-3xl sm:text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
+              <span className="block">盆栽愛好家のための</span>
+              <span className="block">コミュニティSNS</span>
             </h2>
             <p className="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg">
               BON-LOGは、盆栽を愛する全ての人が集まり、<br />
@@ -231,9 +232,6 @@ export default async function Home() {
               <p className="text-sm text-muted-foreground">盆栽愛好家のためのコミュニティSNS</p>
             </div>
             <div className="flex gap-8">
-              <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                サービスについて
-              </Link>
               <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 プライバシーポリシー
               </Link>

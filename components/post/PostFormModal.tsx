@@ -1,35 +1,159 @@
+/**
+ * 投稿フォームモーダルコンポーネント
+ *
+ * このファイルは、モバイル画面で全画面表示される投稿フォームモーダルを提供します。
+ * FAB（Floating Action Button）から開かれる投稿画面として使用されます。
+ *
+ * ## 機能概要
+ * - テキスト入力（文字数制限付き）
+ * - 画像・動画のアップロード
+ * - ジャンル選択
+ * - 下書き保存
+ * - 投稿送信
+ * - マイ盆栽との関連付け
+ *
+ * ## PostFormとの違い
+ * - 全画面モーダルとして表示
+ * - 閉じるボタンと確認ダイアログ
+ * - アップロード中のキャンセル機能
+ * - マイ盆栽の選択機能
+ *
+ * ## 処理フロー
+ * 1. isOpen=trueでモーダルを表示
+ * 2. ユーザーがテキスト/メディア/ジャンルを入力
+ * 3. 「投稿する」で投稿、「下書き保存」で保存
+ * 4. 完了後にonCloseコールバックでモーダルを閉じる
+ *
+ * @module components/post/PostFormModal
+ */
+
 'use client'
 
+// ============================================================
+// インポート
+// ============================================================
+
+/**
+ * React Hooks
+ *
+ * useState: フォームの状態管理
+ * useRef: ファイル入力要素とAbortController への参照
+ */
 import { useState, useRef } from 'react'
+
+/**
+ * Next.js ナビゲーション
+ * ルーターを使用してページ遷移やリフレッシュを行う
+ */
 import { useRouter } from 'next/navigation'
+
+/**
+ * Next.js Linkコンポーネント
+ * 下書き一覧へのリンクに使用
+ */
 import Link from 'next/link'
+
+/**
+ * React Query クライアント
+ * タイムラインのキャッシュを無効化するために使用
+ */
 import { useQueryClient } from '@tanstack/react-query'
+
+/**
+ * Next.js Imageコンポーネント
+ * 画像の最適化と遅延読み込みを提供
+ */
 import Image from 'next/image'
+
+/**
+ * UIコンポーネント
+ * shadcn/uiのButtonとTextareaを使用
+ */
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+
+/**
+ * Server Actions
+ *
+ * createPost: 投稿を作成する
+ */
 import { createPost } from '@/lib/actions/post'
+
+/**
+ * 下書き保存用Server Action
+ */
 import { saveDraft } from '@/lib/actions/draft'
+
+/**
+ * ジャンル選択コンポーネント
+ * 投稿にタグ付けするジャンルを選択
+ */
 import { GenreSelector } from './GenreSelector'
+
+/**
+ * クライアントサイド画像圧縮ユーティリティ
+ *
+ * アップロード前にブラウザ上で画像を圧縮してファイルサイズを削減
+ */
 import { prepareFileForUpload, isVideoFile, formatFileSize, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, uploadVideoToR2 } from '@/lib/client-image-compression'
 
+// ============================================================
+// 型定義
+// ============================================================
+
+/**
+ * ジャンル型
+ *
+ * @property id - ジャンルの一意識別子
+ * @property name - ジャンル名（表示用）
+ * @property category - カテゴリ（グループ化用）
+ */
 type Genre = {
   id: string
   name: string
   category: string
 }
 
+/**
+ * 会員種別による制限値
+ *
+ * プレミアム会員は通常会員より多くの文字数・メディアを使用可能
+ *
+ * @property maxPostLength - 投稿の最大文字数
+ * @property maxImages - 添付可能な画像の最大枚数
+ * @property maxVideos - 添付可能な動画の最大本数
+ */
 type MembershipLimits = {
   maxPostLength: number
   maxImages: number
   maxVideos: number
 }
 
+/**
+ * 盆栽型
+ *
+ * マイ盆栽との関連付けに使用
+ *
+ * @property id - 盆栽の一意識別子
+ * @property name - 盆栽の名前
+ * @property species - 樹種（nullの場合もある）
+ */
 type Bonsai = {
   id: string
   name: string
   species: string | null
 }
 
+/**
+ * PostFormModalコンポーネントのProps型
+ *
+ * @property genres - カテゴリ別に分類されたジャンルのオブジェクト
+ * @property limits - 会員種別による制限値（省略時はデフォルト値を使用）
+ * @property isOpen - モーダルの表示状態
+ * @property onClose - モーダルを閉じるコールバック
+ * @property draftCount - 下書きの数（0より大きい場合は下書き一覧リンクを表示）
+ * @property bonsais - ユーザーのマイ盆栽リスト
+ */
 type PostFormModalProps = {
   genres: Record<string, Genre[]>
   limits?: MembershipLimits
@@ -39,6 +163,17 @@ type PostFormModalProps = {
   bonsais?: Bonsai[]
 }
 
+// ============================================================
+// アイコンコンポーネント
+// ============================================================
+
+/**
+ * 画像アイコンコンポーネント
+ *
+ * メディア添付ボタンに使用するSVGアイコン
+ *
+ * @param className - 追加のCSSクラス
+ */
 function ImageIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -49,6 +184,13 @@ function ImageIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * バツ印アイコンコンポーネント
+ *
+ * モーダルの閉じるボタンとメディアプレビューの削除ボタンに使用
+ *
+ * @param className - 追加のCSSクラス
+ */
 function XIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -57,6 +199,11 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ファイルアイコン（下書き一覧リンク用）
+ *
+ * @param className - 追加のCSSクラス
+ */
 function FileTextIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -69,51 +216,217 @@ function FileTextIcon({ className }: { className?: string }) {
   )
 }
 
+// ============================================================
+// 定数
+// ============================================================
+
+/**
+ * 通常会員のデフォルト制限値
+ *
+ * プレミアム会員でない場合に適用される制限
+ */
 const DEFAULT_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
   maxVideos: 2,
 }
 
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
+/**
+ * 投稿フォームモーダルコンポーネント
+ *
+ * ## 機能
+ * - 全画面モーダル形式の投稿フォーム
+ * - テキスト入力と文字数カウント
+ * - 画像・動画のアップロードとプレビュー
+ * - ジャンル選択（複数選択可）
+ * - マイ盆栽との関連付け
+ * - 下書き保存
+ * - 投稿送信
+ *
+ * ## 状態管理
+ * - content: 投稿テキスト
+ * - selectedGenres: 選択されたジャンルID配列
+ * - mediaFiles: アップロードされたメディアファイル配列
+ * - selectedBonsaiId: 関連付けるマイ盆栽のID
+ * - loading/uploading/savingDraft: 各種ローディング状態
+ * - error: エラーメッセージ
+ *
+ * ## キャンセル機能
+ * アップロード中にAbortControllerを使用してキャンセル可能。
+ * 閉じるボタンクリック時に確認ダイアログを表示。
+ *
+ * @param genres - カテゴリ別ジャンルデータ
+ * @param limits - 会員種別による制限値
+ * @param isOpen - モーダルの表示状態
+ * @param onClose - モーダルを閉じるコールバック
+ * @param draftCount - 下書きの数
+ * @param bonsais - マイ盆栽リスト
+ *
+ * @example
+ * ```tsx
+ * <PostFormModal
+ *   genres={{ '盆栽': [...] }}
+ *   limits={{ maxPostLength: 500, maxImages: 4, maxVideos: 2 }}
+ *   isOpen={isModalOpen}
+ *   onClose={() => setIsModalOpen(false)}
+ *   draftCount={3}
+ *   bonsais={userBonsais}
+ * />
+ * ```
+ */
 export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose, draftCount = 0, bonsais = [] }: PostFormModalProps) {
+  // ------------------------------------------------------------
+  // Hooks
+  // ------------------------------------------------------------
+
+  /**
+   * Next.jsルーター
+   * ページのリフレッシュや遷移に使用
+   */
   const router = useRouter()
+
+  /**
+   * React Queryクライアント
+   * 投稿成功時にタイムラインキャッシュを無効化
+   */
   const queryClient = useQueryClient()
+
+  // ------------------------------------------------------------
+  // 状態管理
+  // ------------------------------------------------------------
+
+  /**
+   * 投稿テキストの内容
+   */
   const [content, setContent] = useState('')
+
+  /**
+   * 選択されたジャンルのID配列
+   */
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
+
+  /**
+   * アップロードされたメディアファイルの配列
+   * 各要素は { url: 'アップロード先URL', type: 'image' | 'video' }
+   */
   const [mediaFiles, setMediaFiles] = useState<{ url: string; type: string }[]>([])
+
+  /**
+   * 関連付けるマイ盆栽のID
+   * 空文字の場合は関連付けなし
+   */
   const [selectedBonsaiId, setSelectedBonsaiId] = useState<string>('')
+
+  /**
+   * 投稿送信中のローディング状態
+   */
   const [loading, setLoading] = useState(false)
+
+  /**
+   * 下書き保存中のローディング状態
+   */
   const [savingDraft, setSavingDraft] = useState(false)
+
+  /**
+   * メディアアップロード中のローディング状態
+   */
   const [uploading, setUploading] = useState(false)
+
+  /**
+   * アップロード進捗（0-100%）
+   */
   const [uploadProgress, setUploadProgress] = useState(0)
+
+  /**
+   * エラーメッセージ（nullの場合はエラーなし）
+   */
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * ファイル入力要素への参照
+   * プログラムからファイル選択ダイアログを開くために使用
+   */
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * AbortControllerへの参照
+   * アップロードのキャンセルに使用
+   */
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // ------------------------------------------------------------
+  // 計算値
+  // ------------------------------------------------------------
+
+  /**
+   * 最大文字数
+   */
   const maxChars = limits.maxPostLength
+
+  /**
+   * 残り文字数
+   * マイナスの場合は文字数超過
+   */
   const remainingChars = maxChars - content.length
 
+  // ------------------------------------------------------------
+  // イベントハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * ファイル選択時のハンドラ
+   *
+   * ## 処理フロー
+   * 1. ファイルの種類（画像/動画）を判定
+   * 2. 現在の添付数と上限をチェック
+   * 3. 動画の場合はR2に直接アップロード（Vercel制限回避）
+   * 4. 画像の場合はクライアントサイドで圧縮してアップロード
+   * 5. 成功時にmediaFiles配列に追加
+   * 6. キャンセル時は処理を中断
+   *
+   * @param e - ファイル入力のchangeイベント
+   */
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0) return
 
     const file = files[0]
+
+    /**
+     * ファイルが動画かどうかを判定
+     * MIMEタイプが 'video/' で始まる場合は動画
+     */
     const isVideo = isVideoFile(file)
 
+    /**
+     * 現在添付されている画像と動画の数をカウント
+     */
     const currentImageCount = mediaFiles.filter(m => m.type === 'image').length
     const currentVideoCount = mediaFiles.filter(m => m.type === 'video').length
 
+    /**
+     * 画像の上限チェック
+     */
     if (!isVideo && currentImageCount >= limits.maxImages) {
       setError(`画像は${limits.maxImages}枚まで添付できます`)
       return
     }
 
+    /**
+     * 動画の上限チェック
+     */
     if (isVideo && currentVideoCount >= limits.maxVideos) {
       setError(`動画は${limits.maxVideos}本まで添付できます`)
       return
     }
 
-    // 動画のファイルサイズチェック（256MB）
+    /**
+     * 動画のファイルサイズチェック（256MB）
+     */
     if (isVideo && file.size > MAX_VIDEO_SIZE) {
       setError(`動画は${MAX_VIDEO_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
       if (fileInputRef.current) {
@@ -122,7 +435,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       return
     }
 
-    // 画像のファイルサイズチェック（圧縮前4MB）
+    /**
+     * 画像のファイルサイズチェック（圧縮前4MB）
+     */
     if (!isVideo && file.size > MAX_IMAGE_SIZE) {
       setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（現在: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
       if (fileInputRef.current) {
@@ -131,20 +446,31 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       return
     }
 
+    /**
+     * アップロード開始
+     */
     setUploading(true)
     setUploadProgress(0)
     setError(null)
 
-    // AbortControllerを作成
+    /**
+     * AbortControllerを作成
+     * キャンセル時にアップロードを中断するために使用
+     */
     abortControllerRef.current = new AbortController()
 
     try {
-      // 動画の場合はR2に直接アップロード
+      /**
+       * 動画の場合はR2に直接アップロード
+       */
       if (isVideo) {
         const result = await uploadVideoToR2(file, 'posts', (progress) => {
           setUploadProgress(progress)
         })
 
+        /**
+         * キャンセルされた場合は処理を中断
+         */
         if (abortControllerRef.current?.signal.aborted) return
 
         if (result.error) {
@@ -153,7 +479,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
           setMediaFiles(prev => [...prev, { url: result.url!, type: 'video' }])
         }
       } else {
-        // 画像の場合は圧縮してからアップロード
+        /**
+         * 画像の場合は圧縮してからアップロード
+         */
         setError('画像を圧縮中...')
         const originalSize = file.size
         const fileToUpload = await prepareFileForUpload(file, {
@@ -167,13 +495,22 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
         }
         setError(null)
 
+        /**
+         * FormDataを作成
+         */
         const formData = new FormData()
         formData.append('file', fileToUpload)
 
-        // XMLHttpRequestを使用して進捗を追跡
+        /**
+         * XMLHttpRequestを使用して進捗を追跡
+         * AbortControllerと連携してキャンセル可能に
+         */
         const result = await new Promise<{ url?: string; type?: string; error?: string }>((resolve) => {
           const xhr = new XMLHttpRequest()
 
+          /**
+           * アップロード進捗イベント
+           */
           xhr.upload.addEventListener('progress', (event) => {
             if (event.lengthComputable) {
               const progress = Math.round((event.loaded / event.total) * 100)
@@ -181,6 +518,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             }
           })
 
+          /**
+           * 完了イベント
+           */
           xhr.addEventListener('load', () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               try {
@@ -194,14 +534,24 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             }
           })
 
+          /**
+           * エラーイベント
+           */
           xhr.addEventListener('error', () => {
             resolve({ error: 'アップロードに失敗しました' })
           })
 
+          /**
+           * キャンセルイベント
+           */
           xhr.addEventListener('abort', () => {
             resolve({ error: 'アップロードがキャンセルされました' })
           })
 
+          /**
+           * AbortControllerのシグナルを監視
+           * キャンセル時にXHRを中断
+           */
           abortControllerRef.current?.signal.addEventListener('abort', () => {
             xhr.abort()
           })
@@ -210,6 +560,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
           xhr.send(formData)
         })
 
+        /**
+         * キャンセルされた場合は処理を中断
+         */
         if (abortControllerRef.current?.signal.aborted) return
 
         if (result.error) {
@@ -219,10 +572,16 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
         }
       }
     } catch {
+      /**
+       * キャンセル以外のエラー
+       */
       if (!abortControllerRef.current?.signal.aborted) {
         setError('アップロードに失敗しました')
       }
     } finally {
+      /**
+       * キャンセルされていない場合のみ状態をクリア
+       */
       if (!abortControllerRef.current?.signal.aborted) {
         setUploading(false)
         setUploadProgress(0)
@@ -234,15 +593,34 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     }
   }
 
+  /**
+   * メディアを削除するハンドラ
+   *
+   * @param index - 削除するメディアのインデックス
+   */
   function removeMedia(index: number) {
     setMediaFiles(mediaFiles.filter((_, i) => i !== index))
   }
 
+  /**
+   * フォーム送信時のハンドラ
+   *
+   * ## 処理フロー
+   * 1. FormDataを構築
+   * 2. Server Actionで投稿を作成
+   * 3. 成功時: フォームをリセットしてモーダルを閉じる
+   * 4. 失敗時: エラーメッセージを表示
+   *
+   * @param e - フォームのsubmitイベント
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    /**
+     * FormDataを構築
+     */
     const formData = new FormData()
     formData.append('content', content)
     selectedGenres.forEach(id => formData.append('genreIds', id))
@@ -250,16 +628,26 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       formData.append('mediaUrls', m.url)
       formData.append('mediaTypes', m.type)
     })
+
+    /**
+     * マイ盆栽が選択されている場合は追加
+     */
     if (selectedBonsaiId) {
       formData.append('bonsaiId', selectedBonsaiId)
     }
 
+    /**
+     * Server Actionで投稿を作成
+     */
     const result = await createPost(formData)
 
     if (result.error) {
       setError(result.error)
       setLoading(false)
     } else {
+      /**
+       * 成功時: フォームをリセット
+       */
       setContent('')
       setSelectedGenres([])
       setMediaFiles([])
@@ -270,19 +658,38 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     }
   }
 
+  /**
+   * モーダルを閉じるハンドラ
+   *
+   * ## 処理フロー
+   * 1. アップロード中の場合: 確認ダイアログを表示し、キャンセル
+   * 2. 入力内容がある場合: 確認ダイアログを表示
+   * 3. 確認後: 状態をリセットしてonCloseを呼び出す
+   */
   function handleClose() {
+    /**
+     * アップロード中の場合
+     */
     if (uploading) {
       if (!confirm('アップロード中です。キャンセルしてもよろしいですか？')) {
         return
       }
-      // アップロードをキャンセル
+      /**
+       * アップロードをキャンセル
+       */
       abortControllerRef.current?.abort()
     } else if (content.length > 0 || mediaFiles.length > 0) {
+      /**
+       * 入力内容がある場合
+       */
       if (!confirm('入力内容が破棄されます。閉じてもよろしいですか？')) {
         return
       }
     }
-    // 全ての状態をリセット
+
+    /**
+     * 全ての状態をリセット
+     */
     setContent('')
     setSelectedGenres([])
     setMediaFiles([])
@@ -294,11 +701,28 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     onClose()
   }
 
+  /**
+   * メディア追加ボタンクリックハンドラ
+   *
+   * ファイル選択ダイアログを開く
+   */
   function handleMediaButtonClick() {
     fileInputRef.current?.click()
   }
 
+  /**
+   * 下書き保存ハンドラ
+   *
+   * ## 処理フロー
+   * 1. 入力内容の検証
+   * 2. Server Actionで下書きを保存
+   * 3. 成功時: モーダルを閉じて下書きページに遷移
+   * 4. 失敗時: エラーメッセージを表示
+   */
   async function handleSaveDraft() {
+    /**
+     * 入力内容の検証
+     */
     if (content.length === 0 && mediaFiles.length === 0) {
       setError('テキストまたは画像を入力してください')
       return
@@ -308,6 +732,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     setError(null)
 
     try {
+      /**
+       * Server Actionで下書きを保存
+       */
       const result = await saveDraft({
         content: content || undefined,
         mediaUrls: mediaFiles.map((m) => m.url),
@@ -317,6 +744,9 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       if (result.error) {
         setError(result.error)
       } else {
+        /**
+         * 成功時: フォームをリセットして下書きページに遷移
+         */
         setContent('')
         setSelectedGenres([])
         setMediaFiles([])
@@ -331,6 +761,13 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
     }
   }
 
+  // ------------------------------------------------------------
+  // レンダリング
+  // ------------------------------------------------------------
+
+  /**
+   * モーダルが閉じている場合は何も表示しない
+   */
   if (!isOpen) return null
 
   return (
@@ -338,6 +775,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       {/* ヘッダー */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center justify-between px-4 py-3">
+          {/* 閉じるボタン */}
           <button
             type="button"
             onClick={handleClose}
@@ -345,7 +783,10 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
           >
             <XIcon className="w-5 h-5" />
           </button>
+
+          {/* アクションボタン群 */}
           <div className="flex items-center gap-2">
+            {/* 下書き一覧リンク（下書きがある場合のみ表示） */}
             {draftCount > 0 && (
               <Link
                 href="/drafts"
@@ -357,6 +798,8 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
                 <span className="hidden sm:inline">下書き一覧</span>
               </Link>
             )}
+
+            {/* 下書き保存ボタン */}
             <Button
               type="button"
               variant="outline"
@@ -365,6 +808,8 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             >
               {savingDraft ? '保存中...' : '下書き保存'}
             </Button>
+
+            {/* 投稿ボタン */}
             <Button
               onClick={handleSubmit}
               disabled={loading || uploading || (content.length === 0 && mediaFiles.length === 0) || remainingChars < 0}
@@ -379,6 +824,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
       {/* フォーム */}
       <div className="p-4 max-w-2xl mx-auto">
         <form onSubmit={handleSubmit}>
+          {/* テキスト入力エリア */}
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -399,6 +845,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
                   ) : (
                     <Image src={media.url} alt="" fill className="object-cover" />
                   )}
+                  {/* 削除ボタン */}
                   <button
                     type="button"
                     onClick={() => removeMedia(index)}
@@ -414,6 +861,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
           {/* メディア追加・文字数 */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex items-center gap-2">
+              {/* 非表示のファイル入力 */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -421,6 +869,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
                 onChange={handleFileSelect}
                 className="hidden"
               />
+              {/* メディア追加ボタン */}
               <Button
                 type="button"
                 variant="ghost"
@@ -431,6 +880,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
                 <ImageIcon className="w-5 h-5" />
                 <span className="ml-1 text-sm">画像/動画</span>
               </Button>
+              {/* アップロード進捗表示 */}
               {uploading && (
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
@@ -444,12 +894,13 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
               )}
             </div>
 
+            {/* 残り文字数表示 */}
             <span className={`text-sm ${remainingChars < 0 ? 'text-destructive' : remainingChars < 50 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
               {remainingChars}
             </span>
           </div>
 
-          {/* マイ盆栽選択 */}
+          {/* マイ盆栽選択（盆栽がある場合のみ表示） */}
           {bonsais.length > 0 && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -479,6 +930,7 @@ export function PostFormModal({ genres, limits = DEFAULT_LIMITS, isOpen, onClose
             />
           </div>
 
+          {/* エラーメッセージ */}
           {error && (
             <p className="text-sm text-destructive mt-4">{error}</p>
           )}
