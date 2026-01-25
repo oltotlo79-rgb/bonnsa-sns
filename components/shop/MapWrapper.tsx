@@ -46,7 +46,7 @@ const Map = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[500px] w-full bg-muted flex items-center justify-center rounded-lg">
+      <div className="h-[250px] md:h-[400px] w-full bg-muted flex items-center justify-center rounded-lg">
         <div className="text-muted-foreground">地図を読み込み中...</div>
       </div>
     ),
@@ -71,16 +71,27 @@ interface MapWrapperProps {
  * 地図ラッパーコンポーネント（通常サイズ）
  *
  * 盆栽園一覧ページなど、広い表示エリアが必要な場面で使用。
- * デフォルト高さ500pxで、propsで変更可能。
+ * スマホでは250px、タブレット以上では400pxの高さで表示。
+ * heightプロパティを指定した場合はそちらが優先される。
  *
  * @param shops - 表示する盆栽園の配列
  * @param center - 地図の中心座標
  * @param zoom - ズームレベル
- * @param height - 地図の高さ（デフォルト: 500px）
+ * @param height - 地図の高さ（指定時はレスポンシブ無効）
  */
-export function MapWrapper({ shops, center, zoom, height = '500px' }: MapWrapperProps) {
+export function MapWrapper({ shops, center, zoom, height }: MapWrapperProps) {
+  // heightが明示的に指定された場合はinline styleを使用
+  // 指定がない場合はレスポンシブクラスを使用（スマホ: 250px、md以上: 400px）
+  if (height) {
+    return (
+      <div style={{ height }}>
+        <Map shops={shops} center={center} zoom={zoom} />
+      </div>
+    )
+  }
+
   return (
-    <div style={{ height }}>
+    <div className="h-[250px] md:h-[400px]">
       <Map shops={shops} center={center} zoom={zoom} />
     </div>
   )

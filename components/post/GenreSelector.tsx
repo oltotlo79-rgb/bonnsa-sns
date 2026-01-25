@@ -195,9 +195,9 @@ export function GenreSelector({ genres, selectedIds, onChange, maxSelections = 3
         <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
-      {/* ドロップダウンパネル */}
+      {/* ドロップダウンパネル（上方向に開く） */}
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+        <div className="absolute z-10 bottom-full mb-1 w-full bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
           {/* カテゴリごとにグループ化 */}
           {Object.entries(genres).map(([category, categoryGenres]) => (
             <div key={category} className="p-2">

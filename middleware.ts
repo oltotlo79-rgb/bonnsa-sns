@@ -75,14 +75,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   )
 
   // Content Security Policy
+  // Google AdSense用のドメインを追加
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.jsのために必要
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://www.googletagservices.com https://adservice.google.com https://www.google.com https://partner.googleadservices.com", // Next.js + Google AdSense
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org",
+    "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.jp https://googleads.g.doubleclick.net https://www.gstatic.com",
     "media-src 'self' blob: https://*.blob.core.windows.net https://*.r2.dev",
-    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com",
+    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com https://pagead2.googlesyndication.com https://www.google.com https://googleads.g.doubleclick.net https://www.google-analytics.com",
+    "frame-src https://googleads.g.doubleclick.net https://www.google.com https://tpc.googlesyndication.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
