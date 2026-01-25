@@ -64,14 +64,9 @@ export function GoogleAdSense() {
   /**
    * 環境変数からAdSenseクライアントIDを取得
    * NEXT_PUBLIC_プレフィックスでクライアントサイドでもアクセス可能
+   * 未設定の場合はデフォルト値を使用（サイト審査対応）
    */
-  const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID
-
-  // AdSense Client IDが設定されていない場合は何も表示しない
-  // （開発環境やAdSense未設定の本番環境で安全に動作）
-  if (!clientId) {
-    return null
-  }
+  const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-7644314630384219'
 
   return (
     <Script
@@ -81,9 +76,9 @@ export function GoogleAdSense() {
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`}
       // クロスオリジン属性（AdSenseの要件）
       crossOrigin="anonymous"
-      // lazyOnload: ページの読み込み完了後に遅延して読み込み
-      // パフォーマンスへの影響を最小限に抑える
-      strategy="lazyOnload"
+      // afterInteractive: ページがインタラクティブになった直後に読み込み
+      // AdSense審査で確実に認識されるようにするため
+      strategy="afterInteractive"
     />
   )
 }
