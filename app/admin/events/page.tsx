@@ -57,7 +57,15 @@ export default async function AdminEventsPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">イベント管理</h1>
-        <span className="text-sm text-muted-foreground">全 {total} 件</span>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/events/import"
+            className="px-4 py-2 border rounded-lg hover:bg-muted text-sm"
+          >
+            外部イベントインポート
+          </Link>
+          <span className="text-sm text-muted-foreground">全 {total} 件</span>
+        </div>
       </div>
 
       {/* フィルター */}
