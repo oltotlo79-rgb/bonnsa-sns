@@ -165,18 +165,44 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* ジャンル紹介 */}
+        {/* 特徴紹介 */}
         <section className="container mx-auto px-4 py-20 bg-gradient-to-b from-bonsai-bg/30 to-white">
-          <h3 className="text-4xl font-bold text-center mb-6">豊富なジャンル</h3>
+          <h3 className="text-4xl font-bold text-center mb-6">BON-LOGの特徴</h3>
           <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-            松柏類から雑木類、草ものまで、あらゆるジャンルの盆栽を取り扱っています
+            盆栽愛好家に必要な機能がすべて揃っています
           </p>
-          <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
-            {['松柏類', '雑木類', '草もの', '用品・道具', '施設・イベント', 'その他'].map((genre) => (
-              <span key={genre} className="px-6 py-3 bg-white border-2 border-bonsai-green/20 hover:border-bonsai-green text-bonsai-green rounded-full text-base font-medium shadow-sm hover:shadow-md transition-all">
-                {genre}
-              </span>
-            ))}
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all">
+              <div className="w-16 h-16 bg-bonsai-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-bonsai-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold mb-2">全国の盆栽園を検索</h4>
+              <p className="text-sm text-muted-foreground">地図から近くの盆栽園を探せます</p>
+            </div>
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all">
+              <div className="w-16 h-16 bg-bonsai-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-bonsai-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" strokeWidth={2} />
+                  <line x1="16" x2="16" y1="2" y2="6" strokeWidth={2} />
+                  <line x1="8" x2="8" y1="2" y2="6" strokeWidth={2} />
+                  <line x1="3" x2="21" y1="10" y2="10" strokeWidth={2} />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold mb-2">イベント情報を確認</h4>
+              <p className="text-sm text-muted-foreground">展示会や即売会をカレンダーでチェック</p>
+            </div>
+            <div className="text-center p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all">
+              <div className="w-16 h-16 bg-bonsai-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-bonsai-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold mb-2">盆栽仲間とつながる</h4>
+              <p className="text-sm text-muted-foreground">投稿やコメントで交流できます</p>
+            </div>
           </div>
         </section>
 
