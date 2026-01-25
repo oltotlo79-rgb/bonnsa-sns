@@ -180,7 +180,7 @@ describe('Scheduled Post Actions', () => {
       const result = await getScheduledPosts()
 
       expect(result.scheduledPosts).toHaveLength(1)
-      expect(result.scheduledPosts[0].genres[0].name).toBe('黒松')
+      expect(result.scheduledPosts![0].genres[0].name).toBe('黒松')
     })
 
     it('未認証の場合、エラーを返す', async () => {

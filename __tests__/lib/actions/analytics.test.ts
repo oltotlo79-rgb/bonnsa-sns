@@ -233,8 +233,8 @@ describe('Analytics Actions', () => {
       const result = await getEngagementTrend(30)
 
       expect(result.trend).toBeDefined()
-      expect(result.trend.length).toBe(30)
-      result.trend.forEach((day: { date: string; posts: number; likes: number; comments: number; engagement: number }) => {
+      expect(result.trend!.length).toBe(30)
+      result.trend!.forEach((day: { date: string; posts: number; likes: number; comments: number; engagement: number }) => {
         expect(day).toHaveProperty('date')
         expect(day).toHaveProperty('posts')
         expect(day).toHaveProperty('likes')

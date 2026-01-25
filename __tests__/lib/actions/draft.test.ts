@@ -23,7 +23,6 @@ jest.mock('next/cache', () => ({
 // ロガーモック
 jest.mock('@/lib/logger', () => ({
   __esModule: true,
-  __esModule: true,
   default: {
     log: jest.fn(),
     warn: jest.fn(),
