@@ -29,22 +29,23 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const authToken = process.env.SENTRY_AUTH_TOKEN
+    // Internal Integration トークン (SENTRY_API_TOKEN) を優先、なければ SENTRY_AUTH_TOKEN を使用
+    const authToken = process.env.SENTRY_API_TOKEN || process.env.SENTRY_AUTH_TOKEN
     const org = process.env.SENTRY_ORG || 'bon-log'
-    const project = process.env.SENTRY_PROJECT || 'javascript-nextjs'
+    const project = process.env.SENTRY_PROJECT || 'bonsai-sns'
 
     if (!authToken) {
       return NextResponse.json({
         success: false,
-        error: 'SENTRY_AUTH_TOKEN が未設定',
-        helpText: 'Sentry Settings → Auth Tokens で作成',
-        helpUrl: 'https://bon-log.sentry.io/settings/auth-tokens/',
+        error: 'SENTRY_API_TOKEN が未設定',
+        helpText: 'Internal Integrationでトークンを作成し、SENTRY_API_TOKENに設定してください',
+        helpUrl: 'https://bon-log.sentry.io/settings/developer-settings/',
       })
     }
 
     // Sentry API: 組織のIssue一覧を取得（プロジェクトでフィルタ）
-    // sntrys_トークンからリージョンURLを抽出、または環境変数から取得
-    let baseUrl = process.env.SENTRY_API_URL || 'https://sentry.io'
+    // USリージョンを使用（bon-logはUSリージョン）
+    let baseUrl = process.env.SENTRY_API_URL || 'https://us.sentry.io'
 
     // sntrys_ トークンの場合、埋め込まれたリージョンURLを使用
     if (authToken.startsWith('sntrys_')) {
@@ -54,14 +55,12 @@ export async function GET() {
         if (parts.length >= 2) {
           const payloadBase64 = parts[1]
           const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString())
-          console.log('Parsed token payload:', payload)
           if (payload.region_url) {
             baseUrl = payload.region_url
-            console.log('Using region URL:', baseUrl)
           }
         }
-      } catch (e) {
-        console.log('Could not parse token payload, using default URL:', e)
+      } catch {
+        // Internal Integration トークンの場合はここに来る、USリージョンを使用
       }
     }
 
