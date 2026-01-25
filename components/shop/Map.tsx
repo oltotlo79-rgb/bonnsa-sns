@@ -258,7 +258,7 @@ export function Map({ shops, center = [35.6762, 139.6503], zoom = 6 }: MapProps)
   // マウント前はローディング表示
   if (!isMounted) {
     return (
-      <div className="h-[500px] w-full bg-muted flex items-center justify-center rounded-lg">
+      <div className="h-full w-full bg-muted flex items-center justify-center rounded-lg">
         <div className="text-muted-foreground">地図を読み込み中...</div>
       </div>
     )
@@ -270,7 +270,7 @@ export function Map({ shops, center = [35.6762, 139.6503], zoom = 6 }: MapProps)
   )
 
   return (
-    <div className="relative h-[500px] w-full rounded-lg overflow-hidden border">
+    <div className="relative h-full w-full rounded-lg overflow-hidden border">
       {/* Leaflet地図コンテナ */}
       <MapContainer
         center={center}
