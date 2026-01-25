@@ -77,7 +77,9 @@ function parseEventFromHtml(html: string, sourceRegion: string, sourceUrl: strin
 
     // コンテンツ抽出（<p>タグ内）
     const contentMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/)
-    const content = contentMatch ? contentMatch[1].replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+    let content = contentMatch ? contentMatch[1].replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+    // 電話番号のHTMLエンティティと電話番号を除去
+    content = content.replace(/&#x260e;/gi, '').replace(/☎/g, '').replace(/[\d０-９]{2,4}[－\-ー（）\(\)]*[\d０-９]{2,4}[－\-ー]*[\d０-９]{3,4}/g, '').replace(/\s+/g, ' ').trim()
 
     // 詳細リンク抽出（<a class="base">タグ）
     const linkMatch = block.match(/<a[^>]*class="[^"]*base[^"]*"[^>]*href="([^"]*)"/)
