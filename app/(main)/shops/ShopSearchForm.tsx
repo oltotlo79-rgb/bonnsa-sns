@@ -1,7 +1,7 @@
 /**
  * @file 盆栽園検索フォームコンポーネント
  * @description 盆栽園の検索・フィルタリング・ソート機能を提供するClient Component。
- * キーワード検索、ジャンルフィルター、ソート順の選択が可能で、
+ * キーワード検索、ジャンルフィルター、地方・都道府県フィルター、ソート順の選択が可能で、
  * 選択時に自動的にURLパラメータを更新してページを再レンダリングする。
  */
 
@@ -11,6 +11,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 // Reactの状態管理・トランジション管理フック
 import { useState, useTransition } from 'react'
+// 地方・都道府県データ
+import { REGIONS, PREFECTURES } from '@/lib/prefectures'
 
 /**
  * ジャンルデータの型定義
@@ -28,6 +30,8 @@ interface ShopSearchFormProps {
   genres: Genre[]           // 利用可能なジャンル一覧
   initialSearch?: string    // 初期検索キーワード
   initialGenre?: string     // 初期選択ジャンルID
+  initialRegion?: string    // 初期選択地方ID
+  initialPrefecture?: string // 初期選択都道府県
   initialSort?: string      // 初期ソート順
 }
 
@@ -66,7 +70,9 @@ export function ShopSearchForm({
   genres,
   initialSearch = '',
   initialGenre = '',
-  initialSort = 'newest',
+  initialRegion = '',
+  initialPrefecture = '',
+  initialSort = 'location',
 }: ShopSearchFormProps) {
   // Next.jsルーター: プログラマティックなナビゲーション用
   const router = useRouter()
@@ -78,7 +84,15 @@ export function ShopSearchForm({
   // ローカル状態: フォーム入力値を管理
   const [search, setSearch] = useState(initialSearch)   // 検索キーワード
   const [genre, setGenre] = useState(initialGenre)       // 選択ジャンル
+  const [region, setRegion] = useState(initialRegion)    // 選択地方
+  const [prefecture, setPrefecture] = useState(initialPrefecture) // 選択都道府県
   const [sort, setSort] = useState(initialSort)          // ソート順
+
+  // 選択された地方に属する都道府県を取得
+  const selectedRegionData = REGIONS.find(r => r.id === region)
+  const availablePrefectures = selectedRegionData
+    ? selectedRegionData.prefectures
+    : [...PREFECTURES]
 
   /**
    * 検索実行ハンドラ
@@ -101,8 +115,22 @@ export function ShopSearchForm({
       params.delete('genre')
     }
 
-    // ソート順の設定（デフォルトのnewestの場合は削除）
-    if (sort && sort !== 'newest') {
+    // 地方フィルターの設定（未選択の場合は削除）
+    if (region) {
+      params.set('region', region)
+    } else {
+      params.delete('region')
+    }
+
+    // 都道府県フィルターの設定（未選択の場合は削除）
+    if (prefecture) {
+      params.set('prefecture', prefecture)
+    } else {
+      params.delete('prefecture')
+    }
+
+    // ソート順の設定（デフォルトのlocationの場合は削除）
+    if (sort && sort !== 'location') {
       params.set('sort', sort)
     } else {
       params.delete('sort')
@@ -121,7 +149,9 @@ export function ShopSearchForm({
   const handleReset = () => {
     setSearch('')
     setGenre('')
-    setSort('newest')
+    setRegion('')
+    setPrefecture('')
+    setSort('location')
     startTransition(() => {
       router.push('/shops')
     })
@@ -209,6 +239,68 @@ export function ShopSearchForm({
           </select>
         </div>
 
+        {/* 地方フィルター */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground">地方:</label>
+          <select
+            value={region}
+            onChange={(e) => {
+              const newRegion = e.target.value
+              setRegion(newRegion)
+              // 地方が変わったら都道府県をリセット
+              setPrefecture('')
+              // 地方選択時に自動で検索を実行
+              const params = new URLSearchParams(searchParams.toString())
+              if (newRegion) {
+                params.set('region', newRegion)
+              } else {
+                params.delete('region')
+              }
+              params.delete('prefecture') // 都道府県もリセット
+              startTransition(() => {
+                router.push(`/shops?${params.toString()}`)
+              })
+            }}
+            className="px-3 py-1.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          >
+            <option value="">すべて</option>
+            {REGIONS.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 都道府県フィルター */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground">都道府県:</label>
+          <select
+            value={prefecture}
+            onChange={(e) => {
+              setPrefecture(e.target.value)
+              // 都道府県選択時に自動で検索を実行
+              const params = new URLSearchParams(searchParams.toString())
+              if (e.target.value) {
+                params.set('prefecture', e.target.value)
+              } else {
+                params.delete('prefecture')
+              }
+              startTransition(() => {
+                router.push(`/shops?${params.toString()}`)
+              })
+            }}
+            className="px-3 py-1.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          >
+            <option value="">すべて</option>
+            {availablePrefectures.map((pref) => (
+              <option key={pref} value={pref}>
+                {pref}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* ソート順フィルター */}
         <div className="flex items-center gap-2">
           <label className="text-sm text-muted-foreground">並び順:</label>
@@ -218,7 +310,7 @@ export function ShopSearchForm({
               setSort(e.target.value)
               // ソート選択時に自動で検索を実行
               const params = new URLSearchParams(searchParams.toString())
-              if (e.target.value && e.target.value !== 'newest') {
+              if (e.target.value && e.target.value !== 'location') {
                 params.set('sort', e.target.value)
               } else {
                 params.delete('sort')
@@ -229,6 +321,7 @@ export function ShopSearchForm({
             }}
             className="px-3 py-1.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           >
+            <option value="location">北から順</option>
             <option value="newest">新着順</option>
             <option value="rating">評価順</option>
             <option value="name">名前順</option>
@@ -236,7 +329,7 @@ export function ShopSearchForm({
         </div>
 
         {/* リセットボタン（フィルターが適用されている場合のみ表示） */}
-        {(search || genre || sort !== 'newest') && (
+        {(search || genre || region || prefecture || sort !== 'location') && (
           <button
             onClick={handleReset}
             className="text-sm text-muted-foreground hover:text-foreground"

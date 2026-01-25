@@ -30,9 +30,11 @@ export const metadata = {
  */
 interface ShopsPageProps {
   searchParams: Promise<{
-    search?: string   // 検索キーワード
-    genre?: string    // 選択されたジャンルID
-    sort?: string     // ソート順（rating, name, newest）
+    search?: string     // 検索キーワード
+    genre?: string      // 選択されたジャンルID
+    region?: string     // 選択された地方ID
+    prefecture?: string // 選択された都道府県
+    sort?: string       // ソート順（rating, name, newest, location）
   }>
 }
 
@@ -71,7 +73,9 @@ export default async function ShopsPage({ searchParams }: ShopsPageProps) {
     getShops({
       search: params.search,          // 検索キーワードでフィルタ
       genreId: params.genre,          // ジャンルでフィルタ
-      sortBy: params.sort as 'rating' | 'name' | 'newest' | undefined,  // ソート順
+      region: params.region,          // 地方でフィルタ
+      prefecture: params.prefecture,  // 都道府県でフィルタ
+      sortBy: params.sort as 'rating' | 'name' | 'newest' | 'location' | undefined,  // ソート順
     }),
     getShopGenres(),  // 全ジャンルを取得（フィルター用）
   ])
@@ -93,11 +97,13 @@ export default async function ShopsPage({ searchParams }: ShopsPageProps) {
       {/* マップ: Leafletを使用した地図表示 */}
       <MapWrapper shops={shops} />
 
-      {/* 検索・フィルターフォーム: キーワード検索、ジャンル選択、ソート */}
+      {/* 検索・フィルターフォーム: キーワード検索、ジャンル選択、地方・都道府県、ソート */}
       <ShopSearchForm
         genres={genres}
         initialSearch={params.search}
         initialGenre={params.genre}
+        initialRegion={params.region}
+        initialPrefecture={params.prefecture}
         initialSort={params.sort}
       />
 

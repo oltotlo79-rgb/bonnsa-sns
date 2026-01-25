@@ -35,6 +35,12 @@
 import { prisma } from '@/lib/db'
 
 /**
+ * 地方・都道府県データ
+ * 絞り込み検索で使用
+ */
+import { extractPrefecture, getRegionById, PREFECTURES } from '@/lib/prefectures'
+
+/**
  * 認証関数
  * NextAuth.jsのセッション取得に使用
  */
@@ -59,7 +65,9 @@ import { revalidatePath } from 'next/cache'
  * ## フィルターオプション
  * - search: 名前または住所で検索
  * - genreId: ジャンルでフィルター
- * - sortBy: ソート順（rating/name/newest）
+ * - prefecture: 都道府県でフィルター
+ * - region: 地方でフィルター
+ * - sortBy: ソート順（rating/name/newest/location）
  *
  * ## 返却データ
  * - 盆栽園基本情報
@@ -76,16 +84,37 @@ import { revalidatePath } from 'next/cache'
  * // 名前で検索
  * const { shops } = await getShops({ search: '盆栽園' })
  *
- * // 評価順でソート
- * const { shops } = await getShops({ sortBy: 'rating' })
+ * // 北から順にソート
+ * const { shops } = await getShops({ sortBy: 'location' })
+ *
+ * // 都道府県でフィルター
+ * const { shops } = await getShops({ prefecture: '埼玉県' })
  * ```
  */
 export async function getShops(options?: {
   search?: string
   genreId?: string
-  sortBy?: 'rating' | 'name' | 'newest'
+  prefecture?: string
+  region?: string
+  sortBy?: 'rating' | 'name' | 'newest' | 'location'
 }) {
-  const { search, genreId, sortBy = 'newest' } = options || {}
+  const { search, genreId, prefecture, region, sortBy = 'location' } = options || {}
+
+  // ------------------------------------------------------------
+  // 地方から都道府県リストを取得
+  // ------------------------------------------------------------
+
+  let prefectureFilter: string[] | undefined
+  if (prefecture) {
+    // 特定の都道府県でフィルター
+    prefectureFilter = [prefecture]
+  } else if (region) {
+    // 地方でフィルター（その地方に属する全都道府県）
+    const regionData = getRegionById(region)
+    if (regionData) {
+      prefectureFilter = regionData.prefectures
+    }
+  }
 
   // ------------------------------------------------------------
   // 盆栽園を取得
@@ -119,6 +148,16 @@ export async function getShops(options?: {
           some: { genreId },
         },
       }),
+      /**
+       * 都道府県フィルター
+       *
+       * 住所が指定された都道府県のいずれかで始まる
+       */
+      ...(prefectureFilter && prefectureFilter.length > 0 && {
+        OR: prefectureFilter.map(pref => ({
+          address: { startsWith: pref },
+        })),
+      }),
     },
     include: {
       /**
@@ -146,7 +185,7 @@ export async function getShops(options?: {
     /**
      * ソート順
      *
-     * rating は後からソートするため、ここでは newest または name
+     * rating, location は後からソートするため、ここでは newest または name
      */
     orderBy: sortBy === 'name'
       ? { name: 'asc' }
@@ -192,7 +231,7 @@ export async function getShops(options?: {
   })
 
   // ------------------------------------------------------------
-  // 評価順ソート（DBレベルでは不可なので手動）
+  // ソート処理（DBレベルでは不可なので手動）
   // ------------------------------------------------------------
 
   /**
@@ -206,6 +245,41 @@ export async function getShops(options?: {
       if (a.averageRating === null) return 1
       if (b.averageRating === null) return -1
       return b.averageRating - a.averageRating
+    })
+  }
+
+  /**
+   * location（北から南）でソートする場合
+   *
+   * 緯度の降順（北ほど緯度が高い）
+   * 緯度がない場合は、住所から都道府県を抽出してソート
+   */
+  if (sortBy === 'location') {
+    shopsWithRating.sort((a: typeof shopsWithRating[number], b: typeof shopsWithRating[number]) => {
+      // 両方緯度がある場合は緯度でソート
+      if (a.latitude !== null && b.latitude !== null) {
+        return b.latitude - a.latitude
+      }
+
+      // 緯度がない場合は都道府県の順番でソート
+      const prefA = extractPrefecture(a.address)
+      const prefB = extractPrefecture(b.address)
+
+      if (prefA && prefB) {
+        const indexA = PREFECTURES.indexOf(prefA as typeof PREFECTURES[number])
+        const indexB = PREFECTURES.indexOf(prefB as typeof PREFECTURES[number])
+        return indexA - indexB
+      }
+
+      // 緯度がある方を優先
+      if (a.latitude !== null) return -1
+      if (b.latitude !== null) return 1
+
+      // 都道府県が取れた方を優先
+      if (prefA) return -1
+      if (prefB) return 1
+
+      return 0
     })
   }
 

@@ -321,10 +321,11 @@ export function ShopForm({ genres, initialData, mode }: ShopFormProps) {
         }
       } else if ('shopId' in result && result.shopId) {
         // 新規登録成功 - 詳細ページへ遷移
-        router.push(`/shops/${result.shopId}`)
+        // replace を使用して履歴を置換（戻るボタンで /shops/new に戻らないように）
+        router.replace(`/shops/${result.shopId}`)
       } else {
         // 更新成功 - 詳細ページへ遷移
-        router.push(`/shops/${initialData?.id}`)
+        router.replace(`/shops/${initialData?.id}`)
       }
     })
   }
@@ -385,7 +386,8 @@ export function ShopForm({ genres, initialData, mode }: ShopFormProps) {
       setShowDeleteDialog(false)
     } else {
       // 削除成功 - 一覧ページへ遷移
-      router.push('/shops')
+      // replace を使用して履歴を置換（戻るボタンで削除済みのページに戻らないように）
+      router.replace('/shops')
     }
   }
 
