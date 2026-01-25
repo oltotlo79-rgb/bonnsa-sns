@@ -7,6 +7,7 @@ jest.mock('@/components/ui/avatar', () => ({
     <div className={className} data-testid="avatar">{children}</div>
   ),
   AvatarImage: ({ src, alt }: { src?: string; alt: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
     src ? <img src={src} alt={alt} data-testid="avatar-image" /> : null
   ),
   AvatarFallback: ({ children }: { children: React.ReactNode }) => (

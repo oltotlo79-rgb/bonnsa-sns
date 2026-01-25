@@ -10,6 +10,7 @@ jest.mock('next/script', () => ({
     strategy: string
     crossOrigin: string
   }) => (
+    // eslint-disable-next-line @next/next/no-sync-scripts
     <script
       id={id}
       src={src}
