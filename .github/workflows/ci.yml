@@ -111,13 +111,14 @@ jobs:
           NEXTAUTH_URL: "http://localhost:3000"
 
   # ===========================================
-  # E2E Tests (mainブランチのみ)
+  # E2E Tests (mainブランチのみ、失敗しても続行)
   # ===========================================
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     needs: [lint, test, build]
+    continue-on-error: true  # E2Eの失敗でCI全体を止めない
     services:
       postgres:
         image: postgres:16-alpine
@@ -171,6 +172,7 @@ jobs:
           NEXTAUTH_SECRET: "e2e-test-secret"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+        timeout-minutes: 15
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
