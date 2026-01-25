@@ -1,17 +1,38 @@
+/**
+ * @file 管理者用操作ログページ
+ * @description 管理者による操作履歴を時系列で表示する管理者ページ。
+ *              アクション種別でのフィルタリングが可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// 管理者操作ログ取得のServer Action
 import { getAdminLogs } from '@/lib/actions/admin'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '操作ログ - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** アクション種別フィルター */
     action?: string
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * アクション種別の日本語ラベル定義
+ */
 const actionLabels: Record<string, string> = {
   suspend_user: 'ユーザー停止',
   activate_user: 'ユーザー復帰',
@@ -21,6 +42,9 @@ const actionLabels: Record<string, string> = {
   update_report_status: '通報ステータス更新',
 }
 
+/**
+ * 対象タイプの日本語ラベル定義
+ */
 const targetTypeLabels: Record<string, string> = {
   user: 'ユーザー',
   post: '投稿',
@@ -29,6 +53,19 @@ const targetTypeLabels: Record<string, string> = {
   report: '通報',
 }
 
+/**
+ * 管理者用操作ログページコンポーネント
+ * 管理者の操作履歴をテーブル形式で表示し、フィルタリング機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns 操作ログページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータからフィルター条件を取得
+ * 2. ページネーション設定（1ページ50件）
+ * 3. getAdminLogsで操作ログ一覧を取得
+ * 4. フィルターフォーム、ログテーブル、ページネーションを表示
+ */
 export default async function AdminLogsPage({ searchParams }: PageProps) {
   const params = await searchParams
   const action = params.action

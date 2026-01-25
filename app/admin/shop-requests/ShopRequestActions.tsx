@@ -1,10 +1,23 @@
+/**
+ * @file 盆栽園変更リクエストアクションコンポーネント
+ * @description 盆栽園変更リクエストカードで使用されるアクションボタン群。
+ *              承認・却下の操作とダイアログを提供する。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// Next.jsのルーター（ページ更新用）
 import { useRouter } from 'next/navigation'
+// Next.jsのLinkコンポーネント（盆栽園確認リンク用）
 import Link from 'next/link'
+// 変更リクエスト承認・却下用のServer Action
 import { approveShopChangeRequest, rejectShopChangeRequest } from '@/lib/actions/shop'
 
+/**
+ * ShopRequestActionsコンポーネントのProps型定義
+ */
 interface ShopRequestActionsProps {
   requestId: string
   shopId: string
@@ -12,6 +25,9 @@ interface ShopRequestActionsProps {
   changes: Record<string, string>
 }
 
+/**
+ * 変更フィールドの日本語ラベル定義
+ */
 const fieldLabels: Record<string, string> = {
   name: '名称',
   address: '住所',
@@ -21,6 +37,21 @@ const fieldLabels: Record<string, string> = {
   closedDays: '定休日',
 }
 
+/**
+ * 盆栽園変更リクエストアクションコンポーネント
+ * 変更リクエストに対する承認・却下操作を提供するボタン群
+ *
+ * @param requestId - 操作対象のリクエストID
+ * @param shopId - 対象盆栽園のID
+ * @param shopName - 対象盆栽園の名前（確認表示用）
+ * @param changes - リクエストされた変更内容
+ * @returns アクションボタン群のJSX要素
+ *
+ * 機能:
+ * - 盆栽園詳細ページへのリンク
+ * - 承認ダイアログ（変更内容の確認、管理者コメント入力）
+ * - 却下ダイアログ（却下理由入力）
+ */
 export function ShopRequestActions({
   requestId,
   shopId,

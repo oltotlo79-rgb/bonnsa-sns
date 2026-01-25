@@ -1,11 +1,36 @@
+/**
+ * @file 管理者用非表示コンテンツ管理ページ
+ * @description 通報により自動非表示になったコンテンツ一覧を表示し、
+ *              再表示または完全削除の管理を行う管理者ページ。
+ */
+
+// 非表示コンテンツ一覧・管理者通知取得のServer Action
 import { getHiddenContent, getAdminNotifications } from '@/lib/actions/admin/hidden'
+// 非表示コンテンツ一覧コンポーネント
 import { HiddenContentList } from './HiddenContentList'
+// 管理者通知バナーコンポーネント
 import { AdminNotificationBanner } from './AdminNotificationBanner'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '非表示コンテンツ管理 - BON-LOG管理',
 }
 
+/**
+ * 管理者用非表示コンテンツ管理ページコンポーネント
+ * 自動非表示になったコンテンツの一覧と管理機能を提供する
+ *
+ * @returns 非表示コンテンツ管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. 非表示コンテンツ一覧と未読通知を並列で取得
+ * 2. 未読通知がある場合はバナーを表示
+ * 3. タイプ別の統計カードを表示
+ * 4. コンテンツ一覧（フィルタリング・再表示・削除機能付き）を表示
+ */
 export default async function HiddenContentPage() {
   const [contentResult, notificationResult] = await Promise.all([
     getHiddenContent(),

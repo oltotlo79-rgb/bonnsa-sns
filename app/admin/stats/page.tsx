@@ -1,13 +1,33 @@
+/**
+ * @file 管理者用統計情報ページ
+ * @description サービスの統計情報（ユーザー数、投稿数、コメント数）を
+ *              サマリーカードとグラフで表示する管理者ページ。
+ */
+
+// 統計履歴・サマリー取得のServer Action
 import { getStatsHistory, getStatsSummary } from '@/lib/actions/admin'
+// 統計グラフコンポーネント
 import { StatsCharts } from './StatsCharts'
 
-// ビルド時の静的生成を無効化（データベース接続が必要なため）
+/**
+ * ビルド時の静的生成を無効化
+ * データベース接続が必要なため動的レンダリングを強制
+ */
 export const dynamic = 'force-dynamic'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '統計情報 - BON-LOG 管理',
 }
 
+/**
+ * トレンド上昇アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function TrendUpIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -17,6 +37,11 @@ function TrendUpIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザーアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function UsersIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -28,6 +53,11 @@ function UsersIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ファイル/投稿アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function FileTextIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -40,6 +70,11 @@ function FileTextIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * コメント/メッセージアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MessageSquareIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -48,6 +83,17 @@ function MessageSquareIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 管理者用統計情報ページコンポーネント
+ * サービスの統計サマリーとグラフを表示する
+ *
+ * @returns 統計情報ページのJSX要素
+ *
+ * 処理内容:
+ * 1. 過去30日分の統計履歴とサマリー情報を並列で取得
+ * 2. サマリーカード（ユーザー/投稿/コメントの総数と増分）を表示
+ * 3. 推移グラフ（期間・指標・グラフタイプ切り替え可能）を表示
+ */
 export default async function AdminStatsPage() {
   const [statsHistory, summary] = await Promise.all([
     getStatsHistory(30),

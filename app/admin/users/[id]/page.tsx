@@ -1,10 +1,27 @@
+/**
+ * @file 管理者用ユーザー詳細ページ
+ * @description 特定ユーザーの詳細情報、最近の投稿、通報履歴を表示する管理者ページ。
+ *              ユーザーに対する管理操作（停止/復帰/削除）へのアクセスを提供する。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// 404ページ表示用の関数
 import { notFound } from 'next/navigation'
+// 管理者用ユーザー詳細取得のServer Action
 import { getAdminUserDetail } from '@/lib/actions/admin'
+// Prismaデータベースクライアント
 import { prisma } from '@/lib/db'
+// ユーザー詳細アクションコンポーネント
 import { UserDetailActions } from './UserDetailActions'
 
+/**
+ * 左矢印アイコンコンポーネント（戻る用）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ArrowLeftIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -45,10 +62,21 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ */
 type Props = {
+  /** URLパラメータ（ユーザーID） */
   params: Promise<{ id: string }>
 }
 
+/**
+ * 動的メタデータ生成関数
+ * ユーザーのニックネームをページタイトルに含める
+ *
+ * @param params - URLパラメータ
+ * @returns ページメタデータ
+ */
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
   const result = await getAdminUserDetail(id)
@@ -62,6 +90,19 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
+/**
+ * 管理者用ユーザー詳細ページコンポーネント
+ * ユーザーの基本情報、統計、最近の投稿、通報履歴を表示する
+ *
+ * @param params - URLパラメータ（ユーザーID）
+ * @returns ユーザー詳細ページのJSX要素
+ *
+ * 処理内容:
+ * 1. ユーザー詳細情報を取得（存在しない場合は404）
+ * 2. 最近の投稿5件を取得
+ * 3. このユーザーに対する通報履歴を取得
+ * 4. 基本情報、統計、投稿、通報を2カラムレイアウトで表示
+ */
 export default async function AdminUserDetailPage({ params }: Props) {
   const { id } = await params
   const result = await getAdminUserDetail(id)

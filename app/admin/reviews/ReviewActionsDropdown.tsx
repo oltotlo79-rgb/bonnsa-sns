@@ -1,10 +1,25 @@
+/**
+ * @file レビューアクションドロップダウンコンポーネント
+ * @description レビュー管理テーブルの各行で使用されるドロップダウンメニュー。
+ *              レビューの削除などの操作を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateとuseRefフック（状態管理とDOM参照用）
 import { useState, useRef } from 'react'
+// Next.jsのルーター（ページ更新用）
 import { useRouter } from 'next/navigation'
+// Next.jsのLinkコンポーネント（盆栽園確認リンク用）
 import Link from 'next/link'
+// レビュー削除用のServer Action
 import { deleteReviewByAdmin } from '@/lib/actions/admin'
 
+/**
+ * 縦三点メニューアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -15,11 +30,29 @@ function MoreVerticalIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ReviewActionsDropdownコンポーネントのProps型定義
+ */
 interface ReviewActionsDropdownProps {
+  /** 操作対象のレビューID */
   reviewId: string
+  /** レビュー対象の盆栽園ID */
   shopId: string
 }
 
+/**
+ * レビューアクションドロップダウンコンポーネント
+ * レビューに対する管理操作（確認/削除）を提供するドロップダウンメニュー
+ *
+ * @param reviewId - 操作対象のレビューID
+ * @param shopId - レビュー対象の盆栽園ID
+ * @returns ドロップダウンメニューのJSX要素
+ *
+ * 機能:
+ * - 盆栽園詳細ページへのリンク
+ * - レビュー削除（理由入力モーダル付き）
+ * - メニュー位置の自動調整（画面端対応）
+ */
 export function ReviewActionsDropdown({ reviewId, shopId }: ReviewActionsDropdownProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)

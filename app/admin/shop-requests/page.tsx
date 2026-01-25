@@ -1,30 +1,68 @@
+/**
+ * @file 管理者用盆栽園変更リクエスト管理ページ
+ * @description ユーザーからの盆栽園情報変更リクエスト一覧を表示し、
+ *              承認・却下の管理を行う管理者ページ。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// 盆栽園変更リクエスト一覧取得のServer Action
 import { getShopChangeRequests } from '@/lib/actions/shop'
+// 変更リクエストアクションコンポーネント
 import { ShopRequestActions } from './ShopRequestActions'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '盆栽園変更リクエスト - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** リクエストステータスフィルター */
     status?: 'pending' | 'approved' | 'rejected' | 'all'
   }>
 }
 
+/**
+ * ステータスの日本語ラベル定義
+ */
 const statusLabels: Record<string, string> = {
   pending: '保留中',
   approved: '承認済み',
   rejected: '却下済み',
 }
 
+/**
+ * ステータスに応じた色クラス定義
+ */
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600',
   approved: 'bg-green-500/10 text-green-600',
   rejected: 'bg-red-500/10 text-red-600',
 }
 
+/**
+ * 管理者用盆栽園変更リクエスト管理ページコンポーネント
+ * 変更リクエスト一覧をカード形式で表示し、承認/却下操作機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns 変更リクエスト管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータからステータスフィルターを取得
+ * 2. getShopChangeRequestsでリクエスト一覧を取得
+ * 3. ステータスフィルタータブ、リクエストカード一覧を表示
+ * 4. 各リクエストには現在値と変更後の値の比較表示
+ */
 export default async function AdminShopRequestsPage({ searchParams }: PageProps) {
   const params = await searchParams
   const status = params.status || 'pending'
@@ -223,6 +261,9 @@ export default async function AdminShopRequestsPage({ searchParams }: PageProps)
   )
 }
 
+/**
+ * 変更フィールドの日本語ラベル定義
+ */
 const fieldLabels: Record<string, string> = {
   name: '名称',
   address: '住所',

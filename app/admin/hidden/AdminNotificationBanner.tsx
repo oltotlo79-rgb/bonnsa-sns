@@ -1,9 +1,21 @@
+/**
+ * @file 管理者通知バナーコンポーネント
+ * @description 未読の管理者通知を表示し、一括既読機能を提供する
+ *              クライアントコンポーネント。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// UIコンポーネント（ボタン）
 import { Button } from '@/components/ui/button'
+// 全通知既読用のServer Action
 import { markAllAdminNotificationsAsRead } from '@/lib/actions/admin/hidden'
 
+/**
+ * 管理者通知の型定義
+ */
 interface AdminNotification {
   id: string
   type: string
@@ -15,6 +27,19 @@ interface AdminNotification {
   createdAt: Date
 }
 
+/**
+ * 管理者通知バナーコンポーネント
+ * 未読通知の表示と一括既読機能を提供するバナー
+ *
+ * @param notifications - 通知のリスト
+ * @param unreadCount - 未読通知の数
+ * @returns 通知バナーのJSX要素
+ *
+ * 機能:
+ * - 未読通知数の表示
+ * - 通知リストの展開/折りたたみ
+ * - 全通知の一括既読
+ */
 export function AdminNotificationBanner({
   notifications,
   unreadCount,

@@ -1,20 +1,54 @@
+/**
+ * @file 管理者用イベント管理ページ
+ * @description イベント一覧の表示、検索機能を提供する管理者ページ。
+ *              イベントの削除や外部イベントのインポートへのアクセスが可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Prismaデータベースクライアント
 import { prisma } from '@/lib/db'
+// 管理者権限チェック用のServer Action
 import { isAdmin } from '@/lib/actions/admin'
+// Next.jsのリダイレクト関数
 import { redirect } from 'next/navigation'
+// イベント操作用ドロップダウンメニューコンポーネント
 import { EventActionsDropdown } from './EventActionsDropdown'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: 'イベント管理 - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** タイトル・会場の検索キーワード */
     search?: string
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * 管理者用イベント管理ページコンポーネント
+ * イベント一覧をテーブル形式で表示し、検索機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns イベント管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. 管理者権限をチェック（未認証の場合はフィードへリダイレクト）
+ * 2. クエリパラメータから検索条件を取得
+ * 3. Prismaでイベント一覧を直接取得（登録者情報含む）
+ * 4. 検索フォーム、イベントテーブル、ページネーションを表示
+ */
 export default async function AdminEventsPage({ searchParams }: PageProps) {
   const isAdminUser = await isAdmin()
   if (!isAdminUser) {

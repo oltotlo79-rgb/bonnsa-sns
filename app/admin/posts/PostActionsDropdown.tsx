@@ -1,9 +1,23 @@
+/**
+ * @file 投稿アクションドロップダウンコンポーネント
+ * @description 投稿管理テーブルの各行で使用されるドロップダウンメニュー。
+ *              投稿の削除などの操作を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateとuseRefフック（状態管理とDOM参照用）
 import { useState, useRef } from 'react'
+// Next.jsのルーター（ページ更新用）
 import { useRouter } from 'next/navigation'
+// 投稿削除用のServer Action
 import { deletePostByAdmin } from '@/lib/actions/admin'
 
+/**
+ * 縦三点メニューアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -14,10 +28,25 @@ function MoreVerticalIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * PostActionsDropdownコンポーネントのProps型定義
+ */
 interface PostActionsDropdownProps {
+  /** 操作対象の投稿ID */
   postId: string
 }
 
+/**
+ * 投稿アクションドロップダウンコンポーネント
+ * 投稿に対する管理操作（削除）を提供するドロップダウンメニュー
+ *
+ * @param postId - 操作対象の投稿ID
+ * @returns ドロップダウンメニューのJSX要素
+ *
+ * 機能:
+ * - 投稿削除（理由入力モーダル付き）
+ * - メニュー位置の自動調整（画面端対応）
+ */
 export function PostActionsDropdown({ postId }: PostActionsDropdownProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)

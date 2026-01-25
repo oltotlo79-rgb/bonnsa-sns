@@ -1,9 +1,21 @@
+/**
+ * @file ユーザー詳細アクションコンポーネント
+ * @description ユーザー詳細ページで使用される管理操作パネル。
+ *              アカウント停止、復帰、削除などの操作を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// Next.jsのルーター（ページ遷移・更新用）
 import { useRouter } from 'next/navigation'
+// ユーザー管理用のServer Action（停止/復帰/削除）
 import { suspendUser, activateUser, deleteUserByAdmin } from '@/lib/actions/admin'
 
+/**
+ * UserDetailActionsコンポーネントのProps型定義
+ */
 type UserDetailActionsProps = {
   userId: string
   isSuspended: boolean
@@ -18,6 +30,20 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザー詳細アクションコンポーネント
+ * ユーザーに対する管理操作（停止/復帰/削除）を提供するパネル
+ *
+ * @param userId - 操作対象のユーザーID
+ * @param isSuspended - ユーザーの停止状態
+ * @param nickname - ユーザーのニックネーム（確認表示用）
+ * @returns アクションパネルのJSX要素
+ *
+ * 機能:
+ * - アカウント停止（理由入力必須）
+ * - アカウント復帰
+ * - アカウント削除（確認ダイアログ付き、取り消し不可）
+ */
 export function UserDetailActions({ userId, isSuspended, nickname }: UserDetailActionsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)

@@ -1,8 +1,18 @@
+/**
+ * @file プレミアム会員アクションドロップダウンコンポーネント
+ * @description プレミアム会員管理テーブルの各行で使用されるドロップダウンメニュー。
+ *              プレミアム会員の付与・延長・取り消し操作を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// Next.jsのルーター（ページ更新用）
 import { useRouter } from 'next/navigation'
+// UIコンポーネント（ボタン）
 import { Button } from '@/components/ui/button'
+// UIコンポーネント（ドロップダウンメニュー）
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+// UIコンポーネント（ダイアログ/モーダル）
 import {
   Dialog,
   DialogContent,
@@ -18,11 +29,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+// UIコンポーネント（入力フィールド）
 import { Input } from '@/components/ui/input'
+// UIコンポーネント（ラベル）
 import { Label } from '@/components/ui/label'
+// プレミアム会員管理用のServer Action
 import { grantPremium, revokePremium, extendPremium } from '@/lib/actions/admin/premium'
+// Lucideアイコン
 import { MoreHorizontal, Crown, Ban, CalendarPlus } from 'lucide-react'
 
+/**
+ * PremiumActionsDropdownコンポーネントのProps型定義
+ */
 type PremiumActionsDropdownProps = {
   userId: string
   userName: string
@@ -30,6 +48,21 @@ type PremiumActionsDropdownProps = {
   premiumExpiresAt: Date | null
 }
 
+/**
+ * プレミアム会員アクションドロップダウンコンポーネント
+ * プレミアム会員に対する管理操作を提供するドロップダウンメニュー
+ *
+ * @param userId - 操作対象のユーザーID
+ * @param userName - ユーザー名（確認ダイアログ表示用）
+ * @param isPremium - 現在プレミアム会員かどうか
+ * @param premiumExpiresAt - プレミアム会員の有効期限
+ * @returns ドロップダウンメニューのJSX要素
+ *
+ * 機能:
+ * - プレミアム付与（非プレミアム会員のみ、日数指定ダイアログ付き）
+ * - 期限延長（プレミアム会員のみ、日数指定ダイアログ付き）
+ * - プレミアム取り消し（プレミアム会員のみ、確認ダイアログ付き）
+ */
 export function PremiumActionsDropdown({
   userId,
   userName,

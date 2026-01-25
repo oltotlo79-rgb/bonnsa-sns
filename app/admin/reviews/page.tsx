@@ -1,8 +1,23 @@
+/**
+ * @file 管理者用レビュー管理ページ
+ * @description 盆栽園レビュー一覧の表示、検索、フィルタリング機能を提供する管理者ページ。
+ *              レビューの削除や通報状況の確認が可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// 管理者用レビュー一覧取得のServer Action
 import { getAdminReviews } from '@/lib/actions/admin'
+// レビュー操作用ドロップダウンメニューコンポーネント
 import { ReviewActionsDropdown } from './ReviewActionsDropdown'
 
+/**
+ * 検索アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -20,18 +35,42 @@ function StarIcon({ className, filled }: { className?: string; filled?: boolean 
   )
 }
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: 'レビュー管理 - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** レビュー内容の検索キーワード */
     search?: string
+    /** 通報されたもののみ表示フラグ */
     hasReports?: string
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * 管理者用レビュー管理ページコンポーネント
+ * レビュー一覧をテーブル形式で表示し、検索・フィルタリング機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns レビュー管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータから検索条件を取得
+ * 2. ページネーション設定（1ページ20件）
+ * 3. getAdminReviewsでレビュー一覧を取得
+ * 4. 検索フォーム、レビューテーブル、ページネーションを表示
+ */
 export default async function AdminReviewsPage({ searchParams }: PageProps) {
   const params = await searchParams
   const search = params.search || ''

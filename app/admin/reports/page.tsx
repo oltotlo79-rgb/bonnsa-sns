@@ -1,21 +1,46 @@
+/**
+ * @file 管理者用通報管理ページ
+ * @description ユーザーからの通報一覧を表示し、対応状況の管理を行う管理者ページ。
+ *              ステータス・対象タイプでのフィルタリングや、通報への対応操作が可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// 通報一覧取得のServer Action
 import { getReports } from '@/lib/actions/report'
+// 通報理由の定数定義
 import { REPORT_REASONS } from '@/lib/constants/report'
+// 通報操作用ドロップダウンメニューコンポーネント
 import { ReportActionsDropdown } from './ReportActionsDropdown'
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '通報管理 - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** 通報ステータスフィルター */
     status?: 'pending' | 'reviewed' | 'resolved' | 'dismissed'
+    /** 通報対象タイプフィルター */
     targetType?: 'post' | 'comment' | 'event' | 'shop' | 'user'
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * ステータスの日本語ラベル定義
+ */
 const statusLabels = {
   pending: '未対応',
   reviewed: '確認中',
@@ -23,6 +48,9 @@ const statusLabels = {
   dismissed: '却下',
 }
 
+/**
+ * ステータスに応じた色クラス定義
+ */
 const statusColors = {
   pending: 'bg-yellow-500/10 text-yellow-600',
   reviewed: 'bg-blue-500/10 text-blue-600',
@@ -30,6 +58,9 @@ const statusColors = {
   dismissed: 'bg-gray-500/10 text-gray-600',
 }
 
+/**
+ * 対象タイプの日本語ラベル定義
+ */
 const targetTypeLabels = {
   post: '投稿',
   comment: 'コメント',
@@ -38,6 +69,18 @@ const targetTypeLabels = {
   user: 'ユーザー',
 }
 
+/**
+ * 管理者用通報管理ページコンポーネント
+ * 通報一覧をテーブル形式で表示し、フィルタリング・対応操作機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns 通報管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータからフィルター条件を取得
+ * 2. getReportsで通報一覧を取得
+ * 3. フィルターフォーム、通報テーブル、ページネーションを表示
+ */
 export default async function AdminReportsPage({ searchParams }: PageProps) {
   const params = await searchParams
   const status = params.status

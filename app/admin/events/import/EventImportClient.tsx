@@ -8,6 +8,14 @@ import {
   type ImportableEvent,
 } from '@/lib/actions/event-import'
 import { BONSAI_EVENT_SOURCES } from '@/lib/scraping/bonsai-events'
+import { PREFECTURES } from '@/lib/prefectures'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 /**
  * 外部イベントインポートのクライアントコンポーネント
@@ -27,6 +35,8 @@ export function EventImportClient() {
   const [success, setSuccess] = useState<string | null>(null)
   // 選択された地方
   const [selectedRegion, setSelectedRegion] = useState<string>('all')
+  // 編集中のイベント
+  const [editingEvent, setEditingEvent] = useState<ImportableEvent | null>(null)
 
   /**
    * スクレイピング実行
@@ -86,6 +96,16 @@ export function EventImportClient() {
     } else {
       setSelectedIds(new Set(events.filter((e) => e.startDate).map((e) => e.id)))
     }
+  }
+
+  /**
+   * イベント更新
+   */
+  const handleUpdateEvent = (updatedEvent: ImportableEvent) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
+    )
+    setEditingEvent(null)
   }
 
   /**
@@ -294,6 +314,13 @@ export function EventImportClient() {
                           詳細 →
                         </a>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingEvent(event)}
+                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                      >
+                        編集
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -309,6 +336,215 @@ export function EventImportClient() {
           <p>「イベント情報を取得」ボタンを押してイベントを取得してください</p>
         </div>
       )}
+
+      {/* 編集モーダル */}
+      <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>イベント情報を編集</DialogTitle>
+          </DialogHeader>
+          {editingEvent && (
+            <EventEditForm
+              event={editingEvent}
+              onSave={handleUpdateEvent}
+              onCancel={() => setEditingEvent(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  )
+}
+
+/**
+ * イベント編集フォーム
+ */
+function EventEditForm({
+  event,
+  onSave,
+  onCancel,
+}: {
+  event: ImportableEvent
+  onSave: (event: ImportableEvent) => void
+  onCancel: () => void
+}) {
+  const [formData, setFormData] = useState<ImportableEvent>(event)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  const updateField = <K extends keyof ImportableEvent>(
+    field: K,
+    value: ImportableEvent[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // ISO日付文字列をinput[type="date"]用にフォーマット
+  const formatDateForInput = (dateStr: string | null): string => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    return date.toISOString().split('T')[0]
+  }
+
+  // input[type="date"]の値をISO文字列に変換
+  const parseDateInput = (value: string): string | null => {
+    if (!value) return null
+    return new Date(value).toISOString()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* タイトル */}
+      <div>
+        <label className="block text-sm font-medium mb-1">タイトル *</label>
+        <input
+          type="text"
+          value={formData.title}
+          onChange={(e) => updateField('title', e.target.value)}
+          required
+          className="w-full px-3 py-2 border rounded-lg bg-background"
+        />
+      </div>
+
+      {/* 日付 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">開始日 *</label>
+          <input
+            type="date"
+            value={formatDateForInput(formData.startDate)}
+            onChange={(e) => updateField('startDate', parseDateInput(e.target.value))}
+            required
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">終了日</label>
+          <input
+            type="date"
+            value={formatDateForInput(formData.endDate)}
+            onChange={(e) => updateField('endDate', parseDateInput(e.target.value))}
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          />
+        </div>
+      </div>
+
+      {/* 場所 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">都道府県</label>
+          <select
+            value={formData.prefecture || ''}
+            onChange={(e) => updateField('prefecture', e.target.value || null)}
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          >
+            <option value="">選択してください</option>
+            {PREFECTURES.map((pref) => (
+              <option key={pref} value={pref}>
+                {pref}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">市区町村</label>
+          <input
+            type="text"
+            value={formData.city || ''}
+            onChange={(e) => updateField('city', e.target.value || null)}
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          />
+        </div>
+      </div>
+
+      {/* 会場 */}
+      <div>
+        <label className="block text-sm font-medium mb-1">会場</label>
+        <input
+          type="text"
+          value={formData.venue || ''}
+          onChange={(e) => updateField('venue', e.target.value || null)}
+          className="w-full px-3 py-2 border rounded-lg bg-background"
+        />
+      </div>
+
+      {/* 主催者 */}
+      <div>
+        <label className="block text-sm font-medium mb-1">主催者</label>
+        <input
+          type="text"
+          value={formData.organizer || ''}
+          onChange={(e) => updateField('organizer', e.target.value || null)}
+          className="w-full px-3 py-2 border rounded-lg bg-background"
+        />
+      </div>
+
+      {/* 入場料・即売 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">入場料</label>
+          <input
+            type="text"
+            value={formData.admissionFee || ''}
+            onChange={(e) => updateField('admissionFee', e.target.value || null)}
+            placeholder="例: 無料、500円"
+            className="w-full px-3 py-2 border rounded-lg bg-background"
+          />
+        </div>
+        <div className="flex items-center pt-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.hasSales}
+              onChange={(e) => updateField('hasSales', e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm">即売あり</span>
+          </label>
+        </div>
+      </div>
+
+      {/* 説明 */}
+      <div>
+        <label className="block text-sm font-medium mb-1">説明</label>
+        <textarea
+          value={formData.description || ''}
+          onChange={(e) => updateField('description', e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 border rounded-lg bg-background resize-none"
+        />
+      </div>
+
+      {/* 外部URL */}
+      <div>
+        <label className="block text-sm font-medium mb-1">外部URL</label>
+        <input
+          type="url"
+          value={formData.externalUrl || ''}
+          onChange={(e) => updateField('externalUrl', e.target.value || null)}
+          className="w-full px-3 py-2 border rounded-lg bg-background"
+        />
+      </div>
+
+      {/* ボタン */}
+      <DialogFooter>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border rounded-lg hover:bg-muted"
+        >
+          キャンセル
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+        >
+          保存
+        </button>
+      </DialogFooter>
+    </form>
   )
 }

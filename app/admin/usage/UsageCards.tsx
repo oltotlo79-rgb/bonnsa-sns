@@ -1,8 +1,21 @@
+/**
+ * @file サービス使用量カードコンポーネント
+ * @description 各クラウドサービスの使用状況をカード形式で表示するクライアントコンポーネント。
+ *              API経由でリアルタイムの使用量を取得し、プログレスバーで視覚化する。
+ */
+
 'use client'
 
+// ReactのuseStateとuseEffectフック（状態管理と副作用用）
 import { useState, useEffect } from 'react'
+// サービス使用量の型定義
 import type { ServiceUsage } from '@/lib/services/usage'
 
+/**
+ * 更新/リフレッシュアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function RefreshIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -14,6 +27,11 @@ function RefreshIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 外部リンクアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ExternalLinkIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -24,6 +42,11 @@ function ExternalLinkIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * チェック/成功アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function CheckCircleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -33,6 +56,11 @@ function CheckCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 警告/アラートアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function AlertTriangleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -43,6 +71,11 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * エラー/Xアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function XCircleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -53,6 +86,11 @@ function XCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 設定/歯車アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function SettingsIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -62,7 +100,10 @@ function SettingsIcon({ className }: { className?: string }) {
   )
 }
 
-// サービスのアイコン
+/**
+ * 各サービスのロゴアイコン定義
+ * サービス名をキーとしてSVGアイコンを格納
+ */
 const serviceIcons: Record<string, React.ReactNode> = {
   Vercel: (
     <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
@@ -98,7 +139,10 @@ const serviceIcons: Record<string, React.ReactNode> = {
   ),
 }
 
-// サービスの背景色
+/**
+ * 各サービスのブランドカラー定義
+ * サービス名をキーとしてTailwind CSSクラスを格納
+ */
 const serviceColors: Record<string, string> = {
   Vercel: 'bg-black text-white',
   Supabase: 'bg-emerald-600 text-white',
@@ -106,6 +150,20 @@ const serviceColors: Record<string, string> = {
   Resend: 'bg-black text-white',
 }
 
+/**
+ * 個別サービス使用量カードコンポーネント
+ * 1つのサービスの使用状況を表示するカード
+ *
+ * @param service - サービス使用量データ
+ * @returns サービスカードのJSX要素
+ *
+ * 表示内容:
+ * - サービス名とロゴ
+ * - ステータス（正常/警告/エラー/未設定）
+ * - 使用量プログレスバー
+ * - ダッシュボードへのリンク
+ * - エラーメッセージ・ヘルプテキスト
+ */
 function UsageCard({ service }: { service: ServiceUsage }) {
   const statusIcon = {
     ok: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
@@ -253,6 +311,19 @@ function UsageCard({ service }: { service: ServiceUsage }) {
   )
 }
 
+/**
+ * サービス使用量カード一覧コンポーネント
+ * 全サービスの使用量カードを表示し、データ取得・更新機能を提供する
+ *
+ * @returns サービス使用量カード一覧のJSX要素
+ *
+ * 機能:
+ * - 初回マウント時に使用量データを取得
+ * - 手動更新ボタン
+ * - ローディング状態のスケルトン表示
+ * - エラー表示
+ * - 未設定サービスの環境変数設定ガイド
+ */
 export function UsageCards() {
   const [services, setServices] = useState<ServiceUsage[]>([])
   const [loading, setLoading] = useState(true)

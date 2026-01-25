@@ -1,9 +1,23 @@
+/**
+ * @file イベントアクションドロップダウンコンポーネント
+ * @description イベント管理テーブルの各行で使用されるドロップダウンメニュー。
+ *              イベントの削除などの操作を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateとuseRefフック（状態管理とDOM参照用）
 import { useState, useRef } from 'react'
+// Next.jsのルーター（ページ更新用）
 import { useRouter } from 'next/navigation'
+// イベント削除用のServer Action
 import { deleteEventByAdmin } from '@/lib/actions/admin'
 
+/**
+ * 縦三点メニューアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -14,10 +28,25 @@ function MoreVerticalIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * EventActionsDropdownコンポーネントのProps型定義
+ */
 interface EventActionsDropdownProps {
+  /** 操作対象のイベントID */
   eventId: string
 }
 
+/**
+ * イベントアクションドロップダウンコンポーネント
+ * イベントに対する管理操作（削除）を提供するドロップダウンメニュー
+ *
+ * @param eventId - 操作対象のイベントID
+ * @returns ドロップダウンメニューのJSX要素
+ *
+ * 機能:
+ * - イベント削除（理由入力モーダル付き）
+ * - メニュー位置の自動調整（画面端対応）
+ */
 export function EventActionsDropdown({ eventId }: EventActionsDropdownProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)

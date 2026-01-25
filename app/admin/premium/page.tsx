@@ -1,8 +1,23 @@
+/**
+ * @file 管理者用プレミアム会員管理ページ
+ * @description プレミアム会員一覧の表示、統計、検索機能を提供する管理者ページ。
+ *              プレミアム会員の付与・延長・取り消し操作や、有効期限の管理が可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// プレミアム会員一覧・統計取得のServer Action
 import { getPremiumUsers, getPremiumStats } from '@/lib/actions/admin/premium'
+// プレミアム操作用ドロップダウンメニューコンポーネント
 import { PremiumActionsDropdown } from './PremiumActionsDropdown'
 
+/**
+ * 王冠アイコンコンポーネント（プレミアムのシンボル）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function CrownIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -21,17 +36,40 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: 'プレミアム会員管理 - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** ニックネーム・メールアドレスの検索キーワード */
     search?: string
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * 管理者用プレミアム会員管理ページコンポーネント
+ * プレミアム会員の統計、一覧、検索機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns プレミアム会員管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータから検索条件を取得
+ * 2. 並列でユーザー一覧と統計情報を取得
+ * 3. 統計カード（総会員数、今月の新規、期限切れ予定、総売上）を表示
+ * 4. 検索フォーム、会員テーブル、ページネーションを表示
+ */
 export default async function AdminPremiumPage({ searchParams }: PageProps) {
   const params = await searchParams
   const search = params.search || ''

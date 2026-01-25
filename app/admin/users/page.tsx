@@ -1,8 +1,23 @@
+/**
+ * @file 管理者用ユーザー管理ページ
+ * @description ユーザー一覧の表示、検索、フィルタリング機能を提供する管理者ページ。
+ *              ユーザーのアカウント状態（アクティブ/停止中）の確認や操作が可能。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// Next.jsの画像最適化コンポーネント
 import Image from 'next/image'
+// 管理者用ユーザー一覧取得のServer Action
 import { getAdminUsers } from '@/lib/actions/admin'
+// ユーザー操作用ドロップダウンメニューコンポーネント
 import { UserActionsDropdown } from './UserActionsDropdown'
 
+/**
+ * 検索アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -12,18 +27,42 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: 'ユーザー管理 - BON-LOG 管理',
 }
 
+/**
+ * ページコンポーネントのProps型定義
+ * URLのクエリパラメータを受け取る
+ */
 interface PageProps {
   searchParams: Promise<{
+    /** ニックネーム・メールアドレスの検索キーワード */
     search?: string
+    /** ユーザーステータスフィルター */
     status?: 'all' | 'active' | 'suspended'
+    /** 現在のページ番号 */
     page?: string
   }>
 }
 
+/**
+ * 管理者用ユーザー管理ページコンポーネント
+ * ユーザー一覧をテーブル形式で表示し、検索・フィルタリング機能を提供する
+ *
+ * @param searchParams - URLのクエリパラメータ
+ * @returns ユーザー管理ページのJSX要素
+ *
+ * 処理内容:
+ * 1. クエリパラメータから検索条件を取得
+ * 2. ページネーション設定（1ページ20件）
+ * 3. getAdminUsersでユーザー一覧を取得
+ * 4. 検索フォーム、ユーザーテーブル、ページネーションを表示
+ */
 export default async function AdminUsersPage({ searchParams }: PageProps) {
   const params = await searchParams
   const search = params.search || ''

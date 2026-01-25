@@ -1,14 +1,27 @@
+/**
+ * @file 非表示コンテンツ一覧コンポーネント
+ * @description 非表示コンテンツのフィルタリング、再表示、削除機能を提供する
+ *              クライアントコンポーネント。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// UIコンポーネント（ボタン）
 import { Button } from '@/components/ui/button'
+// コンテンツ再表示・削除用のServer Action
 import { restoreContent, deleteHiddenContent } from '@/lib/actions/admin/hidden'
+// コンテンツタイプの定数（ラベル・色）
 import {
   CONTENT_TYPE_LABELS,
   CONTENT_TYPE_COLORS,
   type ContentType,
 } from '@/lib/constants/report'
 
+/**
+ * 非表示コンテンツアイテムの型定義
+ */
 interface HiddenItem {
   type: ContentType
   id: string
@@ -18,6 +31,18 @@ interface HiddenItem {
   reportCount: number
 }
 
+/**
+ * 非表示コンテンツ一覧コンポーネント
+ * 非表示コンテンツのフィルタリング、再表示、削除機能を提供する
+ *
+ * @param items - 非表示コンテンツのリスト
+ * @returns コンテンツ一覧のJSX要素
+ *
+ * 機能:
+ * - タイプ別フィルタリング（投稿/コメント/イベント/盆栽園/レビュー）
+ * - コンテンツの再表示（確認ダイアログ付き）
+ * - コンテンツの完全削除（確認ダイアログ付き）
+ */
 export function HiddenContentList({ items }: { items: HiddenItem[] }) {
   const [filter, setFilter] = useState<ContentType | 'all'>('all')
   const [processingId, setProcessingId] = useState<string | null>(null)

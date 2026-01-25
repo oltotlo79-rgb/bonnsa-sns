@@ -1,21 +1,32 @@
+/**
+ * @file 統計グラフコンポーネント
+ * @description 統計データをライン/エリア/バーグラフで表示するクライアントコンポーネント。
+ *              期間・指標・グラフタイプの切り替え機能を提供する。
+ */
+
 'use client'
 
+// ReactのuseStateフック（状態管理用）
 import { useState } from 'react'
+// Rechartsのグラフコンポーネント
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  LineChart,      // 折れ線グラフ
+  Line,           // 折れ線
+  AreaChart,      // エリアグラフ
+  Area,           // エリア
+  BarChart,       // 棒グラフ
+  Bar,            // 棒
+  XAxis,          // X軸
+  YAxis,          // Y軸
+  CartesianGrid,  // グリッド線
+  Tooltip,        // ツールチップ
+  Legend,         // 凡例
+  ResponsiveContainer, // レスポンシブコンテナ
 } from 'recharts'
 
+/**
+ * 統計データの型定義
+ */
 type StatsData = {
   date: string
   users: number
@@ -23,13 +34,33 @@ type StatsData = {
   comments: number
 }
 
+/**
+ * StatsChartsコンポーネントのProps型定義
+ */
 type StatsChartsProps = {
+  /** 統計データの配列 */
   data: StatsData[]
 }
 
+/** グラフタイプ（ライン/エリア/バー） */
 type ChartType = 'line' | 'area' | 'bar'
+/** 表示期間（7日/14日/30日） */
 type Period = '7' | '14' | '30'
 
+/**
+ * 統計グラフコンポーネント
+ * 統計データを視覚的に表示するインタラクティブなグラフ
+ *
+ * @param data - 統計データの配列
+ * @returns グラフを含むJSX要素
+ *
+ * 機能:
+ * - 期間選択（7日/14日/30日）
+ * - 指標選択（すべて/ユーザー数/投稿数/コメント数）
+ * - グラフタイプ選択（エリア/ライン/バー）
+ * - レスポンシブ対応
+ * - ツールチップ・凡例表示
+ */
 export function StatsCharts({ data }: StatsChartsProps) {
   const [chartType, setChartType] = useState<ChartType>('area')
   const [period, setPeriod] = useState<Period>('30')
