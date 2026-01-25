@@ -39,8 +39,15 @@ jest.mock('next/navigation', () => ({
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props) => {
+    // Next.js Image特有のpropsを除外してimgタグに渡す
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { fill, priority, quality, placeholder, blurDataURL, loader, unoptimized, ...imgProps } = props
+    // fillがtrueの場合はstyleを追加
+    if (fill) {
+      imgProps.style = { ...imgProps.style, objectFit: 'cover', position: 'absolute', width: '100%', height: '100%' }
+    }
     // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-    return <img {...props} />
+    return <img {...imgProps} />
   },
 }))
 

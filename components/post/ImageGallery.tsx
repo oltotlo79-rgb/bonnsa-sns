@@ -33,32 +33,18 @@ function ExpandIcon({ className }: { className?: string }) {
   )
 }
 
-function MediaItem({ media, onExpandClick }: { media: Media; onExpandClick?: (e: React.MouseEvent) => void }) {
+function MediaItem({ media }: { media: Media }) {
   if (media.type === 'video') {
     return (
-      <>
-        <video
-          src={media.url}
-          controls
-          className="absolute inset-0 w-full h-full object-cover"
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-          }}
-        />
-        {/* 拡大ボタン */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            onExpandClick?.(e)
-          }}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-          title="拡大表示"
-        >
-          <ExpandIcon className="w-4 h-4 text-white" />
-        </button>
-      </>
+      <video
+        src={media.url}
+        controls
+        className="absolute inset-0 w-full h-full object-cover"
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+        }}
+      />
     )
   }
 
@@ -114,37 +100,58 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
   return (
     <>
       <div className={`${gridClass} rounded-lg overflow-hidden`}>
-        {sortedImages.map((media, index) => (
-          <button
-            key={media.id}
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              if (onMediaClick) {
-                onMediaClick(media)
-              } else {
-                setSelectedIndex(index)
-              }
-            }}
-            className={`relative block w-full bg-muted overflow-hidden ${
-              images.length === 3 && index === 0 ? 'row-span-2' : ''
-            }`}
-            style={{
-              paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%', // 1:1 or 16:9
-            }}
-          >
-            <MediaItem
-              media={media}
-              onExpandClick={() => {
-                if (onMediaClick) {
-                  onMediaClick(media)
-                } else {
-                  setSelectedIndex(index)
-                }
+        {sortedImages.map((media, index) => {
+          const handleClick = (e: React.MouseEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (onMediaClick) {
+              onMediaClick(media)
+            } else {
+              setSelectedIndex(index)
+            }
+          }
+
+          // 動画の場合はdivを使用（video要素にcontrolsがあるため）
+          if (media.type === 'video') {
+            return (
+              <div
+                key={media.id}
+                className={`relative block w-full bg-muted overflow-hidden ${
+                  images.length === 3 && index === 0 ? 'row-span-2' : ''
+                }`}
+                style={{
+                  paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%',
+                }}
+              >
+                <MediaItem media={media} />
+                {/* 拡大ボタン */}
+                <button
+                  onClick={handleClick}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                  title="拡大表示"
+                >
+                  <ExpandIcon className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            )
+          }
+
+          // 画像の場合はボタンを使用
+          return (
+            <button
+              key={media.id}
+              onClick={handleClick}
+              className={`relative block w-full bg-muted overflow-hidden ${
+                images.length === 3 && index === 0 ? 'row-span-2' : ''
+              }`}
+              style={{
+                paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%',
               }}
-            />
-          </button>
-        ))}
+            >
+              <MediaItem media={media} />
+            </button>
+          )
+        })}
       </div>
 
       {/* モーダル（画像・動画） */}

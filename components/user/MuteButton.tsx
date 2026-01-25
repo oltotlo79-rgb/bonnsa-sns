@@ -113,13 +113,15 @@ export function MuteButton({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{nickname}さんをミュートしますか?</AlertDialogTitle>
-            <AlertDialogDescription>
-              ミュートすると、以下の効果があります:
-              <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>タイムラインに投稿が表示されなくなります</li>
-                <li>通知が表示されなくなります</li>
-              </ul>
-              フォロー関係は維持されます。
+            <AlertDialogDescription asChild>
+              <div className="text-muted-foreground text-sm">
+                ミュートすると、以下の効果があります:
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>タイムラインに投稿が表示されなくなります</li>
+                  <li>通知が表示されなくなります</li>
+                </ul>
+                <span className="block mt-2">フォロー関係は維持されます。</span>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

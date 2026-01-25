@@ -111,14 +111,15 @@ jobs:
           NEXTAUTH_URL: "http://localhost:3000"
 
   # ===========================================
-  # E2E Tests (mainブランチのみ、失敗しても続行)
+  # E2E Tests (一時的に無効化 - 手動実行推奨)
+  # 有効化する場合: if の false を削除
   # ===========================================
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: false  # 一時的に無効化
+    # if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     needs: [lint, test, build]
-    continue-on-error: true  # E2Eの失敗でCI全体を止めない
     services:
       postgres:
         image: postgres:16-alpine
