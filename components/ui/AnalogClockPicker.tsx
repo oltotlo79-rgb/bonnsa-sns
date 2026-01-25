@@ -219,8 +219,8 @@ export function AnalogClockPicker({
           setMode('minutes')
         }
       } else {
-        // 分選択モード: 6度ごとに1分（360 / 60 = 6）
-        const newMinutes = Math.round(angle / 6) % 60
+        // 分選択モード: 30度ごとに5分（360 / 12 = 30）、5分単位で選択
+        const newMinutes = (Math.round(angle / 30) * 5) % 60
         onChange(formatTime(hours, newMinutes))
 
         // 操作終了時はピッカーを閉じる
