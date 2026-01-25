@@ -91,8 +91,8 @@ describe('Admin Premium Actions', () => {
       const { grantPremium } = await import('@/lib/actions/admin/premium')
       const result = await grantPremium('target-user-id')
 
-      expect(result.success).toBe(true)
-      expect(result.expiresAt).toBeDefined()
+      expect('success' in result && result.success).toBe(true)
+      expect('expiresAt' in result && result.expiresAt).toBeDefined()
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'target-user-id' },
@@ -123,7 +123,7 @@ describe('Admin Premium Actions', () => {
       const { grantPremium } = await import('@/lib/actions/admin/premium')
       const result = await grantPremium('target-user-id', 365)
 
-      expect(result.success).toBe(true)
+      expect('success' in result && result.success).toBe(true)
       expect(mockPrisma.adminLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -266,8 +266,8 @@ describe('Admin Premium Actions', () => {
       const { extendPremium } = await import('@/lib/actions/admin/premium')
       const result = await extendPremium('target-user-id', 30)
 
-      expect(result.success).toBe(true)
-      expect(result.newExpiresAt).toBeDefined()
+      expect('success' in result && result.success).toBe(true)
+      expect('newExpiresAt' in result && result.newExpiresAt).toBeDefined()
       expect(mockPrisma.adminLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -298,8 +298,8 @@ describe('Admin Premium Actions', () => {
       const { extendPremium } = await import('@/lib/actions/admin/premium')
       const result = await extendPremium('target-user-id', 30)
 
-      expect(result.success).toBe(true)
-      expect(result.newExpiresAt).toBeDefined()
+      expect('success' in result && result.success).toBe(true)
+      expect('newExpiresAt' in result && result.newExpiresAt).toBeDefined()
     })
 
     it('プレミアム期限がnullの場合は現在日時から延長する', async () => {
@@ -317,8 +317,8 @@ describe('Admin Premium Actions', () => {
       const { extendPremium } = await import('@/lib/actions/admin/premium')
       const result = await extendPremium('target-user-id', 30)
 
-      expect(result.success).toBe(true)
-      expect(result.newExpiresAt).toBeDefined()
+      expect('success' in result && result.success).toBe(true)
+      expect('newExpiresAt' in result && result.newExpiresAt).toBeDefined()
     })
   })
 
@@ -364,8 +364,8 @@ describe('Admin Premium Actions', () => {
       const { getPremiumUsers } = await import('@/lib/actions/admin/premium')
       const result = await getPremiumUsers()
 
-      expect(result.users).toHaveLength(1)
-      expect(result.total).toBe(1)
+      expect('users' in result && result.users).toHaveLength(1)
+      expect('total' in result && result.total).toBe(1)
     })
 
     it('検索クエリでフィルタリングできる', async () => {
@@ -439,10 +439,10 @@ describe('Admin Premium Actions', () => {
       const { getPremiumStats } = await import('@/lib/actions/admin/premium')
       const result = await getPremiumStats()
 
-      expect(result.totalPremiumUsers).toBe(100)
-      expect(result.expiringIn7Days).toBe(5)
-      expect(result.newThisMonth).toBe(20)
-      expect(result.totalRevenue).toBe(500000)
+      expect('totalPremiumUsers' in result && result.totalPremiumUsers).toBe(100)
+      expect('expiringIn7Days' in result && result.expiringIn7Days).toBe(5)
+      expect('newThisMonth' in result && result.newThisMonth).toBe(20)
+      expect('totalRevenue' in result && result.totalRevenue).toBe(500000)
     })
 
     it('支払いがない場合は売上0を返す', async () => {
@@ -454,7 +454,7 @@ describe('Admin Premium Actions', () => {
       const { getPremiumStats } = await import('@/lib/actions/admin/premium')
       const result = await getPremiumStats()
 
-      expect(result.totalRevenue).toBe(0)
+      expect('totalRevenue' in result && result.totalRevenue).toBe(0)
     })
   })
 
@@ -511,8 +511,8 @@ describe('Admin Premium Actions', () => {
       const { searchUserForPremium } = await import('@/lib/actions/admin/premium')
       const result = await searchUserForPremium('test')
 
-      expect(result.users).toHaveLength(1)
-      expect(result.users[0].email).toBe('test@example.com')
+      expect('users' in result && result.users).toHaveLength(1)
+      expect('users' in result && result.users[0].email).toBe('test@example.com')
     })
 
     it('最大10件まで取得する', async () => {
