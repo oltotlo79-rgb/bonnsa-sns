@@ -75,16 +75,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   )
 
   // Content Security Policy
-  // Google AdSense用のドメインを追加
+  // Google AdSense用のドメインを追加（ワイルドカードで広くカバー）
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://www.googletagservices.com https://adservice.google.com https://www.google.com https://partner.googleadservices.com", // Next.js + Google AdSense
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googlesyndication.com https://*.googletagservices.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net", // Next.js + Google AdSense
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.jp https://googleads.g.doubleclick.net https://www.gstatic.com",
+    "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org https://*.googlesyndication.com https://*.google.com https://*.google.co.jp https://*.doubleclick.net https://*.gstatic.com",
     "media-src 'self' blob: https://*.blob.core.windows.net https://*.r2.dev",
-    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com https://pagead2.googlesyndication.com https://www.google.com https://googleads.g.doubleclick.net https://www.google-analytics.com",
-    "frame-src https://googleads.g.doubleclick.net https://www.google.com https://tpc.googlesyndication.com",
+    "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://*.google-analytics.com https://*.adtrafficquality.google",
+    "frame-src https://*.doubleclick.net https://*.google.com https://*.googlesyndication.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

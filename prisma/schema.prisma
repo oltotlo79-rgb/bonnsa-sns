@@ -167,6 +167,8 @@ model Post {
   @@index([createdAt])
   @@index([isHidden])
   @@index([bonsaiId])
+  // パフォーマンス最適化: タイムラインクエリ用の複合インデックス
+  @@index([userId, isHidden, createdAt(sort: Desc)])
   @@map("posts")
 }
 

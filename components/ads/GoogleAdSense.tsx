@@ -36,11 +36,7 @@
 // インポート
 // ============================================================
 
-/**
- * Script - Next.jsのスクリプト最適化コンポーネント
- * 外部スクリプトの読み込みを最適化し、パフォーマンスを向上
- */
-import Script from 'next/script'
+import { useEffect } from 'react'
 
 // ============================================================
 // メインコンポーネント
@@ -50,35 +46,34 @@ import Script from 'next/script'
  * Google AdSenseスクリプトローダーコンポーネント
  *
  * AdSenseの広告配信スクリプトをページに読み込む。
- * 環境変数が設定されていない場合は何も表示しない。
+ * Next.jsのScriptコンポーネントはdata-nscript属性を追加するが、
+ * AdSenseはこれをサポートしていないため、useEffectで直接挿入する。
  *
- * @returns スクリプト要素、または環境変数未設定時はnull
- *
- * @example
- * ```tsx
- * // ルートレイアウトに配置
- * <GoogleAdSense />
- * ```
+ * @returns null（スクリプトはheadに直接挿入される）
  */
 export function GoogleAdSense() {
-  /**
-   * 環境変数からAdSenseクライアントIDを取得
-   * NEXT_PUBLIC_プレフィックスでクライアントサイドでもアクセス可能
-   * 未設定の場合はデフォルト値を使用（サイト審査対応）
-   */
-  const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-7644314630384219'
+  useEffect(() => {
+    // 既にスクリプトが存在する場合はスキップ
+    if (document.querySelector('script[src*="adsbygoogle.js"]')) {
+      return
+    }
 
-  return (
-    <Script
-      // 非同期読み込みを有効化
-      async
-      // AdSenseスクリプトのURL（クライアントIDをクエリパラメータで指定）
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`}
-      // クロスオリジン属性（AdSenseの要件）
-      crossOrigin="anonymous"
-      // afterInteractive: ページがインタラクティブになった直後に読み込み
-      // AdSense審査で確実に認識されるようにするため
-      strategy="afterInteractive"
-    />
-  )
+    const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-7644314630384219'
+
+    const script = document.createElement('script')
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`
+    script.async = true
+    script.crossOrigin = 'anonymous'
+    document.head.appendChild(script)
+
+    return () => {
+      // クリーンアップ（SPAナビゲーション時）
+      const existingScript = document.querySelector('script[src*="adsbygoogle.js"]')
+      if (existingScript) {
+        existingScript.remove()
+      }
+    }
+  }, [])
+
+  return null
 }
