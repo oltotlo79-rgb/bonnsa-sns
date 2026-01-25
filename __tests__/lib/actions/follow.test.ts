@@ -48,6 +48,8 @@ describe('Follow Actions', () => {
 
     it('フォローしていない場合は追加する', async () => {
       mockPrisma.follow.findUnique.mockResolvedValue(null)
+      // 公開アカウントのユーザーを返す
+      mockPrisma.user.findUnique.mockResolvedValue({ isPublic: true })
       mockPrisma.follow.create.mockResolvedValue({
         followerId: mockUser.id,
         followingId: 'target-user-id',
@@ -60,6 +62,31 @@ describe('Follow Actions', () => {
       expect(result).toEqual({ success: true, following: true })
       expect(mockPrisma.follow.create).toHaveBeenCalled()
       expect(mockPrisma.notification.create).toHaveBeenCalled()
+    })
+
+    it('非公開アカウントへのフォローはエラーを返す', async () => {
+      mockPrisma.follow.findUnique.mockResolvedValue(null)
+      // 非公開アカウントのユーザーを返す
+      mockPrisma.user.findUnique.mockResolvedValue({ isPublic: false })
+
+      const { toggleFollow } = await import('@/lib/actions/follow')
+      const result = await toggleFollow('target-user-id')
+
+      expect(result).toEqual({
+        error: 'このユーザーは非公開アカウントです。フォローリクエストを送信してください',
+        requiresRequest: true,
+      })
+      expect(mockPrisma.follow.create).not.toHaveBeenCalled()
+    })
+
+    it('存在しないユーザーへのフォローはエラーを返す', async () => {
+      mockPrisma.follow.findUnique.mockResolvedValue(null)
+      mockPrisma.user.findUnique.mockResolvedValue(null)
+
+      const { toggleFollow } = await import('@/lib/actions/follow')
+      const result = await toggleFollow('non-existent-user')
+
+      expect(result).toEqual({ error: 'ユーザーが見つかりません' })
     })
 
     it('フォロー済みの場合は解除する', async () => {

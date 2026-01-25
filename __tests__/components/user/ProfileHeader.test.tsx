@@ -26,6 +26,12 @@ jest.mock('@/lib/actions/message', () => ({
   getOrCreateConversation: jest.fn(),
 }))
 
+// フォローリクエスト Server Actions モック
+jest.mock('@/lib/actions/follow-request', () => ({
+  sendFollowRequest: jest.fn().mockResolvedValue({ success: true, status: 'pending' }),
+  cancelFollowRequest: jest.fn().mockResolvedValue({ success: true }),
+}))
+
 // hooks/use-toast モック
 jest.mock('@/hooks/use-toast', () => ({
   useToast: () => ({

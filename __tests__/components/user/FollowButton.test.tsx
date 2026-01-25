@@ -18,6 +18,14 @@ jest.mock('@/lib/actions/follow', () => ({
   toggleFollow: (...args: unknown[]) => mockToggleFollow(...args),
 }))
 
+// フォローリクエストServer Actionモック
+const mockSendFollowRequest = jest.fn()
+const mockCancelFollowRequest = jest.fn()
+jest.mock('@/lib/actions/follow-request', () => ({
+  sendFollowRequest: (...args: unknown[]) => mockSendFollowRequest(...args),
+  cancelFollowRequest: (...args: unknown[]) => mockCancelFollowRequest(...args),
+}))
+
 describe('FollowButton', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -117,5 +125,72 @@ describe('FollowButton', () => {
     render(<FollowButton userId="user-1" initialIsFollowing={false} />)
     const button = screen.getByRole('button', { name: /フォローする/i })
     expect(button).toHaveClass('bg-bonsai-green')
+  })
+
+  // 非公開アカウント向けテスト
+  describe('非公開アカウント', () => {
+    it('非公開アカウントにはフォローリクエストボタンを表示する', () => {
+      render(
+        <FollowButton
+          userId="user-1"
+          initialIsFollowing={false}
+          isPublic={false}
+          initialHasRequest={false}
+        />
+      )
+      expect(screen.getByRole('button', { name: /フォローリクエスト/i })).toBeInTheDocument()
+    })
+
+    it('リクエスト送信済みの場合はリクエスト済みを表示する', () => {
+      render(
+        <FollowButton
+          userId="user-1"
+          initialIsFollowing={false}
+          isPublic={false}
+          initialHasRequest={true}
+        />
+      )
+      expect(screen.getByRole('button', { name: /リクエスト済み/i })).toBeInTheDocument()
+    })
+
+    it('フォローリクエストボタンクリックでリクエストを送信する', async () => {
+      mockSendFollowRequest.mockResolvedValue({ success: true, status: 'pending' })
+
+      const user = userEvent.setup()
+      render(
+        <FollowButton
+          userId="user-1"
+          initialIsFollowing={false}
+          isPublic={false}
+          initialHasRequest={false}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: /フォローリクエスト/i }))
+
+      await waitFor(() => {
+        expect(mockSendFollowRequest).toHaveBeenCalledWith('user-1')
+      })
+    })
+
+    it('リクエスト済みボタンクリックでキャンセルする', async () => {
+      mockCancelFollowRequest.mockResolvedValue({ success: true })
+
+      const user = userEvent.setup()
+      render(
+        <FollowButton
+          userId="user-1"
+          initialIsFollowing={false}
+          isPublic={false}
+          initialHasRequest={true}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: /リクエスト済み/i }))
+
+      await waitFor(() => {
+        expect(mockCancelFollowRequest).toHaveBeenCalledWith('user-1')
+      })
+    })
   })
 })

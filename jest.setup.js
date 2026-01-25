@@ -1,7 +1,74 @@
+// TextEncoder/TextDecoder ポリフィル（pg/Prisma用）
+import { TextEncoder, TextDecoder } from 'util'
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
 // Jest DOM拡張マッチャーのインポート
 import '@testing-library/jest-dom'
 
 // グローバルモック
+// Database mock (Prisma)
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    user: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    post: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    follow: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    followRequest: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    $transaction: jest.fn(),
+  },
+}))
+
+// Follow request actions mock (avoid next/cache Request error)
+jest.mock('@/lib/actions/follow-request', () => ({
+  sendFollowRequest: jest.fn().mockResolvedValue({ success: true, status: 'pending' }),
+  cancelFollowRequest: jest.fn().mockResolvedValue({ success: true }),
+  approveFollowRequest: jest.fn().mockResolvedValue({ success: true, status: 'approved' }),
+  rejectFollowRequest: jest.fn().mockResolvedValue({ success: true, status: 'rejected' }),
+  getFollowRequestStatus: jest.fn().mockResolvedValue({ hasRequest: false, status: null }),
+  getReceivedFollowRequests: jest.fn().mockResolvedValue({ requests: [], nextCursor: undefined }),
+  getSentFollowRequests: jest.fn().mockResolvedValue({ requests: [], nextCursor: undefined }),
+  getPendingFollowRequestCount: jest.fn().mockResolvedValue({ count: 0 }),
+}))
+
+// Auth mock (NextAuth.js)
+jest.mock('@/lib/auth', () => ({
+  auth: jest.fn().mockResolvedValue({
+    user: {
+      id: 'test-user-id',
+      name: 'Test User',
+      email: 'test@example.com',
+    },
+  }),
+  signIn: jest.fn(),
+  signOut: jest.fn(),
+  handlers: {
+    GET: jest.fn(),
+    POST: jest.fn(),
+  },
+}))
+
 // Logger mock
 jest.mock('@/lib/logger', () => ({
   __esModule: true,

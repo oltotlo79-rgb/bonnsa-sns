@@ -50,7 +50,7 @@ const customJestConfig = {
 
   // 変換対象外（ESMモジュールを除外しない）
   transformIgnorePatterns: [
-    '/node_modules/(?!(isomorphic-dompurify|dompurify|@panva|jose|nanoid|uuid)/)',
+    '/node_modules/(?!(isomorphic-dompurify|dompurify|@panva|jose|nanoid|uuid|next-auth|@auth)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
 
