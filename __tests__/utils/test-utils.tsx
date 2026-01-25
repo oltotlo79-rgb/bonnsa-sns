@@ -420,6 +420,7 @@ export const createMockPrismaClient = () => ({
   },
   post: {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -513,6 +514,16 @@ export const createMockPrismaClient = () => ({
   shopGenre: {
     deleteMany: jest.fn(),
     create: jest.fn(),
+    createMany: jest.fn(),
+  },
+  shopChangeRequest: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
   },
   shopReview: {
     findUnique: jest.fn(),
@@ -715,6 +726,15 @@ export const createMockPrismaClient = () => ({
     create: jest.fn(),
     update: jest.fn(),
     count: jest.fn(),
+    aggregate: jest.fn(),
+  },
+  // ShopReviewImage関連
+  shopReviewImage: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
   },
   $transaction: jest.fn().mockImplementation((callbackOrArray) => {
     // Array form: resolve each operation and return results
@@ -732,6 +752,7 @@ export const createMockPrismaClient = () => ({
         event: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
         bonsaiShop: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
         shopReview: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
+        shopReviewImage: { createMany: jest.fn().mockResolvedValue({}), deleteMany: jest.fn().mockResolvedValue({}) },
         user: { update: jest.fn().mockResolvedValue({}), delete: jest.fn().mockResolvedValue({}) },
         report: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({}) },
         adminNotification: { create: jest.fn().mockResolvedValue({}) },

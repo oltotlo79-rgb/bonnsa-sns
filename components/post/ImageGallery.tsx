@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 
 type Media = {
   id: string
@@ -33,12 +34,35 @@ function ExpandIcon({ className }: { className?: string }) {
   )
 }
 
-function MediaItem({ media }: { media: Media }) {
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  )
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  )
+}
+
+/**
+ * 最適化された画像アイテム
+ * Next.js Imageを使用して遅延読み込みとサイズ最適化を実現
+ */
+function MediaItem({ media, priority = false }: { media: Media; priority?: boolean }) {
+  const [isLoading, setIsLoading] = useState(true)
+
   if (media.type === 'video') {
     return (
       <video
         src={media.url}
         controls
+        preload="metadata"
         className="absolute inset-0 w-full h-full object-cover"
         onClick={(e) => {
           e.stopPropagation()
@@ -49,15 +73,29 @@ function MediaItem({ media }: { media: Media }) {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={media.url}
-      alt=""
-      className="absolute inset-0 w-full h-full object-cover hover:opacity-90 transition-opacity"
-    />
+    <>
+      {isLoading && (
+        <div className="absolute inset-0 bg-muted animate-pulse" />
+      )}
+      <Image
+        src={media.url}
+        alt=""
+        fill
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+        className={`object-cover hover:opacity-90 transition-opacity duration-300 ${
+          isLoading ? 'opacity-0' : 'opacity-100'
+        }`}
+        onLoad={() => setIsLoading(false)}
+        priority={priority}
+        loading={priority ? undefined : 'lazy'}
+      />
+    </>
   )
 }
 
+/**
+ * モーダル内の画像/動画表示
+ */
 function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.MouseEvent) => void }) {
   if (media.type === 'video') {
     return (
@@ -74,13 +112,17 @@ function ModalMediaItem({ media, onClick }: { media: Media; onClick: (e: React.M
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={media.url}
-      alt=""
-      className="max-w-full max-h-full object-contain"
-      onClick={onClick}
-    />
+    <div className="relative max-w-full max-h-full" style={{ width: '100%', height: '100%' }}>
+      <Image
+        src={media.url}
+        alt=""
+        fill
+        sizes="100vw"
+        className="object-contain"
+        onClick={onClick}
+        priority
+      />
+    </div>
   )
 }
 
@@ -96,6 +138,20 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
       : images.length === 3
         ? 'grid grid-cols-2 gap-1'
         : 'grid grid-cols-2 gap-1'
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selectedIndex !== null && selectedIndex > 0) {
+      setSelectedIndex(selectedIndex - 1)
+    }
+  }
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selectedIndex !== null && selectedIndex < sortedImages.length - 1) {
+      setSelectedIndex(selectedIndex + 1)
+    }
+  }
 
   return (
     <>
@@ -123,7 +179,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
                   paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%',
                 }}
               >
-                <MediaItem media={media} />
+                <MediaItem media={media} priority={index === 0} />
                 {/* 拡大ボタン */}
                 <button
                   onClick={handleClick}
@@ -148,7 +204,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
                 paddingBottom: images.length === 3 && index === 0 ? '100%' : '56.25%',
               }}
             >
-              <MediaItem media={media} />
+              <MediaItem media={media} priority={index === 0} />
             </button>
           )
         })}
@@ -162,10 +218,30 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
         >
           <button
             onClick={() => setSelectedIndex(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 z-10"
           >
             <XIcon className="w-6 h-6 text-white" />
           </button>
+
+          {/* 前へボタン */}
+          {images.length > 1 && selectedIndex > 0 && (
+            <button
+              onClick={handlePrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 z-10"
+            >
+              <ChevronLeftIcon className="w-6 h-6 text-white" />
+            </button>
+          )}
+
+          {/* 次へボタン */}
+          {images.length > 1 && selectedIndex < sortedImages.length - 1 && (
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 z-10"
+            >
+              <ChevronRightIcon className="w-6 h-6 text-white" />
+            </button>
+          )}
 
           <div className="flex items-center justify-center max-w-4xl max-h-[90vh] w-full h-full p-4">
             <ModalMediaItem
@@ -174,7 +250,7 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
             />
           </div>
 
-          {/* ナビゲーション */}
+          {/* ナビゲーションドット */}
           {images.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
               {sortedImages.map((_, index) => (
@@ -184,8 +260,8 @@ export function ImageGallery({ images, onMediaClick }: ImageGalleryProps) {
                     e.stopPropagation()
                     setSelectedIndex(index)
                   }}
-                  className={`w-2 h-2 rounded-full ${
-                    index === selectedIndex ? 'bg-white' : 'bg-white/50'
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    index === selectedIndex ? 'bg-white' : 'bg-white/50 hover:bg-white/70'
                   }`}
                 />
               ))}

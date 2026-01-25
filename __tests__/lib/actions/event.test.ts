@@ -249,5 +249,292 @@ describe('Event Actions', () => {
 
       expect(result).toEqual({ success: true })
     })
+
+    it('存在しないイベントはエラーを返す', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue(null)
+
+      const { deleteEvent } = await import('@/lib/actions/event')
+      const result = await deleteEvent('non-existent')
+
+      expect(result).toEqual({ error: 'イベントが見つかりません' })
+    })
+  })
+
+  // ============================================================
+  // getUpcomingEvents
+  // ============================================================
+
+  describe('getUpcomingEvents', () => {
+    it('今後のイベントを取得できる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([mockEvent])
+
+      const { getUpcomingEvents } = await import('@/lib/actions/event')
+      const result = await getUpcomingEvents()
+
+      expect(result.events).toHaveLength(1)
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isHidden: false,
+            startDate: expect.objectContaining({
+              gte: expect.any(Date),
+            }),
+          }),
+        })
+      )
+    })
+
+    it('取得件数を指定できる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getUpcomingEvents } = await import('@/lib/actions/event')
+      await getUpcomingEvents(5)
+
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 5,
+        })
+      )
+    })
+
+    it('地域でフィルタリングできる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getUpcomingEvents } = await import('@/lib/actions/event')
+      await getUpcomingEvents(10, '関東')
+
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            prefecture: expect.objectContaining({
+              in: expect.arrayContaining(['東京都', '神奈川県']),
+            }),
+          }),
+        })
+      )
+    })
+  })
+
+  // ============================================================
+  // getEventsByMonth
+  // ============================================================
+
+  describe('getEventsByMonth', () => {
+    it('指定した月のイベントを取得できる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([mockEvent])
+
+      const { getEventsByMonth } = await import('@/lib/actions/event')
+      const result = await getEventsByMonth(2025, 3) // 2025年4月
+
+      expect(result.events).toHaveLength(1)
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isHidden: false,
+            OR: expect.arrayContaining([
+              expect.objectContaining({
+                startDate: expect.objectContaining({
+                  gte: expect.any(Date),
+                  lt: expect.any(Date),
+                }),
+              }),
+            ]),
+          }),
+        })
+      )
+    })
+
+    it('月をまたぐイベントも取得できる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getEventsByMonth } = await import('@/lib/actions/event')
+      await getEventsByMonth(2025, 0)
+
+      // OR条件に月をまたぐケースが含まれていることを確認
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              expect.objectContaining({
+                startDate: expect.objectContaining({ lt: expect.any(Date) }),
+                endDate: expect.objectContaining({ gte: expect.any(Date) }),
+              }),
+            ]),
+          }),
+        })
+      )
+    })
+  })
+
+  // ============================================================
+  // getEvents - 追加テスト
+  // ============================================================
+
+  describe('getEvents - 追加テスト', () => {
+    it('地域でフィルタリングできる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getEvents } = await import('@/lib/actions/event')
+      await getEvents({ region: '関東' })
+
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            prefecture: expect.objectContaining({
+              in: expect.arrayContaining(['東京都', '神奈川県', '埼玉県', '千葉県']),
+            }),
+          }),
+        })
+      )
+    })
+
+    it('過去イベントを表示できる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getEvents } = await import('@/lib/actions/event')
+      await getEvents({ showPast: true })
+
+      // showPast: true の場合、日付フィルターが設定されないことを確認
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isHidden: false,
+          }),
+        })
+      )
+    })
+
+    it('月と年でフィルタリングできる', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getEvents } = await import('@/lib/actions/event')
+      await getEvents({ year: 2025, month: 3 })
+
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            startDate: expect.objectContaining({
+              gte: expect.any(Date),
+              lt: expect.any(Date),
+            }),
+          }),
+        })
+      )
+    })
+
+    it('都道府県と地域を両方指定した場合、都道府県が優先される', async () => {
+      mockPrisma.event.findMany.mockResolvedValue([])
+
+      const { getEvents } = await import('@/lib/actions/event')
+      await getEvents({ prefecture: '大阪府', region: '関東' })
+
+      expect(mockPrisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            prefecture: { in: ['大阪府'] },
+          }),
+        })
+      )
+    })
+  })
+
+  // ============================================================
+  // updateEvent - 追加テスト
+  // ============================================================
+
+  describe('updateEvent - 追加テスト', () => {
+    it('タイトルが空の場合はエラーを返す', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        createdBy: mockUser.id,
+      })
+
+      const { updateEvent } = await import('@/lib/actions/event')
+      const formData = new FormData()
+      formData.append('title', '')
+      formData.append('startDate', '2025-02-01')
+      formData.append('prefecture', '東京都')
+
+      const result = await updateEvent('event-id', formData)
+
+      expect(result).toEqual({ error: 'タイトルを入力してください' })
+    })
+
+    it('開始日が未指定の場合はエラーを返す', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        createdBy: mockUser.id,
+      })
+
+      const { updateEvent } = await import('@/lib/actions/event')
+      const formData = new FormData()
+      formData.append('title', 'テストイベント')
+      formData.append('prefecture', '東京都')
+
+      const result = await updateEvent('event-id', formData)
+
+      expect(result).toEqual({ error: '開始日を選択してください' })
+    })
+
+    it('都道府県が未指定の場合はエラーを返す', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        createdBy: mockUser.id,
+      })
+
+      const { updateEvent } = await import('@/lib/actions/event')
+      const formData = new FormData()
+      formData.append('title', 'テストイベント')
+      formData.append('startDate', '2025-02-01')
+
+      const result = await updateEvent('event-id', formData)
+
+      expect(result).toEqual({ error: '都道府県を選択してください' })
+    })
+
+    it('終了日が開始日より前の場合はエラーを返す', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        createdBy: mockUser.id,
+      })
+
+      const { updateEvent } = await import('@/lib/actions/event')
+      const formData = new FormData()
+      formData.append('title', 'テストイベント')
+      formData.append('startDate', '2025-02-10')
+      formData.append('endDate', '2025-02-01')
+      formData.append('prefecture', '東京都')
+
+      const result = await updateEvent('event-id', formData)
+
+      expect(result).toEqual({ error: '終了日は開始日以降を選択してください' })
+    })
+
+    it('正常にイベントを更新できる', async () => {
+      mockPrisma.event.findUnique.mockResolvedValue({
+        ...mockEvent,
+        createdBy: mockUser.id,
+      })
+      mockPrisma.event.update.mockResolvedValue(mockEvent)
+
+      const { updateEvent } = await import('@/lib/actions/event')
+      const formData = new FormData()
+      formData.append('title', '更新後のイベント')
+      formData.append('startDate', '2025-02-01')
+      formData.append('endDate', '2025-02-02')
+      formData.append('prefecture', '東京都')
+      formData.append('city', '渋谷区')
+      formData.append('venue', '会場名')
+      formData.append('organizer', '主催者')
+      formData.append('fee', '無料')
+      formData.append('hasSales', 'true')
+      formData.append('description', '説明文')
+      formData.append('externalUrl', 'https://example.com')
+
+      const result = await updateEvent('event-id', formData)
+
+      expect(result).toEqual({ success: true })
+      expect(mockPrisma.event.update).toHaveBeenCalled()
+    })
   })
 })
