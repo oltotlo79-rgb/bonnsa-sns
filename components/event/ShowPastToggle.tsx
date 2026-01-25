@@ -78,7 +78,7 @@ export function ShowPastToggle({ showPast }: ShowPastToggleProps) {
         className="w-4 h-4 rounded cursor-pointer"
       />
       {/* ラベルテキスト */}
-      <span className="text-muted-foreground hover:text-foreground">
+      <span className="text-muted-foreground hover:text-foreground whitespace-nowrap">
         終了イベントも表示
       </span>
     </Link>
