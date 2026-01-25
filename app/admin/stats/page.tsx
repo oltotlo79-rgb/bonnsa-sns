@@ -1,6 +1,9 @@
 import { getStatsHistory, getStatsSummary } from '@/lib/actions/admin'
 import { StatsCharts } from './StatsCharts'
 
+// ビルド時の静的生成を無効化（データベース接続が必要なため）
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: '統計情報 - BON-LOG 管理',
 }

@@ -4,6 +4,9 @@ import { auth, signOut } from '@/lib/auth'
 import { isAdmin } from '@/lib/actions/admin'
 import { prisma } from '@/lib/db'
 
+// ビルド時の静的生成を無効化（データベース接続が必要なため）
+export const dynamic = 'force-dynamic'
+
 function HomeIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
