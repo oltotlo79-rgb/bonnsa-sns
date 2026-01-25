@@ -44,7 +44,7 @@ export default async function Home() {
           {/* 背景画像 */}
           <div className="absolute inset-0 z-0">
             <Image
-              src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070"
+              src="/images/main_image.png"
               alt="Beautiful bonsai tree"
               fill
               className="object-cover"
@@ -94,7 +94,7 @@ export default async function Home() {
             <div className="group bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
               <div className="relative h-48 overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?q=80&w=1000"
+                  src="/images/uekae.png"
                   alt="Bonsai sharing"
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -118,7 +118,7 @@ export default async function Home() {
             <div className="group bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
               <div className="relative h-48 overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=1000"
+                  src="/images/community.png"
                   alt="Community"
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -142,7 +142,7 @@ export default async function Home() {
             <div className="group bg-card rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300">
               <div className="relative h-48 overflow-hidden">
                 <Image
-                  src="https://images.unsplash.com/photo-1480796927426-f609979314bd?q=80&w=1000"
+                  src="/images/bonsaien.png"
                   alt="Japanese garden"
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
