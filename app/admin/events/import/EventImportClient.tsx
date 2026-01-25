@@ -18,6 +18,13 @@ import {
 } from '@/components/ui/dialog'
 
 /**
+ * 表示モードの型定義
+ * - card: カード形式の一覧表示
+ * - table: テーブル形式での一括編集
+ */
+type ViewMode = 'card' | 'table'
+
+/**
  * 外部イベントインポートのクライアントコンポーネント
  */
 export function EventImportClient() {
@@ -37,6 +44,8 @@ export function EventImportClient() {
   const [selectedRegion, setSelectedRegion] = useState<string>('all')
   // 編集中のイベント
   const [editingEvent, setEditingEvent] = useState<ImportableEvent | null>(null)
+  // 表示モード（カード or テーブル）
+  const [viewMode, setViewMode] = useState<ViewMode>('table')
 
   /**
    * スクレイピング実行
@@ -106,6 +115,31 @@ export function EventImportClient() {
       prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
     )
     setEditingEvent(null)
+  }
+
+  /**
+   * テーブルでの直接編集用ハンドラ
+   */
+  const handleInlineUpdate = <K extends keyof ImportableEvent>(
+    eventId: string,
+    field: K,
+    value: ImportableEvent[K]
+  ) => {
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, [field]: value } : e))
+    )
+  }
+
+  /**
+   * イベント削除（一覧から除外）
+   */
+  const handleRemoveEvent = (eventId: string) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId))
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(eventId)
+      return next
+    })
   }
 
   /**
@@ -189,20 +223,48 @@ export function EventImportClient() {
 
           {/* インポートボタン（イベントがある場合のみ） */}
           {events.length > 0 && (
-            <button
-              onClick={handleImport}
-              disabled={isPending || selectedIds.size === 0}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-            >
-              {isPending ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  インポート中...
-                </span>
-              ) : (
-                `選択した${selectedIds.size}件をインポート`
-              )}
-            </button>
+            <>
+              <button
+                onClick={handleImport}
+                disabled={isPending || selectedIds.size === 0}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    インポート中...
+                  </span>
+                ) : (
+                  `選択した${selectedIds.size}件をインポート`
+                )}
+              </button>
+
+              {/* 表示モード切り替え */}
+              <div className="flex items-center gap-1 ml-auto border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-2 text-sm ${
+                    viewMode === 'table'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                  title="テーブル表示（一括編集）"
+                >
+                  📋 テーブル
+                </button>
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`px-3 py-2 text-sm ${
+                    viewMode === 'card'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                  title="カード表示"
+                >
+                  🗂️ カード
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -242,91 +304,248 @@ export function EventImportClient() {
             </div>
           </div>
 
-          {/* イベントリスト */}
-          <div className="divide-y max-h-[600px] overflow-y-auto">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className={`p-4 hover:bg-muted/30 ${
-                  event.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
-                } ${!event.startDate ? 'opacity-50' : ''}`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* チェックボックス */}
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(event.id)}
-                    onChange={() => toggleSelect(event.id)}
-                    disabled={!event.startDate}
-                    className="w-4 h-4 mt-1"
-                  />
-
-                  {/* イベント情報 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium text-sm">{event.title}</h3>
-                      {event.isDuplicate && (
-                        <span className="px-2 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded flex-shrink-0">
-                          重複？
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>
-                        📅 {formatDate(event.startDate)}
-                        {event.endDate && ` 〜 ${formatDate(event.endDate)}`}
-                      </span>
-                      {event.prefecture && (
-                        <span>📍 {event.prefecture}{event.city && ` ${event.city}`}</span>
-                      )}
-                      {event.venue && <span>🏛️ {event.venue}</span>}
-                    </div>
-
-                    {event.organizer && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        主催: {event.organizer}
-                      </p>
-                    )}
-
-                    {event.description && (
-                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                        {event.description}
-                      </p>
-                    )}
-
-                    <div className="mt-2 flex items-center gap-2 text-xs">
-                      <span className="px-2 py-0.5 bg-muted rounded">
-                        {event.sourceRegion}
-                      </span>
-                      {event.hasSales && (
-                        <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
-                          即売あり
-                        </span>
-                      )}
-                      {event.externalUrl && (
-                        <a
-                          href={event.externalUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
+          {/* テーブル表示モード */}
+          {viewMode === 'table' ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 border-b">
+                  <tr>
+                    <th className="px-2 py-2 text-left w-8">選択</th>
+                    <th className="px-2 py-2 text-left min-w-[200px]">タイトル</th>
+                    <th className="px-2 py-2 text-left w-32">開始日</th>
+                    <th className="px-2 py-2 text-left w-32">終了日</th>
+                    <th className="px-2 py-2 text-left w-28">都道府県</th>
+                    <th className="px-2 py-2 text-left w-28">市区町村</th>
+                    <th className="px-2 py-2 text-left min-w-[150px]">会場</th>
+                    <th className="px-2 py-2 text-left w-28">入場料</th>
+                    <th className="px-2 py-2 text-left w-16">即売</th>
+                    <th className="px-2 py-2 text-left w-20">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {events.map((event) => (
+                    <tr
+                      key={event.id}
+                      className={`hover:bg-muted/30 ${
+                        event.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
+                      } ${!event.startDate ? 'opacity-50' : ''}`}
+                    >
+                      {/* チェックボックス */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(event.id)}
+                          onChange={() => toggleSelect(event.id)}
+                          disabled={!event.startDate}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                      {/* タイトル */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="text"
+                          value={event.title}
+                          onChange={(e) => handleInlineUpdate(event.id, 'title', e.target.value)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                        />
+                        {event.isDuplicate && (
+                          <span className="ml-1 px-1 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">
+                            重複？
+                          </span>
+                        )}
+                      </td>
+                      {/* 開始日 */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="date"
+                          value={event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'startDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                        />
+                      </td>
+                      {/* 終了日 */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="date"
+                          value={event.endDate ? new Date(event.endDate).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'endDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                        />
+                      </td>
+                      {/* 都道府県 */}
+                      <td className="px-2 py-1">
+                        <select
+                          value={event.prefecture || ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'prefecture', e.target.value || null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
                         >
-                          詳細 →
-                        </a>
+                          <option value="">-</option>
+                          {PREFECTURES.map((pref) => (
+                            <option key={pref} value={pref}>
+                              {pref}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      {/* 市区町村 */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="text"
+                          value={event.city || ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'city', e.target.value || null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                          placeholder="市区町村"
+                        />
+                      </td>
+                      {/* 会場 */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="text"
+                          value={event.venue || ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'venue', e.target.value || null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                          placeholder="会場名"
+                        />
+                      </td>
+                      {/* 入場料 */}
+                      <td className="px-2 py-1">
+                        <input
+                          type="text"
+                          value={event.admissionFee || ''}
+                          onChange={(e) => handleInlineUpdate(event.id, 'admissionFee', e.target.value || null)}
+                          className="w-full px-2 py-1 border rounded bg-background text-sm"
+                          placeholder="無料/有料"
+                        />
+                      </td>
+                      {/* 即売 */}
+                      <td className="px-2 py-1 text-center">
+                        <input
+                          type="checkbox"
+                          checked={event.hasSales}
+                          onChange={(e) => handleInlineUpdate(event.id, 'hasSales', e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                      {/* 操作 */}
+                      <td className="px-2 py-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingEvent(event)}
+                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200"
+                            title="詳細編集"
+                          >
+                            詳細
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEvent(event.id)}
+                            className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200"
+                            title="削除"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* カード表示モード */
+            <div className="divide-y max-h-[600px] overflow-y-auto">
+              {events.map((event) => (
+                <div
+                  key={event.id}
+                  className={`p-4 hover:bg-muted/30 ${
+                    event.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''
+                  } ${!event.startDate ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* チェックボックス */}
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(event.id)}
+                      onChange={() => toggleSelect(event.id)}
+                      disabled={!event.startDate}
+                      className="w-4 h-4 mt-1"
+                    />
+
+                    {/* イベント情報 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-medium text-sm">{event.title}</h3>
+                        {event.isDuplicate && (
+                          <span className="px-2 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded flex-shrink-0">
+                            重複？
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <span>
+                          📅 {formatDate(event.startDate)}
+                          {event.endDate && ` 〜 ${formatDate(event.endDate)}`}
+                        </span>
+                        {event.prefecture && (
+                          <span>📍 {event.prefecture}{event.city && ` ${event.city}`}</span>
+                        )}
+                        {event.venue && <span>🏛️ {event.venue}</span>}
+                      </div>
+
+                      {event.organizer && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          主催: {event.organizer}
+                        </p>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setEditingEvent(event)}
-                        className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
-                      >
-                        編集
-                      </button>
+
+                      {event.description && (
+                        <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
+                          {event.description}
+                        </p>
+                      )}
+
+                      <div className="mt-2 flex items-center gap-2 text-xs">
+                        <span className="px-2 py-0.5 bg-muted rounded">
+                          {event.sourceRegion}
+                        </span>
+                        {event.hasSales && (
+                          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+                            即売あり
+                          </span>
+                        )}
+                        {event.externalUrl && (
+                          <a
+                            href={event.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            詳細 →
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditingEvent(event)}
+                          className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                        >
+                          編集
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEvent(event.id)}
+                          className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
+                        >
+                          削除
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
