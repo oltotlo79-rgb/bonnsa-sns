@@ -137,4 +137,75 @@ describe('PostForm', () => {
     render(<PostForm genres={mockGenres} draftCount={3} />)
     expect(screen.getByTitle('下書き一覧')).toBeInTheDocument()
   })
+
+  it('下書き保存エラー時にエラーメッセージを表示する', async () => {
+    mockSaveDraft.mockResolvedValue({ error: '下書き保存に失敗しました' })
+    const user = userEvent.setup()
+    render(<PostForm genres={mockGenres} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.click(screen.getByRole('button', { name: '下書き保存' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('下書き保存に失敗しました')).toBeInTheDocument()
+    })
+  })
+
+  it('投稿成功時にフォームがリセットされる', async () => {
+    mockCreatePost.mockResolvedValue({ success: true })
+    const user = userEvent.setup()
+    render(<PostForm genres={mockGenres} />)
+
+    const textarea = screen.getByPlaceholderText('いまどうしてる？')
+    await user.type(textarea, 'テスト投稿')
+    await user.click(screen.getByRole('button', { name: '投稿する' }))
+
+    await waitFor(() => {
+      expect(textarea).toHaveValue('')
+    })
+  })
+
+  it('下書き保存成功時にフォームがリセットされる', async () => {
+    mockSaveDraft.mockResolvedValue({ success: true })
+    const user = userEvent.setup()
+    render(<PostForm genres={mockGenres} />)
+
+    const textarea = screen.getByPlaceholderText('いまどうしてる？')
+    await user.type(textarea, 'テスト下書き')
+    await user.click(screen.getByRole('button', { name: '下書き保存' }))
+
+    await waitFor(() => {
+      expect(textarea).toHaveValue('')
+    })
+  })
+
+  it('送信中は投稿ボタンが無効化される', async () => {
+    mockCreatePost.mockImplementation(() => new Promise(() => {}))
+    const user = userEvent.setup()
+    render(<PostForm genres={mockGenres} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.click(screen.getByRole('button', { name: '投稿する' }))
+
+    await waitFor(() => {
+      const buttons = screen.getAllByRole('button')
+      const postButton = buttons.find(btn => btn.textContent?.includes('投稿'))
+      expect(postButton).toBeDisabled()
+    })
+  })
+
+  it('下書き保存中はボタンが無効化される', async () => {
+    mockSaveDraft.mockImplementation(() => new Promise(() => {}))
+    const user = userEvent.setup()
+    render(<PostForm genres={mockGenres} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.click(screen.getByRole('button', { name: '下書き保存' }))
+
+    await waitFor(() => {
+      const buttons = screen.getAllByRole('button')
+      const draftButton = buttons.find(btn => btn.textContent?.includes('保存'))
+      expect(draftButton).toBeDisabled()
+    })
+  })
 })

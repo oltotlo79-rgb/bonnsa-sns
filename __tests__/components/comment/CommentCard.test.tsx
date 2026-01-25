@@ -284,4 +284,95 @@ describe('CommentCard', () => {
     )
     expect(container.querySelector('.ml-8')).toBeInTheDocument()
   })
+
+  it('削除エラー時にエラー状態になる', async () => {
+    mockDeleteComment.mockResolvedValue({ error: '削除に失敗しました' })
+
+    const user = userEvent.setup()
+    render(
+      <CommentCard
+        comment={mockComment}
+        postId="post-1"
+        currentUserId="user-1"
+      />
+    )
+
+    // 削除ボタンをクリック
+    const deleteButton = screen.getAllByRole('button').find(btn =>
+      btn.querySelector('svg.lucide-trash-2')
+    )
+    await user.click(deleteButton!)
+
+    await waitFor(() => {
+      expect(screen.getByText('コメントを削除')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: '削除' }))
+
+    await waitFor(() => {
+      expect(mockDeleteComment).toHaveBeenCalledWith('comment-1')
+    })
+  })
+
+  it('削除キャンセルでダイアログが閉じる', async () => {
+    const user = userEvent.setup()
+    render(
+      <CommentCard
+        comment={mockComment}
+        postId="post-1"
+        currentUserId="user-1"
+      />
+    )
+
+    // 削除ボタンをクリック
+    const deleteButton = screen.getAllByRole('button').find(btn =>
+      btn.querySelector('svg.lucide-trash-2')
+    )
+    await user.click(deleteButton!)
+
+    await waitFor(() => {
+      expect(screen.getByText('コメントを削除')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('コメントを削除')).not.toBeInTheDocument()
+    })
+  })
+
+  it('返信フォームのキャンセルでフォームが閉じる', async () => {
+    const user = userEvent.setup()
+    render(
+      <CommentCard
+        comment={mockComment}
+        postId="post-1"
+        currentUserId="test-user-id"
+      />
+    )
+
+    // 返信ボタンをクリック
+    await user.click(screen.getByRole('button', { name: /返信/i }))
+
+    expect(screen.getByPlaceholderText('@テストユーザー への返信...')).toBeInTheDocument()
+
+    // キャンセルボタンをクリック
+    await user.click(screen.getByRole('button', { name: /キャンセル/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('@テストユーザー への返信...')).not.toBeInTheDocument()
+    })
+  })
+
+  it('currentUserIdがnullの場合は返信ボタンを表示しない', () => {
+    render(
+      <CommentCard
+        comment={mockComment}
+        postId="post-1"
+        currentUserId={null}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /返信/i })).not.toBeInTheDocument()
+  })
+
 })

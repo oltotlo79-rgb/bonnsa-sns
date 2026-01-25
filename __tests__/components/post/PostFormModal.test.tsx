@@ -112,4 +112,80 @@ describe('PostFormModal', () => {
     render(<PostFormModal {...defaultProps} bonsais={bonsais} />)
     expect(screen.getByText('関連する盆栽（任意）')).toBeInTheDocument()
   })
+
+  it('テキスト入力で残り文字数が更新される', async () => {
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト')
+
+    expect(screen.getByText('497')).toBeInTheDocument()
+  })
+
+  it('空の状態では投稿ボタンが無効', () => {
+    render(<PostFormModal {...defaultProps} />)
+    expect(screen.getByRole('button', { name: '投稿する' })).toBeDisabled()
+  })
+
+  it('テキスト入力で投稿ボタンが有効になる', async () => {
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+
+    expect(screen.getByRole('button', { name: '投稿する' })).not.toBeDisabled()
+  })
+
+  it('投稿エラー時にエラーメッセージを表示する', async () => {
+    mockCreatePost.mockResolvedValue({ error: '投稿に失敗しました' })
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.click(screen.getByRole('button', { name: '投稿する' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('投稿に失敗しました')).toBeInTheDocument()
+    })
+  })
+
+  it('下書き保存成功時にonCloseが呼ばれる', async () => {
+    mockSaveDraft.mockResolvedValue({ success: true })
+    const onClose = jest.fn()
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} onClose={onClose} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.click(screen.getByRole('button', { name: '下書き保存' }))
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('下書き保存エラー時にエラーメッセージを表示する', async () => {
+    mockSaveDraft.mockResolvedValue({ error: '下書き保存に失敗しました' })
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.click(screen.getByRole('button', { name: '下書き保存' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('下書き保存に失敗しました')).toBeInTheDocument()
+    })
+  })
+
+  it('送信中は投稿ボタンが無効化される', async () => {
+    mockCreatePost.mockImplementation(() => new Promise(() => {}))
+    const user = userEvent.setup()
+    render(<PostFormModal {...defaultProps} />)
+
+    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.click(screen.getByRole('button', { name: '投稿する' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /投稿/ })).toBeDisabled()
+    })
+  })
 })

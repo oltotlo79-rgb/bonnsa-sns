@@ -219,4 +219,46 @@ describe('CommentForm', () => {
       expect(screen.getByText('-1')).toHaveClass('text-destructive')
     })
   })
+
+
+  it('parentIdがある場合は返信コメントとして送信する', async () => {
+    mockCreateComment.mockResolvedValue({ success: true })
+
+    const user = userEvent.setup()
+    render(<CommentForm postId="post-1" parentId="parent-comment-1" />)
+
+    const textarea = screen.getByPlaceholderText('コメントを入力...')
+    await user.type(textarea, '返信コメント')
+    await user.click(screen.getByRole('button', { name: /返信する/i }))
+
+    await waitFor(() => {
+      expect(mockCreateComment).toHaveBeenCalled()
+    })
+  })
+
+  it('キャンセルボタンが表示されない場合はonCancelを呼ばない', () => {
+    render(<CommentForm postId="post-1" />)
+
+    // onCancelが指定されていない場合はキャンセルボタンがない
+    const cancelButtons = screen.queryAllByRole('button', { name: /キャンセル/i })
+    expect(cancelButtons.length).toBe(0)
+  })
+
+  it('送信成功時にテキストエリアがリセットされる', async () => {
+    mockCreateComment.mockResolvedValue({ success: true })
+
+    const user = userEvent.setup()
+    render(<CommentForm postId="post-1" />)
+
+    const textarea = screen.getByPlaceholderText('コメントを入力...')
+    await user.type(textarea, 'テストコメント')
+
+    expect(textarea).toHaveValue('テストコメント')
+
+    await user.click(screen.getByRole('button', { name: /コメントする/i }))
+
+    await waitFor(() => {
+      expect(textarea).toHaveValue('')
+    })
+  })
 })

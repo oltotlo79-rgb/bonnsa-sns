@@ -211,6 +211,46 @@ describe('NotificationItem', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/users/user-1')
   })
 
+  it('フォローリクエスト通知を表示する', () => {
+    const notification = {
+      ...baseNotification,
+      type: 'follow_request',
+    }
+    render(<NotificationItem notification={notification} />)
+
+    expect(screen.getByText(/さんからフォローリクエストが届きました/)).toBeInTheDocument()
+  })
+
+  it('フォローリクエスト通知はフォローリクエスト管理ページへのリンクを持つ', () => {
+    const notification = {
+      ...baseNotification,
+      type: 'follow_request',
+    }
+    render(<NotificationItem notification={notification} />)
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/settings/follow-requests')
+  })
+
+  it('フォローリクエスト承認通知を表示する', () => {
+    const notification = {
+      ...baseNotification,
+      type: 'follow_request_approved',
+    }
+    render(<NotificationItem notification={notification} />)
+
+    expect(screen.getByText(/さんがフォローリクエストを承認しました/)).toBeInTheDocument()
+  })
+
+  it('フォローリクエスト承認通知はユーザーページへのリンクを持つ', () => {
+    const notification = {
+      ...baseNotification,
+      type: 'follow_request_approved',
+    }
+    render(<NotificationItem notification={notification} />)
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/users/user-1')
+  })
+
   it('相対時間を表示する', () => {
     const notification = {
       ...baseNotification,
