@@ -6,13 +6,20 @@
  *
  * ## 機能概要
  * - フォロー/フォロー解除のトグル
+ * - 非公開アカウントへのフォローリクエスト対応
  * - Optimistic UI（即時レスポンス）
  * - ホバー時のUI変化（フォロー中→フォロー解除に変化）
+ *
+ * ## 非公開アカウントの場合
+ * - 「フォローリクエスト」ボタンを表示
+ * - リクエスト送信後は「リクエスト済み」と表示
+ * - クリックでリクエストをキャンセル可能
  *
  * ## スタイリング
  * - 未フォロー: 緑色の背景
  * - フォロー中: アウトラインスタイル
  * - ホバー時（フォロー中）: 赤色に変化
+ * - リクエスト済み: アウトラインスタイル
  *
  * @module components/user/FollowButton
  */
@@ -23,27 +30,12 @@
 // インポート
 // ============================================================
 
-/**
- * React useState Hook
- * フォロー状態、ローディング状態、ホバー状態の管理
- */
 import { useState } from 'react'
-
-/**
- * shadcn/uiのButtonコンポーネント
- */
 import { Button } from '@/components/ui/button'
-
-/**
- * フォロートグル用Server Action
- */
 import { toggleFollow } from '@/lib/actions/follow'
-
-/**
- * Next.jsルーター
- * ページリフレッシュと認証エラー時のリダイレクトに使用
- */
+import { sendFollowRequest, cancelFollowRequest } from '@/lib/actions/follow-request'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 
 // ============================================================
 // 型定義
@@ -54,10 +46,14 @@ import { useRouter } from 'next/navigation'
  *
  * @property userId - フォロー対象のユーザーID
  * @property initialIsFollowing - 初期のフォロー状態（true=フォロー中）
+ * @property isPublic - 対象ユーザーが公開アカウントかどうか
+ * @property initialHasRequest - 初期のリクエスト送信状態（true=リクエスト済み）
  */
 type FollowButtonProps = {
   userId: string
   initialIsFollowing: boolean
+  isPublic?: boolean
+  initialHasRequest?: boolean
 }
 
 // ============================================================
@@ -68,26 +64,40 @@ type FollowButtonProps = {
  * フォローボタンコンポーネント
  *
  * ## 機能
- * - クリックでフォロー/フォロー解除をトグル
+ * - 公開アカウント: クリックでフォロー/フォロー解除をトグル
+ * - 非公開アカウント: フォローリクエストを送信/キャンセル
  * - Optimistic UIで即時フィードバック
  * - ホバー時に「フォロー解除」表示
  *
- * ## ユーザー体験
- * - フォロー中にホバーすると赤色の「フォロー解除」に変化
- * - これにより、ユーザーは解除操作を認識しやすい
- *
  * @param userId - フォロー対象のユーザーID
  * @param initialIsFollowing - 初期フォロー状態
+ * @param isPublic - 公開アカウントかどうか（デフォルト: true）
+ * @param initialHasRequest - リクエスト送信済みかどうか（デフォルト: false）
  *
  * @example
  * ```tsx
+ * // 公開アカウント
  * <FollowButton
  *   userId="user123"
  *   initialIsFollowing={false}
+ *   isPublic={true}
+ * />
+ *
+ * // 非公開アカウント
+ * <FollowButton
+ *   userId="user456"
+ *   initialIsFollowing={false}
+ *   isPublic={false}
+ *   initialHasRequest={false}
  * />
  * ```
  */
-export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) {
+export function FollowButton({
+  userId,
+  initialIsFollowing,
+  isPublic = true,
+  initialHasRequest = false,
+}: FollowButtonProps) {
   // ------------------------------------------------------------
   // 状態管理
   // ------------------------------------------------------------
@@ -97,6 +107,12 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
    * true: フォロー中, false: 未フォロー
    */
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
+
+  /**
+   * フォローリクエスト送信状態（非公開アカウント用）
+   * true: リクエスト送信済み, false: 未送信
+   */
+  const [hasRequest, setHasRequest] = useState(initialHasRequest)
 
   /**
    * ローディング状態
@@ -110,55 +126,113 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
    */
   const [isHovered, setIsHovered] = useState(false)
 
-  /**
-   * Next.jsルーター
-   * ページリフレッシュとリダイレクトに使用
-   */
   const router = useRouter()
+  const { toast } = useToast()
 
   // ------------------------------------------------------------
   // イベントハンドラ
   // ------------------------------------------------------------
 
   /**
-   * フォローボタンクリックハンドラ
-   *
-   * ## 処理フロー
-   * 1. Optimistic UIで即座に状態を更新
-   * 2. Server Actionでフォロー/解除を実行
-   * 3. エラー時はロールバック
-   * 4. 認証エラー時はログインページへリダイレクト
+   * 公開アカウントのフォロー/フォロー解除
    */
-  async function handleClick() {
+  async function handleFollow() {
     setLoading(true)
-
-    /**
-     * Optimistic UI: 即座にUIを更新
-     * サーバーレスポンスを待たずに状態を変更
-     */
     setIsFollowing(!isFollowing)
 
     const result = await toggleFollow(userId)
 
     if (result.error) {
-      /**
-       * エラー時: 元の状態にロールバック
-       */
       setIsFollowing(isFollowing)
-
-      /**
-       * 認証エラーの場合はログインページへリダイレクト
-       */
       if (result.error === '認証が必要です') {
         router.push('/login')
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error,
+          variant: 'destructive',
+        })
       }
     }
 
     setLoading(false)
-    /**
-     * ページをリフレッシュしてフォロー数などを更新
-     */
     router.refresh()
+  }
+
+  /**
+   * 非公開アカウントへのフォローリクエスト送信
+   */
+  async function handleSendRequest() {
+    setLoading(true)
+    setHasRequest(true)
+
+    const result = await sendFollowRequest(userId)
+
+    if ('error' in result) {
+      setHasRequest(false)
+      if (result.error === '認証が必要です') {
+        router.push('/login')
+      } else {
+        toast({
+          title: 'エラー',
+          description: result.error,
+          variant: 'destructive',
+        })
+      }
+    } else {
+      toast({
+        title: 'リクエストを送信しました',
+        description: '相手の承認をお待ちください',
+      })
+    }
+
+    setLoading(false)
+    router.refresh()
+  }
+
+  /**
+   * フォローリクエストのキャンセル
+   */
+  async function handleCancelRequest() {
+    setLoading(true)
+    setHasRequest(false)
+
+    const result = await cancelFollowRequest(userId)
+
+    if (result.error) {
+      setHasRequest(true)
+      toast({
+        title: 'エラー',
+        description: result.error,
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title: 'リクエストをキャンセルしました',
+      })
+    }
+
+    setLoading(false)
+    router.refresh()
+  }
+
+  /**
+   * ボタンクリックハンドラ
+   */
+  function handleClick() {
+    if (isFollowing) {
+      // フォロー中の場合はフォロー解除
+      handleFollow()
+    } else if (!isPublic && hasRequest) {
+      // 非公開アカウントでリクエスト済みの場合はキャンセル
+      handleCancelRequest()
+    } else if (!isPublic) {
+      // 非公開アカウントでリクエスト未送信の場合はリクエスト送信
+      handleSendRequest()
+    } else {
+      // 公開アカウントでフォローしていない場合はフォロー
+      handleFollow()
+    }
   }
 
   // ------------------------------------------------------------
@@ -167,32 +241,48 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
 
   /**
    * ボタンテキストを取得
-   *
-   * 状態に応じてテキストを切り替え:
-   * - ローディング中: '...'
-   * - 未フォロー: 'フォローする'
-   * - フォロー中（ホバー）: 'フォロー解除'
-   * - フォロー中: 'フォロー中'
    */
   const getButtonText = () => {
     if (loading) return '...'
-    if (!isFollowing) return 'フォローする'
-    if (isHovered) return 'フォロー解除'
-    return 'フォロー中'
+    if (isFollowing) {
+      return isHovered ? 'フォロー解除' : 'フォロー中'
+    }
+    if (!isPublic) {
+      if (hasRequest) {
+        return isHovered ? 'キャンセル' : 'リクエスト済み'
+      }
+      return 'フォローリクエスト'
+    }
+    return 'フォローする'
   }
 
   /**
    * ボタンのCSSクラスを取得
-   *
-   * 状態に応じてスタイルを切り替え:
-   * - 未フォロー: 緑色の背景
-   * - フォロー中（ホバー）: 赤色のボーダーとテキスト
-   * - フォロー中: デフォルトスタイル
    */
   const getButtonClass = () => {
-    if (!isFollowing) return 'bg-bonsai-green hover:bg-bonsai-green/90'
-    if (isHovered) return 'border-red-500 text-red-500 hover:bg-red-50'
+    // フォロー中でホバー時は赤色
+    if (isFollowing && isHovered) {
+      return 'border-red-500 text-red-500 hover:bg-red-50'
+    }
+    // リクエスト済みでホバー時は赤色
+    if (!isPublic && hasRequest && isHovered) {
+      return 'border-red-500 text-red-500 hover:bg-red-50'
+    }
+    // 未フォロー/未リクエストは緑色
+    if (!isFollowing && !hasRequest) {
+      return 'bg-bonsai-green hover:bg-bonsai-green/90'
+    }
     return ''
+  }
+
+  /**
+   * ボタンのvariantを取得
+   */
+  const getButtonVariant = () => {
+    if (isFollowing || hasRequest) {
+      return 'outline'
+    }
+    return 'default'
   }
 
   // ------------------------------------------------------------
@@ -203,7 +293,7 @@ export function FollowButton({ userId, initialIsFollowing }: FollowButtonProps) 
     <Button
       onClick={handleClick}
       disabled={loading}
-      variant={isFollowing ? 'outline' : 'default'}
+      variant={getButtonVariant()}
       className={getButtonClass()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

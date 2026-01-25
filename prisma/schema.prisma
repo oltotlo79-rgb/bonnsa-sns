@@ -103,6 +103,8 @@ model User {
   blocking     Block[]        @relation("BlockingUser")
   mutedBy      Mute[]         @relation("MutedUser")
   muting       Mute[]         @relation("MutingUser")
+  followRequestsSent     FollowRequest[] @relation("FollowRequestSent")
+  followRequestsReceived FollowRequest[] @relation("FollowRequestReceived")
   notifications    Notification[] @relation("NotificationUser")
   actorNotifications Notification[] @relation("NotificationActor")
   shopReviews  ShopReview[]
@@ -318,6 +320,25 @@ model Mute {
 
   @@id([muterId, mutedId])
   @@map("mutes")
+}
+
+// フォローリクエスト（非公開アカウント用）
+model FollowRequest {
+  id          String   @id @default(cuid())
+  requesterId String   @map("requester_id")  // リクエスト送信者
+  targetId    String   @map("target_id")     // リクエスト受信者（非公開アカウント）
+  status      String   @default("pending")   // pending, approved, rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  requester User @relation("FollowRequestSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    User @relation("FollowRequestReceived", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+  @@index([requesterId])
+  @@index([targetId])
+  @@index([status])
+  @@map("follow_requests")
 }
 
 // 通知

@@ -165,6 +165,23 @@ export async function toggleFollow(userId: string) {
     // ------------------------------------------------------------
 
     /**
+     * 対象ユーザーの公開設定を確認
+     * 非公開アカウントの場合はフォローリクエストが必要
+     */
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isPublic: true },
+    })
+
+    if (!targetUser) {
+      return { error: 'ユーザーが見つかりません' }
+    }
+
+    if (!targetUser.isPublic) {
+      return { error: 'このユーザーは非公開アカウントです。フォローリクエストを送信してください', requiresRequest: true }
+    }
+
+    /**
      * フォローレコードを作成
      */
     await prisma.follow.create({

@@ -34,6 +34,9 @@ import { isPremiumUser } from '@/lib/premium'
 // プロフィール閲覧記録用のServer Action
 import { recordProfileView } from '@/lib/actions/analytics'
 
+// フォローリクエスト状態取得用のServer Action
+import { getFollowRequestStatus } from '@/lib/actions/follow-request'
+
 // ユーザープロフィールヘッダーコンポーネント（アバター、フォローボタン等）
 import { ProfileHeader } from '@/components/user/ProfileHeader'
 
@@ -167,16 +170,17 @@ export default async function UserProfilePage({ params }: Props) {
   // プレミアム会員状態を取得（バッジ表示用）
   const isPremium = await isPremiumUser(id)
 
-  // フォロー/ブロック/ミュート状態の初期値を設定
+  // フォロー/ブロック/ミュート/フォローリクエスト状態の初期値を設定
   let isFollowing = false      // フォロー中か
   let isBlocked = false        // ブロック中か
   let isMuted = false          // ミュート中か
   let isBlockedByUser = false  // 相手からブロックされているか
+  let hasFollowRequest = false // フォローリクエスト送信済みか
 
   // ログイン中かつ他ユーザーのプロフィールを閲覧している場合、関係性を確認
   if (session?.user?.id && !isOwner) {
     // 複数のデータベースクエリを並列実行してパフォーマンスを最適化
-    const [follow, block, mute, blockedBy] = await Promise.all([
+    const [follow, block, mute, blockedBy, followRequestStatus] = await Promise.all([
       // フォロー関係をチェック
       prisma.follow.findUnique({
         where: {
@@ -213,6 +217,8 @@ export default async function UserProfilePage({ params }: Props) {
           },
         },
       }),
+      // 非公開アカウントへのフォローリクエスト状態をチェック
+      getFollowRequestStatus(id),
     ])
 
     // クエリ結果をboolean値に変換
@@ -220,6 +226,7 @@ export default async function UserProfilePage({ params }: Props) {
     isBlocked = !!block
     isMuted = !!mute
     isBlockedByUser = !!blockedBy
+    hasFollowRequest = followRequestStatus.hasRequest && followRequestStatus.status === 'pending'
   }
 
   // ブロック関係にある場合はプロフィールを表示しない
@@ -343,6 +350,7 @@ export default async function UserProfilePage({ params }: Props) {
         isBlocked={isBlocked}
         isMuted={isMuted}
         isPremium={isPremium}
+        hasFollowRequest={hasFollowRequest}
       />
 
       {/* 投稿一覧セクション */}

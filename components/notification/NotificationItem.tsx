@@ -184,6 +184,7 @@ function ReplyIcon({ className }: { className?: string }) {
  * - いいね: 赤
  * - コメント: 青
  * - フォロー: 緑
+ * - フォローリクエスト: 黄色
  * - 引用/リポスト: 紫
  * - 返信: オレンジ
  *
@@ -198,7 +199,10 @@ function getNotificationIcon(type: string) {
     case 'comment':
       return <MessageCircleIcon className="w-5 h-5 text-blue-500" />
     case 'follow':
+    case 'follow_request_approved':
       return <UserPlusIcon className="w-5 h-5 text-green-500" />
+    case 'follow_request':
+      return <UserPlusIcon className="w-5 h-5 text-yellow-500" />
     case 'quote':
     case 'repost':
       return <RepeatIcon className="w-5 h-5 text-purple-500" />
@@ -226,6 +230,10 @@ function getNotificationMessage(type: string, actorName: string) {
       return <><strong>{actorName}</strong>さんがあなたの投稿にコメントしました</>
     case 'follow':
       return <><strong>{actorName}</strong>さんがあなたをフォローしました</>
+    case 'follow_request':
+      return <><strong>{actorName}</strong>さんからフォローリクエストが届きました</>
+    case 'follow_request_approved':
+      return <><strong>{actorName}</strong>さんがフォローリクエストを承認しました</>
     case 'quote':
       return <><strong>{actorName}</strong>さんがあなたの投稿を引用しました</>
     case 'repost':
@@ -253,10 +261,17 @@ function getNotificationLink(notification: Notification) {
   const { type, post, comment, actor } = notification
 
   /**
-   * フォロー通知はユーザーページへ
+   * フォロー関連通知はユーザーページへ
    */
-  if (type === 'follow') {
+  if (type === 'follow' || type === 'follow_request_approved') {
     return `/users/${actor.id}`
+  }
+
+  /**
+   * フォローリクエスト通知はフォローリクエスト管理ページへ
+   */
+  if (type === 'follow_request') {
+    return '/settings/follow-requests'
   }
 
   /**

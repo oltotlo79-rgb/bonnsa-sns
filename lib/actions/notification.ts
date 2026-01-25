@@ -73,13 +73,15 @@ import { getMutedUserIds } from './filter-helper'
  * - 'quote': 引用投稿通知
  * - 'reply': コメントへの返信通知
  * - 'comment_like': コメントへのいいね通知
+ * - 'follow_request': フォローリクエスト通知（非公開アカウント用）
+ * - 'follow_request_approved': フォローリクエスト承認通知
  *
  * ## 使用例
  * ```typescript
  * const type: NotificationType = 'like'
  * ```
  */
-export type NotificationType = 'like' | 'comment' | 'follow' | 'quote' | 'reply' | 'comment_like'
+export type NotificationType = 'like' | 'comment' | 'follow' | 'quote' | 'reply' | 'comment_like' | 'follow_request' | 'follow_request_approved'
 
 // ============================================================
 // 通知一覧取得

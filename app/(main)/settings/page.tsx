@@ -87,6 +87,25 @@ function CrownIcon({ className }: { className?: string }) {
 }
 
 /**
+ * ユーザーリクエストアイコンコンポーネント
+ * フォローリクエスト管理メニューのアイコンとして使用
+ *
+ * @param {Object} props - コンポーネントのプロパティ
+ * @param {string} [props.className] - 追加のCSSクラス
+ * @returns {JSX.Element} SVGアイコン要素
+ */
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+/**
  * 静的メタデータの定義
  * ページタイトルの設定
  */
@@ -117,6 +136,12 @@ export default function SettingsPage() {
       icon: SettingsIcon,             // 歯車アイコン
       title: 'アカウント設定',
       description: '公開設定、アカウント削除など',
+    },
+    {
+      href: '/settings/follow-requests', // フォローリクエスト管理ページ
+      icon: UsersIcon,                   // ユーザーアイコン
+      title: 'フォローリクエスト',
+      description: '受信したフォローリクエストの確認・承認',
     },
     {
       href: '/settings/subscription', // プラン管理ページ

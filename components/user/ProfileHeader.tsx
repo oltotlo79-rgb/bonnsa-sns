@@ -115,6 +115,7 @@ type ProfileHeaderProps = {
   isBlocked?: boolean
   isMuted?: boolean
   isPremium?: boolean
+  hasFollowRequest?: boolean
 }
 
 // ============================================================
@@ -293,7 +294,7 @@ function calculateBonsaiExperience(startYear: number | null, startMonth: number 
  * />
  * ```
  */
-export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, isPremium }: ProfileHeaderProps) {
+export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, isPremium, hasFollowRequest }: ProfileHeaderProps) {
   // 登録日をフォーマット（例: 2024年1月）
   const joinDate = new Date(user.createdAt)
   const formattedJoinDate = `${joinDate.getFullYear()}年${joinDate.getMonth() + 1}月`
@@ -350,7 +351,12 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, 
             // 他人のプロフィールの場合: アクションボタン群
             <>
               <MessageButton userId={user.id} isBlocked={isBlocked} />
-              <FollowButton userId={user.id} initialIsFollowing={isFollowing ?? false} />
+              <FollowButton
+                userId={user.id}
+                initialIsFollowing={isFollowing ?? false}
+                isPublic={user.isPublic}
+                initialHasRequest={hasFollowRequest ?? false}
+              />
               <MuteButton
                 userId={user.id}
                 nickname={user.nickname}
