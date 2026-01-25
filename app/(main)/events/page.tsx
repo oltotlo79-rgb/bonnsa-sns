@@ -152,25 +152,25 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           {/* カレンダー表示ボタン */}
           <Link
             href={`/events?${new URLSearchParams({ ...params, view: 'calendar' }).toString()}`}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
               view === 'calendar'
                 ? 'bg-primary text-primary-foreground'
                 : 'border hover:bg-muted'
             }`}
           >
-            <CalendarIcon className="w-4 h-4" />
+            <CalendarIcon className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">カレンダー</span>
           </Link>
           {/* リスト表示ボタン */}
           <Link
             href={`/events?${new URLSearchParams({ ...params, view: 'list' }).toString()}`}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors ${
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
               view === 'list'
                 ? 'bg-primary text-primary-foreground'
                 : 'border hover:bg-muted'
             }`}
           >
-            <ListIcon className="w-4 h-4" />
+            <ListIcon className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">リスト</span>
           </Link>
         </div>
