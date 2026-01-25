@@ -1,33 +1,105 @@
+/**
+ * @fileoverview 盆栽登録・編集フォームコンポーネント
+ *
+ * このファイルは盆栽の新規登録および既存盆栽の編集に使用される
+ * フォームコンポーネントを提供します。
+ *
+ * @description
+ * 主な機能:
+ * - 盆栽の新規登録フォーム
+ * - 既存盆栽の編集フォーム（propsで既存データを受け取り）
+ * - バリデーションとエラーハンドリング
+ * - 登録/更新後の自動ナビゲーション
+ *
+ * @example
+ * // 新規登録時
+ * <BonsaiForm />
+ *
+ * // 編集時
+ * <BonsaiForm bonsai={existingBonsai} />
+ */
+
 'use client'
 
+// React のフック: コンポーネントの状態管理に使用
 import { useState } from 'react'
+// Next.js のルーター: ページ遷移とリフレッシュに使用
 import { useRouter } from 'next/navigation'
+// Server Actions: 盆栽の作成・更新処理を実行するサーバーサイド関数
 import { createBonsai, updateBonsai } from '@/lib/actions/bonsai'
 
+/**
+ * BonsaiFormコンポーネントのProps型定義
+ */
 interface BonsaiFormProps {
+  /** 編集対象の盆栽データ（新規登録時はundefined） */
   bonsai?: {
+    /** 盆栽ID */
     id: string
+    /** 盆栽の名前（必須） */
     name: string
+    /** 樹種（オプション） */
     species: string | null
+    /** 入手日（オプション） */
     acquiredAt: Date | null
+    /** 説明・メモ（オプション） */
     description: string | null
   }
 }
 
+/**
+ * 盆栽登録・編集フォームコンポーネント
+ *
+ * bonsai propsの有無によって新規登録または編集モードで動作します。
+ * フォーム送信時にServer Actionを呼び出し、成功時は詳細ページにリダイレクトします。
+ *
+ * @param props - コンポーネントのプロパティ
+ * @param props.bonsai - 編集対象の盆栽データ（編集モード時に指定）
+ */
 export function BonsaiForm({ bonsai }: BonsaiFormProps) {
+  // ルーターインスタンス: ページ遷移とデータ更新に使用
   const router = useRouter()
+
+  /**
+   * フォーム送信中かどうかのフラグ
+   * true: 送信処理中（ボタン無効化）、false: 待機状態
+   */
   const [loading, setLoading] = useState(false)
+
+  /**
+   * エラーメッセージの状態
+   * null: エラーなし、string: エラーメッセージを表示
+   */
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * フォーム送信時のイベントハンドラ
+   *
+   * 処理フロー:
+   * 1. フォームデータを取得・整形
+   * 2. 編集モードか新規登録かを判定
+   * 3. 対応するServer Actionを呼び出し
+   * 4. 成功時は盆栽詳細ページにリダイレクト
+   * 5. 失敗時はエラーメッセージを表示
+   *
+   * @param e - フォーム送信イベント
+   */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    // デフォルトのフォーム送信を防止
     e.preventDefault()
+    // 送信処理開始
     setLoading(true)
     setError(null)
 
+    // FormDataを使用してフォームの値を取得
     const formData = new FormData(e.currentTarget)
+
+    // フォームデータをオブジェクトに整形
     const data = {
       name: formData.get('name') as string,
+      // 空文字列の場合はundefinedに変換
       species: formData.get('species') as string || undefined,
+      // 日付文字列をDateオブジェクトに変換（空の場合はundefined）
       acquiredAt: formData.get('acquiredAt')
         ? new Date(formData.get('acquiredAt') as string)
         : undefined,
@@ -36,38 +108,47 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
 
     try {
       if (bonsai) {
+        // 編集モード: 既存の盆栽を更新
         const result = await updateBonsai(bonsai.id, data)
         if (result.error) {
           setError(result.error)
           return
         }
+        // 更新成功時は詳細ページにリダイレクト
         router.push(`/bonsai/${bonsai.id}`)
       } else {
+        // 新規登録モード: 新しい盆栽を作成
         const result = await createBonsai(data)
         if (result.error) {
           setError(result.error)
           return
         }
+        // 作成成功時は新しい盆栽の詳細ページにリダイレクト
         if (result.bonsai) {
           router.push(`/bonsai/${result.bonsai.id}`)
         }
       }
+      // ページデータをリフレッシュ
       router.refresh()
     } catch {
+      // 予期しないエラーの場合
       setError('エラーが発生しました')
     } finally {
+      // 送信処理完了
       setLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* エラーメッセージ表示エリア */}
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
           {error}
         </div>
       )}
 
+      {/* 名前入力フィールド（必須） */}
       <div>
         <label htmlFor="name" className="block text-sm font-medium mb-1">
           名前 <span className="text-destructive">*</span>
@@ -83,6 +164,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         />
       </div>
 
+      {/* 樹種選択フィールド */}
       <div>
         <label htmlFor="species" className="block text-sm font-medium mb-1">
           樹種
@@ -94,6 +176,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
           className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="">選択してください</option>
+          {/* 松柏類（常緑針葉樹）のグループ */}
           <optgroup label="松柏類">
             <option value="黒松">黒松</option>
             <option value="赤松">赤松</option>
@@ -114,6 +197,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
             <option value="槙">槙</option>
             <option value="その他松柏類">その他松柏類</option>
           </optgroup>
+          {/* 雑木類（落葉樹・花木・実もの等）のグループ */}
           <optgroup label="雑木類">
             <option value="紅葉">紅葉</option>
             <option value="楓">楓</option>
@@ -154,6 +238,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
             <option value="レンギョウ">レンギョウ</option>
             <option value="その他雑木類">その他雑木類</option>
           </optgroup>
+          {/* 草もの（山野草・苔など）のグループ */}
           <optgroup label="草もの">
             <option value="山野草">山野草</option>
             <option value="苔">苔</option>
@@ -161,6 +246,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         </select>
       </div>
 
+      {/* 入手日入力フィールド */}
       <div>
         <label htmlFor="acquiredAt" className="block text-sm font-medium mb-1">
           入手日
@@ -170,6 +256,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
           id="acquiredAt"
           name="acquiredAt"
           defaultValue={
+            // DateオブジェクトをYYYY-MM-DD形式の文字列に変換
             bonsai?.acquiredAt
               ? new Date(bonsai.acquiredAt).toISOString().split('T')[0]
               : ''
@@ -178,6 +265,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         />
       </div>
 
+      {/* メモ・説明入力フィールド */}
       <div>
         <label htmlFor="description" className="block text-sm font-medium mb-1">
           メモ
@@ -192,7 +280,9 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         />
       </div>
 
+      {/* アクションボタン */}
       <div className="flex gap-2 pt-4">
+        {/* キャンセルボタン: 前のページに戻る */}
         <button
           type="button"
           onClick={() => router.back()}
@@ -200,6 +290,7 @@ export function BonsaiForm({ bonsai }: BonsaiFormProps) {
         >
           キャンセル
         </button>
+        {/* 送信ボタン: モードによってラベルを変更 */}
         <button
           type="submit"
           disabled={loading}

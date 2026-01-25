@@ -1,12 +1,28 @@
+/**
+ * @file 管理者ダッシュボードのレイアウトコンポーネント
+ * @description 管理者専用ページ全体を包むレイアウト。サイドバーナビゲーションと認証チェックを提供する。
+ *              管理者権限を持つユーザーのみがアクセス可能。
+ */
+
+// Next.jsのナビゲーションユーティリティ（リダイレクト処理用）
 import { redirect } from 'next/navigation'
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// NextAuth.jsの認証関数とサインアウト関数
 import { auth, signOut } from '@/lib/auth'
+// 管理者権限チェック用のServer Action
 import { isAdmin } from '@/lib/actions/admin'
+// Prismaデータベースクライアント
 import { prisma } from '@/lib/db'
 
 // ビルド時の静的生成を無効化（データベース接続が必要なため）
 export const dynamic = 'force-dynamic'
 
+/**
+ * ホームアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function HomeIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -16,6 +32,11 @@ function HomeIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザーアイコンコンポーネント（複数人）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function UsersIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -27,6 +48,11 @@ function UsersIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ファイル/テキストアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function FileTextIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -39,6 +65,11 @@ function FileTextIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 警告三角アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function AlertTriangleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -49,6 +80,11 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * カレンダーアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -60,6 +96,11 @@ function CalendarIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * マップピンアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MapPinIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -69,6 +110,11 @@ function MapPinIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * スクロールテキスト/ログアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ScrollTextIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -80,6 +126,11 @@ function ScrollTextIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * トレンド上昇アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function TrendUpIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -89,6 +140,11 @@ function TrendUpIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ゲージ/メーターアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function GaugeIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -98,6 +154,11 @@ function GaugeIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 非表示アイコンコンポーネント（目に斜線）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function EyeOffIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -109,6 +170,11 @@ function EyeOffIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * メッセージ/コメントアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MessageSquareIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -117,6 +183,11 @@ function MessageSquareIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 左矢印アイコンコンポーネント（戻る用）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ArrowLeftIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -126,6 +197,10 @@ function ArrowLeftIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * サイドバーナビゲーション項目の定義
+ * 各項目はURL、ラベル、アイコンコンポーネントを持つ
+ */
 const navItems = [
   { href: '/admin', label: 'ダッシュボード', icon: HomeIcon },
   { href: '/admin/users', label: 'ユーザー管理', icon: UsersIcon },
@@ -140,6 +215,19 @@ const navItems = [
   { href: '/admin/logs', label: '操作ログ', icon: ScrollTextIcon },
 ]
 
+/**
+ * 管理者レイアウトコンポーネント
+ * 管理者ページ全体のレイアウトを定義し、認証・権限チェックを行う
+ *
+ * @param children - 子コンポーネント（各管理ページのコンテンツ）
+ * @returns レイアウトを適用したJSX要素
+ *
+ * 処理内容:
+ * 1. ユーザーテーブルが空の場合はサインアウトしてトップへリダイレクト
+ * 2. 未認証の場合はログインページへリダイレクト
+ * 3. 管理者権限がない場合はフィードページへリダイレクト
+ * 4. サイドバーナビゲーションとメインコンテンツエリアを表示
+ */
 export default async function AdminLayout({
   children,
 }: {
@@ -152,27 +240,33 @@ export default async function AdminLayout({
     redirect('/')
   }
 
+  // 現在のセッション情報を取得
   const session = await auth()
 
+  // 未認証の場合はログインページへリダイレクト
   if (!session?.user?.id) {
     redirect('/login')
   }
 
+  // 管理者権限をチェック
   const isAdminUser = await isAdmin()
 
+  // 管理者でない場合はフィードページへリダイレクト
   if (!isAdminUser) {
     redirect('/feed')
   }
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* サイドバー */}
+      {/* サイドバー - 固定表示のナビゲーションメニュー */}
       <aside className="fixed top-0 left-0 w-64 h-full bg-card border-r z-50">
+        {/* ヘッダー部分 - ロゴとタイトル */}
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold">BON-LOG 管理</h1>
           <p className="text-sm text-muted-foreground">管理者ダッシュボード</p>
         </div>
 
+        {/* ナビゲーションメニュー */}
         <nav className="p-4">
           <ul className="space-y-1">
             {navItems.map((item) => (
@@ -189,6 +283,7 @@ export default async function AdminLayout({
           </ul>
         </nav>
 
+        {/* フッター部分 - サイトへ戻るリンク */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
           <Link
             href="/feed"
@@ -200,7 +295,7 @@ export default async function AdminLayout({
         </div>
       </aside>
 
-      {/* メインコンテンツ */}
+      {/* メインコンテンツエリア - サイドバーの幅分オフセット */}
       <main className="ml-64 min-h-screen">
         <div className="p-6">
           {children}

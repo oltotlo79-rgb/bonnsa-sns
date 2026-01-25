@@ -1,9 +1,25 @@
+/**
+ * @file 管理者ダッシュボードのメインページ
+ * @description 管理者向けのホーム画面。サービス全体の統計情報、通報状況、
+ *              クイックアクション、Sentryエラー情報などを一覧表示する。
+ */
+
+// Next.jsのLinkコンポーネント（クライアントサイドナビゲーション用）
 import Link from 'next/link'
+// 管理者統計情報取得用のServer Action
 import { getAdminStats } from '@/lib/actions/admin'
+// 通報統計情報取得用のServer Action
 import { getReportStats } from '@/lib/actions/report'
+// 未対応の盆栽園変更リクエスト数取得用のServer Action
 import { getPendingShopChangeRequestCount } from '@/lib/actions/shop'
+// Sentryエラー表示コンポーネント
 import { SentryErrors } from './SentryErrors'
 
+/**
+ * ユーザーアイコンコンポーネント（複数人）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function UsersIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -15,6 +31,11 @@ function UsersIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ファイル/テキストアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function FileTextIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -26,6 +47,11 @@ function FileTextIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 警告三角アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function AlertTriangleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -36,6 +62,11 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * カレンダーアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -47,6 +78,11 @@ function CalendarIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * マップピンアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MapPinIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -56,6 +92,11 @@ function MapPinIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * アクティビティアイコンコンポーネント（心電図風）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ActivityIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -64,6 +105,11 @@ function ActivityIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 右矢印アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ArrowRightIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -73,6 +119,11 @@ function ArrowRightIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * メッセージ/コメントアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function MessageSquareIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -81,6 +132,11 @@ function MessageSquareIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 星アイコンコンポーネント（レビュー用）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function StarIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -89,11 +145,29 @@ function StarIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ページメタデータの定義
+ * ブラウザのタイトルバーに表示される
+ */
 export const metadata = {
   title: '管理者ダッシュボード - BON-LOG',
 }
 
+/**
+ * 管理者ダッシュボードページコンポーネント
+ * サービス全体の統計情報と管理機能への導線を表示する
+ *
+ * @returns ダッシュボードのJSX要素
+ *
+ * 処理内容:
+ * 1. 管理統計、通報統計、盆栽園変更リクエスト数を並列取得
+ * 2. 主要統計（ユーザー数、投稿数、未対応通報、週間アクティブ等）を表示
+ * 3. 通報のステータス別・種別別の内訳を表示
+ * 4. 各管理機能へのクイックアクセスリンクを表示
+ * 5. Sentryのエラー情報を表示
+ */
 export default async function AdminDashboardPage() {
+  // 複数の統計データを並列で取得してパフォーマンスを最適化
   const [stats, reportResult, shopRequestResult] = await Promise.all([
     getAdminStats(),
     getReportStats(),
@@ -102,10 +176,12 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* ページタイトル */}
       <h1 className="text-2xl font-bold">ダッシュボード</h1>
 
-      {/* 主要統計 */}
+      {/* 主要統計カード - 4カラムグリッドレイアウト */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 総ユーザー数カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
@@ -117,6 +193,7 @@ export default async function AdminDashboardPage() {
           <p className="text-sm text-green-500 mt-1">+{stats.todayUsers} 今日</p>
         </div>
 
+        {/* 総投稿数カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-green-500/10 text-green-500 rounded-lg">
@@ -128,6 +205,7 @@ export default async function AdminDashboardPage() {
           <p className="text-sm text-green-500 mt-1">+{stats.todayPosts} 今日</p>
         </div>
 
+        {/* 未対応通報カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-red-500/10 text-red-500 rounded-lg">
@@ -141,6 +219,7 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
 
+        {/* 週間アクティブユーザー数カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg">
@@ -152,6 +231,7 @@ export default async function AdminDashboardPage() {
           <p className="text-sm text-muted-foreground mt-1">過去7日間</p>
         </div>
 
+        {/* 未対応変更リクエストカード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
@@ -168,8 +248,9 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* サブ統計 */}
+      {/* サブ統計カード - イベント・盆栽園 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 登録イベント数カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg">
@@ -180,6 +261,7 @@ export default async function AdminDashboardPage() {
           <p className="text-2xl font-bold">{stats.totalEvents.toLocaleString()}</p>
         </div>
 
+        {/* 登録盆栽園数カード */}
         <div className="bg-card rounded-lg border p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-teal-500/10 text-teal-500 rounded-lg">
@@ -191,10 +273,11 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 通報統計 */}
+      {/* 通報統計セクション - ステータス別・種別別の内訳 */}
       {'stats' in reportResult && reportResult.stats && (
         <div className="bg-card rounded-lg border p-6">
           <h2 className="text-lg font-semibold mb-4">通報統計</h2>
+          {/* ステータス別の通報数 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
               <p className="text-2xl font-bold text-yellow-600">{reportResult.stats.pending}</p>
@@ -214,6 +297,7 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
+          {/* 種別ごとの通報数 */}
           {reportResult.stats.byType && Object.keys(reportResult.stats.byType).length > 0 && (
             <div className="mt-4 pt-4 border-t">
               <h3 className="text-sm font-medium mb-2">種別ごとの通報</h3>
@@ -234,10 +318,11 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* クイックアクション */}
+      {/* クイックアクションセクション - 各管理ページへの導線 */}
       <div className="bg-card rounded-lg border p-6">
         <h2 className="text-lg font-semibold mb-4">クイックアクション</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* ユーザー管理へのリンク */}
           <Link
             href="/admin/users"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -245,6 +330,7 @@ export default async function AdminDashboardPage() {
             <UsersIcon className="w-8 h-8 text-blue-500" />
             <span className="text-sm">ユーザー管理</span>
           </Link>
+          {/* 投稿管理へのリンク */}
           <Link
             href="/admin/posts"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -252,6 +338,7 @@ export default async function AdminDashboardPage() {
             <FileTextIcon className="w-8 h-8 text-green-500" />
             <span className="text-sm">投稿管理</span>
           </Link>
+          {/* レビュー管理へのリンク */}
           <Link
             href="/admin/reviews"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -259,6 +346,7 @@ export default async function AdminDashboardPage() {
             <StarIcon className="w-8 h-8 text-yellow-500" />
             <span className="text-sm">レビュー管理</span>
           </Link>
+          {/* 通報管理へのリンク */}
           <Link
             href="/admin/reports"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -266,6 +354,7 @@ export default async function AdminDashboardPage() {
             <AlertTriangleIcon className="w-8 h-8 text-red-500" />
             <span className="text-sm">通報管理</span>
           </Link>
+          {/* 操作ログへのリンク */}
           <Link
             href="/admin/logs"
             className="flex flex-col items-center gap-2 p-4 border rounded-lg hover:bg-muted transition-colors"
@@ -276,7 +365,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Sentryエラー */}
+      {/* Sentryエラー表示セクション */}
       <SentryErrors />
     </div>
   )

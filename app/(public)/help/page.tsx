@@ -1,11 +1,45 @@
+/**
+ * @file app/(public)/help/page.tsx
+ * @description BON-LOGヘルプセンターページ
+ *
+ * このページはBON-LOGの使い方やよくある質問（FAQ）を表示します。
+ * ユーザーがサービスを利用する際の疑問を解決するためのページです。
+ *
+ * 主な機能:
+ * - FAQセクション（アコーディオン形式で質問と回答を表示）
+ * - クイックリンク（関連ページへの導線）
+ * - お問い合わせフォーム
+ *
+ * FAQカテゴリ:
+ * - はじめに（サービス概要、アカウント作成）
+ * - 投稿について（文字数制限、画像・動画、ジャンル）
+ * - プレミアム会員（特典、料金、支払い、解約）
+ * - プライバシーとセキュリティ（非公開設定、ブロック、ミュート）
+ * - 盆栽園マップ（登録、編集、レビュー）
+ * - その他（報告、お問い合わせ、アプリ）
+ */
+
+// Next.jsのメタデータ型定義（SEO対策用）
 import { Metadata } from 'next'
+// Next.jsのクライアントサイドナビゲーション用Linkコンポーネント
 import Link from 'next/link'
 
+/**
+ * ページメタデータの定義
+ * SEO最適化のためのtitleとdescriptionを設定
+ */
 export const metadata: Metadata = {
   title: 'ヘルプ - BON-LOG',
   description: 'BON-LOG（ボンログ）のヘルプページです。',
 }
 
+/**
+ * 右矢印アイコンコンポーネント
+ * リンクやアコーディオンの展開状態を示すために使用
+ *
+ * @param className - アイコンに適用するCSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ChevronRightIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -14,6 +48,13 @@ function ChevronRightIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 検索アイコンコンポーネント
+ * 検索入力フィールドに表示
+ *
+ * @param className - アイコンに適用するCSSクラス名
+ * @returns SVGアイコン要素
+ */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -23,15 +64,28 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ヘルプセクションの型定義
+ * FAQのカテゴリごとにタイトルと質問・回答のリストを持つ
+ */
 interface HelpSection {
+  /** セクションのタイトル（カテゴリ名） */
   title: string
+  /** 質問と回答のリスト */
   items: {
+    /** 質問文 */
     question: string
+    /** 回答文 */
     answer: string
   }[]
 }
 
+/**
+ * ヘルプセクションのデータ定義
+ * 各カテゴリごとにFAQを整理
+ */
 const helpSections: HelpSection[] = [
+  // 「はじめに」セクション: サービスの基本的な使い方
   {
     title: 'はじめに',
     items: [
@@ -49,6 +103,7 @@ const helpSections: HelpSection[] = [
       },
     ],
   },
+  // 「投稿について」セクション: 投稿機能の詳細
   {
     title: '投稿について',
     items: [
@@ -74,6 +129,7 @@ const helpSections: HelpSection[] = [
       },
     ],
   },
+  // 「プレミアム会員」セクション: 有料会員に関する情報
   {
     title: 'プレミアム会員',
     items: [
@@ -103,6 +159,7 @@ const helpSections: HelpSection[] = [
       },
     ],
   },
+  // 「プライバシーとセキュリティ」セクション: アカウント保護に関する情報
   {
     title: 'プライバシーとセキュリティ',
     items: [
@@ -128,6 +185,7 @@ const helpSections: HelpSection[] = [
       },
     ],
   },
+  // 「盆栽園マップ」セクション: マップ機能に関する情報
   {
     title: '盆栽園マップ',
     items: [
@@ -149,6 +207,7 @@ const helpSections: HelpSection[] = [
       },
     ],
   },
+  // 「その他」セクション: その他の質問
   {
     title: 'その他',
     items: [
@@ -168,9 +227,19 @@ const helpSections: HelpSection[] = [
   },
 ]
 
+/**
+ * ヘルプセンターページコンポーネント
+ *
+ * FAQをカテゴリごとにアコーディオン形式で表示し、
+ * ユーザーが疑問を解決できるようにします。
+ * また、お問い合わせフォームを提供し、FAQで解決しない問題に対応します。
+ *
+ * @returns ヘルプセンターページ要素
+ */
 export default function HelpPage() {
   return (
     <div className="space-y-8">
+      {/* ページヘッダー */}
       <div>
         <h1 className="text-3xl font-bold mb-2">ヘルプセンター</h1>
         <p className="text-muted-foreground">
@@ -178,7 +247,7 @@ export default function HelpPage() {
         </p>
       </div>
 
-      {/* 検索（将来的に実装） */}
+      {/* 検索フィールド（将来的に実装予定、現在は無効） */}
       <div className="relative">
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <input
@@ -189,8 +258,9 @@ export default function HelpPage() {
         />
       </div>
 
-      {/* クイックリンク */}
+      {/* クイックリンク: よく使われるページへの導線 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* プレミアム会員セクションへのページ内リンク */}
         <Link
           href="#premium"
           className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted transition-colors"
@@ -198,6 +268,7 @@ export default function HelpPage() {
           <span className="font-medium">プレミアム会員について</span>
           <ChevronRightIcon className="w-5 h-5 text-muted-foreground" />
         </Link>
+        {/* 利用規約ページへのリンク */}
         <Link
           href="/terms"
           className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted transition-colors"
@@ -205,6 +276,7 @@ export default function HelpPage() {
           <span className="font-medium">利用規約</span>
           <ChevronRightIcon className="w-5 h-5 text-muted-foreground" />
         </Link>
+        {/* プライバシーポリシーページへのリンク */}
         <Link
           href="/privacy"
           className="flex items-center justify-between p-4 bg-card border rounded-lg hover:bg-muted transition-colors"
@@ -214,25 +286,32 @@ export default function HelpPage() {
         </Link>
       </div>
 
-      {/* FAQ セクション */}
+      {/* FAQ セクション: カテゴリごとに質問と回答を表示 */}
       <div className="space-y-8">
         {helpSections.map((section, sectionIndex) => (
           <section
             key={sectionIndex}
+            // プレミアム会員セクションにはアンカーIDを設定
             id={section.title === 'プレミアム会員' ? 'premium' : undefined}
             className="scroll-mt-8"
           >
+            {/* セクションタイトル */}
             <h2 className="text-xl font-bold mb-4 pb-2 border-b">{section.title}</h2>
+            {/* 質問リスト（アコーディオン形式） */}
             <div className="space-y-4">
               {section.items.map((item, itemIndex) => (
+                // HTML5のdetails/summary要素でアコーディオンを実装
                 <details
                   key={itemIndex}
                   className="group bg-card border rounded-lg"
                 >
+                  {/* 質問（クリックで開閉） */}
                   <summary className="flex items-center justify-between p-4 cursor-pointer list-none hover:bg-muted/50 rounded-lg">
                     <span className="font-medium pr-4">{item.question}</span>
+                    {/* 開閉状態を示すアイコン（開くと90度回転） */}
                     <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform group-open:rotate-90" />
                   </summary>
+                  {/* 回答（展開時に表示） */}
                   <div className="px-4 pb-4 text-muted-foreground whitespace-pre-line">
                     {item.answer}
                   </div>
@@ -243,15 +322,17 @@ export default function HelpPage() {
         ))}
       </div>
 
-      {/* お問い合わせ */}
+      {/* お問い合わせセクション: FAQで解決しない場合の連絡先 */}
       <section className="bg-muted/50 rounded-lg p-6">
         <h2 className="text-xl font-bold mb-2">お探しの答えが見つかりませんか？</h2>
         <p className="text-muted-foreground mb-4">
           ヘルプセンターで解決しない場合は、お問い合わせフォームからご連絡ください。
         </p>
+        {/* お問い合わせフォーム */}
         <div className="bg-card border rounded-lg p-6">
           <h3 className="font-semibold mb-4">お問い合わせフォーム</h3>
           <form className="space-y-4">
+            {/* メールアドレス入力 */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1">
                 メールアドレス
@@ -265,6 +346,7 @@ export default function HelpPage() {
                 placeholder="your@email.com"
               />
             </div>
+            {/* お問い合わせ種類の選択 */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium mb-1">
                 お問い合わせ種類
@@ -284,6 +366,7 @@ export default function HelpPage() {
                 <option value="other">その他</option>
               </select>
             </div>
+            {/* お問い合わせ内容の入力 */}
             <div>
               <label htmlFor="message" className="block text-sm font-medium mb-1">
                 お問い合わせ内容
@@ -297,6 +380,7 @@ export default function HelpPage() {
                 placeholder="お問い合わせ内容を詳しくご記入ください..."
               />
             </div>
+            {/* 送信ボタン */}
             <button
               type="submit"
               className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
@@ -304,6 +388,7 @@ export default function HelpPage() {
               送信する
             </button>
           </form>
+          {/* 返信についての注意書き */}
           <p className="text-xs text-muted-foreground mt-4">
             ※ 通常、3営業日以内にご返信いたします。
           </p>

@@ -1,21 +1,41 @@
+/**
+ * @file 盆栽園検索フォームコンポーネント
+ * @description 盆栽園の検索・フィルタリング・ソート機能を提供するClient Component。
+ * キーワード検索、ジャンルフィルター、ソート順の選択が可能で、
+ * 選択時に自動的にURLパラメータを更新してページを再レンダリングする。
+ */
+
 'use client'
 
+// Next.jsのルーター・検索パラメータ取得フック
 import { useRouter, useSearchParams } from 'next/navigation'
+// Reactの状態管理・トランジション管理フック
 import { useState, useTransition } from 'react'
 
+/**
+ * ジャンルデータの型定義
+ */
 interface Genre {
-  id: string
-  name: string
-  category: string
+  id: string       // ジャンルID
+  name: string     // ジャンル名
+  category: string // カテゴリ（グループ分け用）
 }
 
+/**
+ * コンポーネントのProps型定義
+ */
 interface ShopSearchFormProps {
-  genres: Genre[]
-  initialSearch?: string
-  initialGenre?: string
-  initialSort?: string
+  genres: Genre[]           // 利用可能なジャンル一覧
+  initialSearch?: string    // 初期検索キーワード
+  initialGenre?: string     // 初期選択ジャンルID
+  initialSort?: string      // 初期ソート順
 }
 
+/**
+ * 検索アイコンコンポーネント
+ * 検索入力フィールドに表示するSVGアイコン
+ * @param className - 追加のCSSクラス
+ */
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -25,46 +45,79 @@ function SearchIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 盆栽園検索フォームコンポーネント
+ *
+ * このClient Componentは以下の機能を提供する:
+ * 1. キーワード検索（名前または住所で検索）
+ * 2. ジャンルフィルター（カテゴリごとにグループ化して表示）
+ * 3. ソート順の選択（新着順、評価順、名前順）
+ * 4. フィルターのリセット機能
+ *
+ * useTransitionを使用してナビゲーション中のローディング状態を管理し、
+ * URLパラメータを更新することでServer Componentの再レンダリングをトリガーする。
+ *
+ * @param genres - 利用可能なジャンル一覧
+ * @param initialSearch - URLから取得した初期検索キーワード
+ * @param initialGenre - URLから取得した初期選択ジャンル
+ * @param initialSort - URLから取得した初期ソート順
+ */
 export function ShopSearchForm({
   genres,
   initialSearch = '',
   initialGenre = '',
   initialSort = 'newest',
 }: ShopSearchFormProps) {
+  // Next.jsルーター: プログラマティックなナビゲーション用
   const router = useRouter()
+  // 現在のURLパラメータを取得
   const searchParams = useSearchParams()
+  // トランジション管理: ナビゲーション中のローディング状態を管理
   const [isPending, startTransition] = useTransition()
 
-  const [search, setSearch] = useState(initialSearch)
-  const [genre, setGenre] = useState(initialGenre)
-  const [sort, setSort] = useState(initialSort)
+  // ローカル状態: フォーム入力値を管理
+  const [search, setSearch] = useState(initialSearch)   // 検索キーワード
+  const [genre, setGenre] = useState(initialGenre)       // 選択ジャンル
+  const [sort, setSort] = useState(initialSort)          // ソート順
 
+  /**
+   * 検索実行ハンドラ
+   * 現在のフォーム値からURLパラメータを構築してナビゲーション
+   */
   const handleSearch = () => {
     const params = new URLSearchParams(searchParams.toString())
 
+    // 検索キーワードの設定（空の場合は削除）
     if (search.trim()) {
       params.set('search', search.trim())
     } else {
       params.delete('search')
     }
 
+    // ジャンルフィルターの設定（未選択の場合は削除）
     if (genre) {
       params.set('genre', genre)
     } else {
       params.delete('genre')
     }
 
+    // ソート順の設定（デフォルトのnewestの場合は削除）
     if (sort && sort !== 'newest') {
       params.set('sort', sort)
     } else {
       params.delete('sort')
     }
 
+    // トランジションを使用してナビゲーション（UIをブロックしない）
     startTransition(() => {
       router.push(`/shops?${params.toString()}`)
     })
   }
 
+  /**
+   * フィルターリセットハンドラ
+   * 全ての検索条件をクリアして初期状態に戻す
+   */
   const handleReset = () => {
     setSearch('')
     setGenre('')
@@ -74,13 +127,17 @@ export function ShopSearchForm({
     })
   }
 
+  /**
+   * キーダウンハンドラ
+   * Enterキーで検索を実行
+   */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
   }
 
-  // ジャンルをカテゴリごとにグループ化
+  // ジャンルをカテゴリごとにグループ化（select要素のoptgroup用）
   const groupedGenres = genres.reduce((acc: Record<string, Genre[]>, g: Genre) => {
     if (!acc[g.category]) {
       acc[g.category] = []
@@ -91,10 +148,12 @@ export function ShopSearchForm({
 
   return (
     <div className="bg-card rounded-lg border p-4 space-y-4">
-      {/* 検索入力 */}
+      {/* 検索入力セクション */}
       <div className="flex gap-2">
         <div className="relative flex-1">
+          {/* 検索アイコン */}
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          {/* 検索入力フィールド */}
           <input
             type="text"
             value={search}
@@ -104,6 +163,7 @@ export function ShopSearchForm({
             className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
+        {/* 検索ボタン */}
         <button
           onClick={handleSearch}
           disabled={isPending}
@@ -113,7 +173,7 @@ export function ShopSearchForm({
         </button>
       </div>
 
-      {/* フィルター */}
+      {/* フィルターセクション */}
       <div className="flex flex-wrap gap-4">
         {/* ジャンルフィルター */}
         <div className="flex items-center gap-2">
@@ -122,7 +182,7 @@ export function ShopSearchForm({
             value={genre}
             onChange={(e) => {
               setGenre(e.target.value)
-              // 選択時に自動で検索
+              // ジャンル選択時に自動で検索を実行
               const params = new URLSearchParams(searchParams.toString())
               if (e.target.value) {
                 params.set('genre', e.target.value)
@@ -136,6 +196,7 @@ export function ShopSearchForm({
             className="px-3 py-1.5 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           >
             <option value="">すべて</option>
+            {/* カテゴリごとにoptgroupで表示 */}
             {Object.entries(groupedGenres).map(([category, categoryGenres]) => (
               <optgroup key={category} label={category}>
                 {categoryGenres.map((g) => (
@@ -148,14 +209,14 @@ export function ShopSearchForm({
           </select>
         </div>
 
-        {/* ソート */}
+        {/* ソート順フィルター */}
         <div className="flex items-center gap-2">
           <label className="text-sm text-muted-foreground">並び順:</label>
           <select
             value={sort}
             onChange={(e) => {
               setSort(e.target.value)
-              // 選択時に自動で検索
+              // ソート選択時に自動で検索を実行
               const params = new URLSearchParams(searchParams.toString())
               if (e.target.value && e.target.value !== 'newest') {
                 params.set('sort', e.target.value)
@@ -174,7 +235,7 @@ export function ShopSearchForm({
           </select>
         </div>
 
-        {/* リセット */}
+        {/* リセットボタン（フィルターが適用されている場合のみ表示） */}
         {(search || genre || sort !== 'newest') && (
           <button
             onClick={handleReset}

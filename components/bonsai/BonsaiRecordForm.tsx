@@ -1,15 +1,46 @@
+/**
+ * @fileoverview 盆栽成長記録投稿フォームコンポーネント
+ *
+ * このファイルは盆栽の成長記録を投稿するためのフォームを提供します。
+ * テキストと画像（最大4枚）を組み合わせて記録を残すことができます。
+ *
+ * @description
+ * 主な機能:
+ * - テキスト入力（成長の様子や作業内容）
+ * - 画像選択・プレビュー（最大4枚まで）
+ * - 画像の自動圧縮（クライアントサイド）
+ * - 画像アップロードと記録保存
+ *
+ * @example
+ * // 盆栽詳細ページでの使用
+ * <BonsaiRecordForm bonsaiId="bonsai-123" />
+ */
+
 'use client'
 
+// React のフック: 状態管理とDOM参照に使用
 import { useState, useRef } from 'react'
+// Next.js のルーター: データリフレッシュに使用
 import { useRouter } from 'next/navigation'
+// Server Action: 成長記録を追加するサーバーサイド関数
 import { addBonsaiRecord } from '@/lib/actions/bonsai'
+// Next.js の画像最適化コンポーネント
 import Image from 'next/image'
+// 画像圧縮ユーティリティ: クライアントサイドで画像を圧縮
 import { prepareFileForUpload, formatFileSize, MAX_IMAGE_SIZE } from '@/lib/client-image-compression'
 
+/**
+ * BonsaiRecordFormコンポーネントのProps型定義
+ */
 interface BonsaiRecordFormProps {
+  /** 記録を追加する対象の盆栽ID */
   bonsaiId: string
 }
 
+/**
+ * カメラアイコン（画像追加ボタン用）
+ * @param className - カスタムCSSクラス
+ */
 function CameraIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -19,6 +50,10 @@ function CameraIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * バツ印アイコン（画像削除ボタン用）
+ * @param className - カスタムCSSクラス
+ */
 function XIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -28,21 +63,68 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 盆栽成長記録投稿フォームコンポーネント
+ *
+ * テキストと画像を組み合わせて成長記録を投稿できます。
+ * 画像はクライアントサイドで圧縮してからアップロードされます。
+ *
+ * @param props - コンポーネントのプロパティ
+ * @param props.bonsaiId - 記録を追加する対象の盆栽ID
+ */
 export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
+  // ルーターインスタンス: データリフレッシュに使用
   const router = useRouter()
+
+  /**
+   * 送信処理中かどうかのフラグ
+   * true: 送信中（ボタン無効化）、false: 待機状態
+   */
   const [loading, setLoading] = useState(false)
+
+  /**
+   * エラーメッセージの状態
+   * null: エラーなし、string: エラーメッセージを表示
+   */
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * テキスト入力内容の状態
+   * 成長の様子や作業内容を記録
+   */
   const [content, setContent] = useState('')
+
+  /**
+   * 選択された画像の状態
+   * file: 元のファイル、preview: プレビュー用のBlobURL
+   */
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
+
+  /**
+   * ファイル入力要素への参照
+   * 画像選択後にinputをリセットするために使用
+   */
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  /**
+   * 画像選択時のイベントハンドラ
+   *
+   * 処理フロー:
+   * 1. 選択されたファイルのサイズをチェック
+   * 2. 有効なファイルのプレビューURLを生成
+   * 3. 既存の画像と合わせて最大4枚まで追加
+   * 4. ファイル入力をリセット
+   *
+   * @param e - ファイル選択イベント
+   */
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
 
-    // ファイルサイズチェック
+    // ファイルサイズの検証
     const validFiles: File[] = []
     for (const file of Array.from(files)) {
+      // MAX_IMAGE_SIZEを超えるファイルはスキップ
       if (file.size > MAX_IMAGE_SIZE) {
         setError(`画像は${MAX_IMAGE_SIZE / 1024 / 1024}MB以下にしてください（${file.name}: ${(file.size / 1024 / 1024).toFixed(1)}MB）`)
         continue
@@ -50,53 +132,83 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
       validFiles.push(file)
     }
 
+    // 有効なファイルのプレビューURLを生成
     const newImages = validFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
     }))
 
+    // 既存の画像と合わせて最大4枚まで
     setImages((prev) => [...prev, ...newImages].slice(0, 4))
+
+    // ファイル入力をリセット（同じファイルを再選択可能にする）
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
+  /**
+   * 画像削除時のイベントハンドラ
+   *
+   * 指定されたインデックスの画像を削除し、
+   * BlobURLを解放してメモリリークを防止
+   *
+   * @param index - 削除する画像のインデックス
+   */
   const removeImage = (index: number) => {
     setImages((prev) => {
       const newImages = [...prev]
+      // BlobURLを解放（メモリリーク防止）
       URL.revokeObjectURL(newImages[index].preview)
       newImages.splice(index, 1)
       return newImages
     })
   }
 
+  /**
+   * フォーム送信時のイベントハンドラ
+   *
+   * 処理フロー:
+   * 1. 入力検証（テキストまたは画像が必要）
+   * 2. 各画像を圧縮してアップロード
+   * 3. 圧縮率をコンソールに出力（デバッグ用）
+   * 4. 成長記録をServer Actionで保存
+   * 5. 成功時はフォームをリセット
+   *
+   * @param e - フォーム送信イベント
+   */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    // 入力検証: テキストまたは画像のいずれかが必要
     if (!content.trim() && images.length === 0) {
       setError('テキストまたは画像を入力してください')
       return
     }
 
+    // 送信処理開始
     setLoading(true)
     setError(null)
 
     try {
-      // 画像をアップロード（圧縮してから）
+      // 各画像を圧縮してアップロード
       const imageUrls: string[] = []
       for (const image of images) {
-        // 画像を圧縮
+        // クライアントサイドで画像を圧縮
         const originalSize = image.file.size
         const compressedFile = await prepareFileForUpload(image.file, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
+          maxSizeMB: 1,           // 最大1MB
+          maxWidthOrHeight: 1920, // 最大解像度1920px
         })
         const compressedSize = compressedFile.size
+
+        // 圧縮率を計算してログ出力（デバッグ用）
         const ratio = Math.round((1 - compressedSize / originalSize) * 100)
         if (ratio > 0) {
           console.log(`圧縮: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${ratio}%削減)`)
         }
 
+        // 圧縮した画像をサーバーにアップロード
         const formData = new FormData()
         formData.append('file', compressedFile)
 
@@ -110,7 +222,7 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
         }
       }
 
-      // 成長記録を追加
+      // Server Actionで成長記録を保存
       const result = await addBonsaiRecord({
         bonsaiId,
         content: content.trim() || undefined,
@@ -122,25 +234,30 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
         return
       }
 
-      // フォームをリセット
+      // 成功時はフォームをリセット
       setContent('')
       setImages([])
+      // ページデータをリフレッシュして新しい記録を表示
       router.refresh()
     } catch {
+      // 予期しないエラーの場合
       setError('エラーが発生しました')
     } finally {
+      // 送信処理完了
       setLoading(false)
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* エラーメッセージ表示エリア */}
       {error && (
         <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
           {error}
         </div>
       )}
 
+      {/* テキスト入力エリア */}
       <div>
         <textarea
           value={content}
@@ -151,7 +268,7 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
         />
       </div>
 
-      {/* 画像プレビュー */}
+      {/* 選択された画像のプレビュー表示 */}
       {images.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {images.map((image, index) => (
@@ -162,6 +279,7 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
                 fill
                 className="object-cover rounded-lg"
               />
+              {/* 画像削除ボタン */}
               <button
                 type="button"
                 onClick={() => removeImage(index)}
@@ -174,8 +292,10 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
         </div>
       )}
 
+      {/* アクションエリア: 画像追加と送信ボタン */}
       <div className="flex items-center justify-between">
         <div>
+          {/* 非表示のファイル入力 */}
           <input
             ref={fileInputRef}
             type="file"
@@ -185,6 +305,7 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
             className="hidden"
             id="record-images"
           />
+          {/* 画像追加ラベル（ファイル入力のトリガー） */}
           <label
             htmlFor="record-images"
             className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer hover:bg-muted transition-colors ${
@@ -194,9 +315,11 @@ export function BonsaiRecordForm({ bonsaiId }: BonsaiRecordFormProps) {
             <CameraIcon className="w-5 h-5" />
             <span className="text-sm">画像を追加</span>
           </label>
+          {/* 画像枚数制限の説明 */}
           <p className="text-xs text-muted-foreground mt-1">最大4枚まで</p>
         </div>
 
+        {/* 記録送信ボタン */}
         <button
           type="submit"
           disabled={loading || (!content.trim() && images.length === 0)}

@@ -1,34 +1,90 @@
+/**
+ * @file EventCalendar.tsx
+ * @description イベントカレンダーコンポーネント
+ *
+ * 目的:
+ * - イベントを月間カレンダー形式で視覚的に表示する
+ * - 日付ごとのイベントを一目で確認できるようにする
+ * - 月の切り替えによる時系列的なイベント閲覧を可能にする
+ *
+ * 機能概要:
+ * - 月間カレンダービューの表示
+ * - 前月/次月への移動機能
+ * - 「今日」ボタンによる現在月への移動
+ * - 日付セルにイベントタイトルを表示
+ * - 複数日にまたがるイベントの表示対応
+ * - イベントクリックで詳細ページへ遷移
+ *
+ * 使用例:
+ * ```tsx
+ * <EventCalendar
+ *   events={events}
+ *   onMonthChange={(year, month) => {
+ *     console.log(`${year}年${month + 1}月に移動`);
+ *   }}
+ * />
+ * ```
+ */
+
+// Client Componentとして宣言（useStateを使用するため）
 'use client'
 
+// React Hooks - カレンダーの現在月を管理するために使用
 import { useState } from 'react'
+
+// Next.jsのLinkコンポーネント - イベント詳細ページへの遷移に使用
 import Link from 'next/link'
+
+// date-fns関数群 - 日付計算とフォーマットに使用
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameMonth,
-  addMonths,
-  subMonths,
-  isToday,
+  format,         // 日付を指定形式の文字列にフォーマット
+  startOfMonth,   // 月の初日を取得
+  endOfMonth,     // 月の末日を取得
+  startOfWeek,    // 週の初日を取得
+  endOfWeek,      // 週の末日を取得
+  eachDayOfInterval, // 期間内の全日付を配列で取得
+  isSameMonth,    // 2つの日付が同じ月かどうか判定
+  addMonths,      // 月を加算
+  subMonths,      // 月を減算
+  isToday,        // 今日かどうか判定
 } from 'date-fns'
+
+// date-fnsの日本語ロケール - 月名等を日本語で表示するために使用
 import { ja } from 'date-fns/locale'
 
+/**
+ * イベントデータの型定義
+ */
 interface Event {
+  /** イベントの一意識別子 */
   id: string
+  /** イベントのタイトル */
   title: string
+  /** イベント開始日時 */
   startDate: Date
+  /** イベント終了日時（単日イベントの場合はnull） */
   endDate: Date | null
+  /** 開催都道府県（カレンダー表示では使用しないがデータ型を統一） */
   prefecture: string | null
 }
 
+/**
+ * EventCalendarコンポーネントのプロパティ型定義
+ */
 interface EventCalendarProps {
+  /** 表示するイベントの配列 */
   events: Event[]
+  /** 月が変更されたときに呼ばれるコールバック関数 */
   onMonthChange?: (year: number, month: number) => void
 }
 
+/**
+ * 左矢印アイコンコンポーネント
+ * 前月への移動ボタンに使用
+ *
+ * @param className - アイコンに適用するCSSクラス
+ * @returns 左矢印アイコンのSVG要素
+ */
 function ChevronLeftIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -37,6 +93,13 @@ function ChevronLeftIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 右矢印アイコンコンポーネント
+ * 次月への移動ボタンに使用
+ *
+ * @param className - アイコンに適用するCSSクラス
+ * @returns 右矢印アイコンのSVG要素
+ */
 function ChevronRightIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -45,45 +108,91 @@ function ChevronRightIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * イベントカレンダーコンポーネント
+ * 月間カレンダー形式でイベントを表示し、月の切り替えを可能にする
+ *
+ * @param props - コンポーネントのプロパティ
+ * @returns イベントカレンダーのReact要素
+ */
 export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
+  /**
+   * 現在表示している月を管理する状態
+   * 初期値は現在の日付
+   */
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
+  // ------------------------------------------------------------
+  // カレンダー表示用の日付計算
+  // ------------------------------------------------------------
+
+  // 表示月の初日と末日を取得
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
+
+  // カレンダーグリッドの開始日と終了日を取得
+  // （週の始まりの日曜日から週の終わりの土曜日まで）
   const calendarStart = startOfWeek(monthStart)
   const calendarEnd = endOfWeek(monthEnd)
+
+  // カレンダーに表示する全ての日付を配列で取得
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
+  /**
+   * 指定した日に開催されているイベントを取得する関数
+   * 複数日にまたがるイベントも考慮
+   *
+   * @param day - 対象の日付
+   * @returns その日に開催されているイベントの配列
+   */
   const getEventsForDay = (day: Date) => {
     return events.filter((event) => {
       const eventStart = new Date(event.startDate)
+      // 終了日がない場合は開始日を終了日として扱う
       const eventEnd = event.endDate ? new Date(event.endDate) : eventStart
+      // 日付が開始日〜終了日の範囲内にあるかチェック
       return day >= eventStart && day <= eventEnd
     })
   }
 
+  /**
+   * 前月に移動するハンドラ
+   * 表示月を1ヶ月前に変更し、コールバックを呼び出す
+   */
   const handlePrevMonth = () => {
     const newMonth = subMonths(currentMonth, 1)
     setCurrentMonth(newMonth)
+    // 親コンポーネントに月の変更を通知
     onMonthChange?.(newMonth.getFullYear(), newMonth.getMonth())
   }
 
+  /**
+   * 次月に移動するハンドラ
+   * 表示月を1ヶ月後に変更し、コールバックを呼び出す
+   */
   const handleNextMonth = () => {
     const newMonth = addMonths(currentMonth, 1)
     setCurrentMonth(newMonth)
+    // 親コンポーネントに月の変更を通知
     onMonthChange?.(newMonth.getFullYear(), newMonth.getMonth())
   }
 
+  /**
+   * 今日の月に移動するハンドラ
+   * 表示月を現在の月に戻し、コールバックを呼び出す
+   */
   const handleToday = () => {
     const today = new Date()
     setCurrentMonth(today)
+    // 親コンポーネントに月の変更を通知
     onMonthChange?.(today.getFullYear(), today.getMonth())
   }
 
   return (
     <div className="bg-card rounded-lg border">
-      {/* ヘッダー */}
+      {/* カレンダーヘッダー（月表示と移動ボタン） */}
       <div className="flex items-center justify-between p-4 border-b">
+        {/* 前月移動ボタン */}
         <button
           onClick={handlePrevMonth}
           className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -92,6 +201,7 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
           <ChevronLeftIcon className="w-5 h-5" />
         </button>
 
+        {/* 年月表示と今日ボタン */}
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">
             {format(currentMonth, 'yyyy年M月', { locale: ja })}
@@ -104,6 +214,7 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
           </button>
         </div>
 
+        {/* 次月移動ボタン */}
         <button
           onClick={handleNextMonth}
           className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -113,12 +224,13 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
         </button>
       </div>
 
-      {/* 曜日ヘッダー */}
+      {/* 曜日ヘッダー（日〜土） */}
       <div className="grid grid-cols-7 border-b">
         {['日', '月', '火', '水', '木', '金', '土'].map((day, index) => (
           <div
             key={day}
             className={`text-center text-sm font-medium py-2 ${
+              // 日曜は赤、土曜は青で表示
               index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : ''
             }`}
           >
@@ -127,25 +239,33 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
         ))}
       </div>
 
-      {/* カレンダー本体 */}
+      {/* カレンダー本体（日付グリッド） */}
       <div className="grid grid-cols-7">
         {days.map((day, index) => {
+          // この日のイベント一覧を取得
           const dayEvents = getEventsForDay(day)
+          // 現在の表示月に属する日かどうか
           const isCurrentMonth = isSameMonth(day, currentMonth)
+          // 今日かどうか
           const isCurrentDay = isToday(day)
+          // 曜日番号（0:日曜 〜 6:土曜）
           const dayOfWeek = day.getDay()
 
           return (
             <div
               key={day.toISOString()}
               className={`min-h-[100px] p-1 border-b border-r ${
+                // 当月以外の日付は背景を薄く表示
                 !isCurrentMonth ? 'bg-muted/30' : ''
               } ${index % 7 === 0 ? 'border-l' : ''}`}
             >
+              {/* 日付番号 */}
               <div
                 className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
+                  // 今日はプライマリカラーで強調表示
                   isCurrentDay
                     ? 'bg-primary text-primary-foreground'
+                    // 日曜は赤、土曜は青
                     : dayOfWeek === 0
                     ? 'text-red-500'
                     : dayOfWeek === 6
@@ -155,6 +275,7 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
               >
                 {format(day, 'd')}
               </div>
+              {/* その日のイベント一覧（最大3件表示） */}
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((event) => (
                   <Link
@@ -165,6 +286,7 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
                     {event.title}
                   </Link>
                 ))}
+                {/* 4件以上ある場合は残り件数を表示 */}
                 {dayEvents.length > 3 && (
                   <div className="text-xs text-muted-foreground px-1">
                     +{dayEvents.length - 3}件

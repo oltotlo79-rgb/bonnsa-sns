@@ -1,31 +1,65 @@
+/**
+ * @file Sentryエラー表示コンポーネント
+ * @description 管理者ダッシュボードにSentryから取得したエラー情報を表示するクライアントコンポーネント。
+ *              未解決のエラーをリスト形式で表示し、Sentryダッシュボードへの直接リンクを提供する。
+ */
+
 'use client'
 
+// ReactのuseStateとuseEffectフック
 import { useState, useEffect } from 'react'
+// 日付のフォーマット用ユーティリティ（相対時間表示）
 import { formatDistanceToNow } from 'date-fns'
+// 日本語ロケール
 import { ja } from 'date-fns/locale'
 
+/**
+ * Sentryのイシュー（エラー）情報の型定義
+ */
 interface SentryIssue {
+  /** イシューの一意識別子 */
   id: string
+  /** 短縮ID（表示用） */
   shortId: string
+  /** エラータイトル */
   title: string
+  /** エラー発生箇所（関数名やファイルパス） */
   culprit: string
+  /** エラーレベル（error, warning, info, debug, fatal） */
   level: 'error' | 'warning' | 'info' | 'debug' | 'fatal'
+  /** イシューのステータス */
   status: string
+  /** 発生回数 */
   count: string
+  /** 影響を受けたユーザー数 */
   userCount: number
+  /** 最初の発生日時 */
   firstSeen: string
+  /** 最後の発生日時 */
   lastSeen: string
+  /** Sentryダッシュボードへの直リンク */
   permalink: string
 }
 
+/**
+ * Sentry APIレスポンスの型定義
+ */
 interface SentryResponse {
+  /** 取得成功フラグ */
   success: boolean
+  /** イシューのリスト */
   issues?: SentryIssue[]
+  /** エラーメッセージ */
   error?: string
+  /** ヘルプテキスト */
   helpText?: string
+  /** ヘルプURL */
   helpUrl?: string
+  /** SentryダッシュボードのURL */
   dashboardUrl?: string
+  /** データ取得日時 */
   fetchedAt?: string
+  /** デバッグ情報 */
   debug?: {
     url?: string
     tokenLength?: number
@@ -35,6 +69,11 @@ interface SentryResponse {
   }
 }
 
+/**
+ * アラートサークルアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function AlertCircleIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -45,6 +84,11 @@ function AlertCircleIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 外部リンクアイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function ExternalLinkIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -55,6 +99,11 @@ function ExternalLinkIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * リフレッシュ/更新アイコンコンポーネント
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
 function RefreshIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -66,6 +115,11 @@ function RefreshIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * エラーレベルに応じた色クラスを返す関数
+ * @param level - エラーレベル
+ * @returns Tailwind CSSの色クラス
+ */
 function getLevelColor(level: string) {
   switch (level) {
     case 'fatal':
@@ -81,6 +135,11 @@ function getLevelColor(level: string) {
   }
 }
 
+/**
+ * エラーレベルの日本語ラベルを返す関数
+ * @param level - エラーレベル
+ * @returns 日本語のラベル
+ */
 function getLevelLabel(level: string) {
   switch (level) {
     case 'fatal':
@@ -96,10 +155,29 @@ function getLevelLabel(level: string) {
   }
 }
 
+/**
+ * Sentryエラー表示コンポーネント
+ * 管理者ダッシュボードに未解決のSentryエラーを表示する
+ *
+ * @returns Sentryエラーリストを含むカード要素
+ *
+ * 処理内容:
+ * 1. コンポーネントマウント時にSentry APIからエラー情報を取得
+ * 2. ローディング中はスピナーを表示
+ * 3. エラー時はエラーメッセージとヘルプリンクを表示
+ * 4. 成功時はエラーリストを表示（発生回数、最終発生日時付き）
+ * 5. 手動更新ボタンでデータを再取得可能
+ */
 export function SentryErrors() {
+  // Sentryレスポンスデータの状態
   const [data, setData] = useState<SentryResponse | null>(null)
+  // ローディング状態
   const [loading, setLoading] = useState(true)
 
+  /**
+   * Sentry APIからエラー情報を取得する関数
+   * /api/admin/sentry エンドポイントを呼び出す
+   */
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -113,10 +191,12 @@ export function SentryErrors() {
     }
   }
 
+  // コンポーネントマウント時にデータ取得
   useEffect(() => {
     fetchData()
   }, [])
 
+  // ローディング中の表示
   if (loading) {
     return (
       <div className="bg-card rounded-lg border p-6">
@@ -133,6 +213,7 @@ export function SentryErrors() {
     )
   }
 
+  // エラー時またはデータ取得失敗時の表示
   if (!data?.success) {
     return (
       <div className="bg-card rounded-lg border p-6">
@@ -152,11 +233,13 @@ export function SentryErrors() {
             Sentry <ExternalLinkIcon className="w-3 h-3" />
           </a>
         </div>
+        {/* エラーメッセージとヘルプ情報 */}
         <div className="bg-yellow-500/10 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-700">{data?.error}</p>
           {data?.helpText && (
             <p className="text-sm text-yellow-600 mt-1">{data.helpText}</p>
           )}
+          {/* デバッグ情報（開発時に有用） */}
           {data?.debug && (
             <div className="mt-2 text-xs text-muted-foreground font-mono bg-muted/50 p-2 rounded">
               <p>URL: {data.debug.url}</p>
@@ -179,16 +262,20 @@ export function SentryErrors() {
     )
   }
 
+  // 取得したイシューリスト
   const issues = data.issues || []
 
+  // 成功時のエラーリスト表示
   return (
     <div className="bg-card rounded-lg border p-6">
+      {/* ヘッダー部分 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-red-500/10 text-red-500 rounded-lg">
             <AlertCircleIcon className="w-5 h-5" />
           </div>
           <h2 className="text-lg font-semibold">Sentryエラー</h2>
+          {/* 未解決エラー数バッジ */}
           {issues.length > 0 && (
             <span className="px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
               {issues.length}
@@ -196,6 +283,7 @@ export function SentryErrors() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* 手動更新ボタン */}
           <button
             onClick={fetchData}
             className="p-1.5 hover:bg-muted rounded-md transition-colors"
@@ -203,6 +291,7 @@ export function SentryErrors() {
           >
             <RefreshIcon className="w-4 h-4" />
           </button>
+          {/* Sentryダッシュボードへのリンク */}
           <a
             href={data.dashboardUrl || 'https://bon-log.sentry.io/issues/'}
             target="_blank"
@@ -214,12 +303,14 @@ export function SentryErrors() {
         </div>
       </div>
 
+      {/* エラーリストまたは「エラーなし」メッセージ */}
       {issues.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <p>未解決のエラーはありません</p>
         </div>
       ) : (
         <div className="space-y-3">
+          {/* 各エラーイシューのカード */}
           {issues.map((issue) => (
             <a
               key={issue.id}
@@ -230,6 +321,7 @@ export function SentryErrors() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
+                  {/* エラーレベルと短縮ID */}
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`px-1.5 py-0.5 text-xs font-medium rounded border ${getLevelColor(issue.level)}`}>
                       {getLevelLabel(issue.level)}
@@ -238,11 +330,14 @@ export function SentryErrors() {
                       {issue.shortId}
                     </span>
                   </div>
+                  {/* エラータイトル */}
                   <p className="font-medium text-sm truncate">{issue.title}</p>
+                  {/* 発生箇所 */}
                   <p className="text-xs text-muted-foreground truncate mt-0.5">
                     {issue.culprit}
                   </p>
                 </div>
+                {/* 発生回数と最終発生日時 */}
                 <div className="text-right text-xs text-muted-foreground shrink-0">
                   <p>{issue.count}回</p>
                   <p className="mt-1">

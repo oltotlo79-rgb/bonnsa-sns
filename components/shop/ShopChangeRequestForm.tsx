@@ -1,31 +1,93 @@
+/**
+ * @file ShopChangeRequestForm.tsx
+ * @description 盆栽園情報の変更リクエストフォームコンポーネント
+ *
+ * 機能概要:
+ * - 非オーナーのユーザーが盆栽園情報の修正をリクエストできる
+ * - 変更したい項目をチェックボックスで選択し、新しい値を入力
+ * - 変更理由を任意で記入可能
+ * - リクエストは管理者が確認後に反映される
+ * - 送信成功時に成功メッセージを表示してモーダルを閉じる
+ *
+ * 使用例:
+ * ```tsx
+ * <ShopChangeRequestForm
+ *   shop={shopInfo}
+ *   onClose={() => setShowForm(false)}
+ * />
+ * ```
+ */
 'use client'
 
+// React hooks
+// useState: フォーム状態、チェック状態、送信状態などを管理
 import { useState } from 'react'
+
+// Next.jsのルーターフック
+// 送信後のページ更新に使用
 import { useRouter } from 'next/navigation'
+
+// Server Action - 変更リクエストの作成
+// createShopChangeRequest: 変更リクエストをサーバーに送信
+// ShopChangeRequestData: 変更リクエストのデータ型
 import { createShopChangeRequest, type ShopChangeRequestData } from '@/lib/actions/shop'
 
+/**
+ * 盆栽園情報の型定義
+ * フォームで編集可能な項目を定義
+ */
 interface ShopInfo {
+  /** 盆栽園の一意識別子 */
   id: string
+  /** 盆栽園名 */
   name: string
+  /** 住所 */
   address: string
+  /** 電話番号（任意） */
   phone: string | null
+  /** ウェブサイトURL（任意） */
   website: string | null
+  /** 営業時間（任意） */
   businessHours: string | null
+  /** 定休日（任意） */
   closedDays: string | null
 }
 
+/**
+ * ShopChangeRequestFormコンポーネントのプロパティ定義
+ */
 interface ShopChangeRequestFormProps {
+  /** 変更対象の盆栽園情報 */
   shop: ShopInfo
+  /** モーダルを閉じる際のコールバック関数 */
   onClose: () => void
 }
 
+/**
+ * 盆栽園情報変更リクエストフォームコンポーネント
+ *
+ * モーダルダイアログとして表示され、ユーザーが変更したい項目を
+ * チェックボックスで選択し、新しい値を入力できる。
+ * 送信されたリクエストは管理者による承認後に反映される。
+ *
+ * @param shop - 変更対象の盆栽園情報
+ * @param onClose - モーダルを閉じる際のコールバック
+ */
 export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormProps) {
+  // ルーターインスタンス（送信後のページ更新用）
   const router = useRouter()
+
+  // 送信処理中の状態
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // エラーメッセージの状態
   const [error, setError] = useState<string | null>(null)
+
+  // 送信成功状態（成功メッセージ表示用）
   const [success, setSuccess] = useState(false)
 
-  // 変更したいフィールドのチェック状態
+  // 変更したいフィールドのチェック状態を管理
+  // キー: フィールド名、値: チェックされているかどうか
   const [checkedFields, setCheckedFields] = useState<Record<string, boolean>>({
     name: false,
     address: false,
@@ -35,7 +97,8 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     closedDays: false,
   })
 
-  // 変更後の値
+  // 各フィールドの変更後の値を管理
+  // 初期値は現在の盆栽園情報
   const [values, setValues] = useState<ShopChangeRequestData>({
     name: shop.name,
     address: shop.address,
@@ -45,9 +108,14 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     closedDays: shop.closedDays || '',
   })
 
-  // 変更理由
+  // 変更理由（任意入力）
   const [reason, setReason] = useState('')
 
+  /**
+   * フィールドのチェック状態をトグルするハンドラ
+   *
+   * @param field - トグルするフィールド名
+   */
   const handleFieldToggle = (field: string) => {
     setCheckedFields((prev) => ({
       ...prev,
@@ -55,6 +123,12 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     }))
   }
 
+  /**
+   * フィールドの値を更新するハンドラ
+   *
+   * @param field - 更新するフィールド名
+   * @param value - 新しい値
+   */
   const handleValueChange = (field: keyof ShopChangeRequestData, value: string) => {
     setValues((prev) => ({
       ...prev,
@@ -62,11 +136,17 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     }))
   }
 
+  /**
+   * フォーム送信ハンドラ
+   * チェックされたフィールドの中で、実際に値が変更されているものだけを送信
+   *
+   * @param e - フォーム送信イベント
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    // チェックされたフィールドのみを変更内容として送信
+    // チェックされたフィールドのみを変更内容として収集
     const changes: ShopChangeRequestData = {}
     let hasChanges = false
 
@@ -76,7 +156,7 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
         const newValue = values[key]
         const originalValue = shop[key as keyof ShopInfo] || ''
 
-        // 実際に値が変わっている場合のみ含める
+        // 実際に値が変わっている場合のみ変更内容に含める
         if (newValue !== originalValue) {
           changes[key] = newValue
           hasChanges = true
@@ -84,6 +164,7 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
       }
     }
 
+    // 変更がない場合はエラーを表示
     if (!hasChanges) {
       setError('変更内容を選択し、現在の値と異なる内容を入力してください')
       return
@@ -91,20 +172,26 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
 
     setIsSubmitting(true)
 
+    // Server Actionで変更リクエストを送信
     const result = await createShopChangeRequest(shop.id, changes, reason)
 
     if (result.error) {
       setError(result.error)
       setIsSubmitting(false)
     } else {
+      // 成功時: 成功メッセージを表示し、2秒後にモーダルを閉じる
       setSuccess(true)
       setTimeout(() => {
         onClose()
-        router.refresh()
+        router.refresh() // ページを更新して最新の状態を反映
       }, 2000)
     }
   }
 
+  /**
+   * フィールド名とラベルのマッピング
+   * 日本語ラベルを表示するために使用
+   */
   const fieldLabels: Record<string, string> = {
     name: '名称',
     address: '住所',
@@ -114,16 +201,19 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     closedDays: '定休日',
   }
 
+  // 送信成功時の画面表示
   if (success) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
         <div className="bg-card rounded-lg shadow-xl max-w-lg w-full p-6">
           <div className="text-center">
+            {/* 成功アイコン */}
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-green-600">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
+            {/* 成功メッセージ */}
             <h3 className="text-lg font-semibold mb-2">変更リクエストを送信しました</h3>
             <p className="text-sm text-muted-foreground">
               管理者が確認後、変更が反映されます。
@@ -134,10 +224,12 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
     )
   }
 
+  // 通常のフォーム表示
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
       <div className="bg-card rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
+          {/* ヘッダー: タイトルと閉じるボタン */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">情報の変更をリクエスト</h2>
             <button
@@ -152,20 +244,25 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
             </button>
           </div>
 
+          {/* 説明テキスト */}
           <p className="text-sm text-muted-foreground mb-4">
             変更したい項目にチェックを入れ、正しい情報を入力してください。
             リクエストは管理者が確認後に反映されます。
           </p>
 
+          {/* エラーメッセージ表示エリア */}
           {error && (
             <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm mb-4">
               {error}
             </div>
           )}
 
+          {/* 変更リクエストフォーム */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 各フィールドのチェックボックスと入力欄 */}
             {Object.entries(fieldLabels).map(([field, label]) => (
               <div key={field} className="space-y-2">
+                {/* フィールド選択チェックボックス */}
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -176,11 +273,14 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
                   <span className="text-sm font-medium">{label}</span>
                 </label>
 
+                {/* チェックされている場合のみ入力欄を表示 */}
                 {checkedFields[field] && (
                   <div className="ml-6 space-y-1">
+                    {/* 現在の値を表示 */}
                     <p className="text-xs text-muted-foreground">
                       現在: {(shop[field as keyof ShopInfo] as string) || '（未設定）'}
                     </p>
+                    {/* 営業時間と定休日は複数行入力 */}
                     {field === 'businessHours' || field === 'closedDays' ? (
                       <textarea
                         value={values[field as keyof ShopChangeRequestData] || ''}
@@ -203,7 +303,7 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
               </div>
             ))}
 
-            {/* 変更理由 */}
+            {/* 変更理由（任意） */}
             <div className="space-y-2 pt-4 border-t">
               <label className="text-sm font-medium">
                 変更理由（任意）
@@ -217,7 +317,7 @@ export function ShopChangeRequestForm({ shop, onClose }: ShopChangeRequestFormPr
               />
             </div>
 
-            {/* ボタン */}
+            {/* 送信・キャンセルボタン */}
             <div className="flex gap-3 pt-4">
               <button
                 type="button"

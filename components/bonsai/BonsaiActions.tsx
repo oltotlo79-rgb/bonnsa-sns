@@ -1,15 +1,45 @@
+/**
+ * @fileoverview 盆栽のアクションメニューコンポーネント
+ *
+ * このファイルは盆栽詳細ページで表示される「その他のアクション」メニューを提供します。
+ * ドロップダウン形式で編集・削除オプションを表示し、ユーザーが盆栽データを管理できます。
+ *
+ * @description
+ * 主な機能:
+ * - 盆栽の編集ページへのナビゲーション
+ * - 盆栽の削除（確認ダイアログ付き）
+ * - ドロップダウンメニューの開閉制御
+ *
+ * @example
+ * // 盆栽詳細ページでの使用例
+ * <BonsaiActions bonsaiId="bonsai-123" bonsaiName="黒松一号" />
+ */
+
 'use client'
 
+// React のフック: コンポーネントの状態管理に使用
 import { useState } from 'react'
+// Next.js のルーター: ページ遷移とリフレッシュに使用
 import { useRouter } from 'next/navigation'
+// Next.js のリンクコンポーネント: クライアントサイドナビゲーション用
 import Link from 'next/link'
+// Server Action: 盆栽削除処理を実行するサーバーサイド関数
 import { deleteBonsai } from '@/lib/actions/bonsai'
 
+/**
+ * BonsaiActionsコンポーネントのProps型定義
+ */
 interface BonsaiActionsProps {
+  /** 操作対象の盆栽ID（一意識別子） */
   bonsaiId: string
+  /** 盆栽の名前（削除確認ダイアログに表示） */
   bonsaiName: string
 }
 
+/**
+ * 縦三点リーダーアイコン（その他メニュー用）
+ * @param className - カスタムCSSクラス
+ */
 function MoreVerticalIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -20,6 +50,10 @@ function MoreVerticalIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 鉛筆アイコン（編集ボタン用）
+ * @param className - カスタムCSSクラス
+ */
 function PencilIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -29,6 +63,10 @@ function PencilIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ゴミ箱アイコン（削除ボタン用）
+ * @param className - カスタムCSSクラス
+ */
 function TrashIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -41,28 +79,65 @@ function TrashIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 盆栽アクションメニューコンポーネント
+ *
+ * ドロップダウン形式のアクションメニューを提供し、
+ * 盆栽の編集・削除操作を可能にします。
+ *
+ * @param props - コンポーネントのプロパティ
+ * @param props.bonsaiId - 操作対象の盆栽ID
+ * @param props.bonsaiName - 削除確認時に表示する盆栽名
+ */
 export function BonsaiActions({ bonsaiId, bonsaiName }: BonsaiActionsProps) {
+  // ルーターインスタンス: ページ遷移とデータ更新に使用
   const router = useRouter()
+
+  /**
+   * ドロップダウンメニューの開閉状態
+   * true: メニューが開いている、false: メニューが閉じている
+   */
   const [isOpen, setIsOpen] = useState(false)
+
+  /**
+   * 削除処理中かどうかのフラグ
+   * true: 削除処理中（ボタン無効化）、false: 待機状態
+   */
   const [isDeleting, setIsDeleting] = useState(false)
 
+  /**
+   * 盆栽削除処理のイベントハンドラ
+   *
+   * 処理フロー:
+   * 1. 確認ダイアログを表示
+   * 2. ユーザーが確認した場合、Server Actionで削除実行
+   * 3. 成功時は盆栽一覧ページにリダイレクト
+   * 4. 失敗時はエラーメッセージを表示
+   */
   const handleDelete = async () => {
+    // 削除確認ダイアログを表示（キャンセル時は処理中断）
     if (!confirm(`「${bonsaiName}」を削除しますか？\n成長記録もすべて削除されます。`)) {
       return
     }
 
+    // 削除処理開始（ボタンを無効化）
     setIsDeleting(true)
     try {
+      // Server Actionを呼び出して盆栽を削除
       const result = await deleteBonsai(bonsaiId)
       if (result.error) {
+        // エラーがあれば表示
         alert(result.error)
       } else {
+        // 成功時は盆栽一覧ページにリダイレクトし、データをリフレッシュ
         router.push('/bonsai')
         router.refresh()
       }
     } catch {
+      // 予期しないエラーの場合
       alert('削除に失敗しました')
     } finally {
+      // 処理完了後、状態をリセット
       setIsDeleting(false)
       setIsOpen(false)
     }
@@ -70,6 +145,7 @@ export function BonsaiActions({ bonsaiId, bonsaiName }: BonsaiActionsProps) {
 
   return (
     <div className="relative">
+      {/* メニュー開閉トグルボタン */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 hover:bg-muted rounded-lg transition-colors"
@@ -78,13 +154,17 @@ export function BonsaiActions({ bonsaiId, bonsaiName }: BonsaiActionsProps) {
         <MoreVerticalIcon className="w-5 h-5" />
       </button>
 
+      {/* ドロップダウンメニュー（isOpenがtrueの時のみ表示） */}
       {isOpen && (
         <>
+          {/* オーバーレイ: メニュー外クリックで閉じる */}
           <div
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
+          {/* メニュー本体 */}
           <div className="absolute right-0 top-full mt-1 w-48 bg-card border rounded-lg shadow-lg z-50 py-1">
+            {/* 編集リンク */}
             <Link
               href={`/bonsai/${bonsaiId}/edit`}
               className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors"
@@ -93,6 +173,7 @@ export function BonsaiActions({ bonsaiId, bonsaiName }: BonsaiActionsProps) {
               <PencilIcon className="w-4 h-4" />
               編集
             </Link>
+            {/* 削除ボタン */}
             <button
               onClick={handleDelete}
               disabled={isDeleting}
