@@ -5,7 +5,6 @@ import {
   scrapeExternalEvents,
   scrapeEventsByRegion,
   importSelectedEvents,
-  getAvailableRegions,
   type ImportableEvent,
 } from '@/lib/actions/event-import'
 import { BONSAI_EVENT_SOURCES } from '@/lib/scraping/bonsai-events'

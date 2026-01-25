@@ -59,27 +59,28 @@ export interface ScrapedEvent {
 function parseEventFromHtml(html: string, sourceRegion: string, sourceUrl: string, prefectures: readonly string[]): ScrapedEvent[] {
   const events: ScrapedEvent[] = []
 
-  // イベントブロックを抽出（the_listクラス）
-  const eventBlockRegex = /<div[^>]*class="[^"]*the_list[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/gi
+  // イベントブロックを抽出（event_areaクラス）
+  // 実際のHTML構造: <div class="event_area"><span>タイトル</span><p>内容</p><a class="base" href="..."></a></div>
+  const eventBlockRegex = /<div[^>]*class="[^"]*event_area[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
   let match
 
   while ((match = eventBlockRegex.exec(html)) !== null) {
     const block = match[0]
 
-    // タイトル抽出
-    const titleMatch = block.match(/<[^>]*class="[^"]*the_title[^"]*"[^>]*>([\s\S]*?)<\//)
+    // タイトル抽出（<span>タグ内）
+    const titleMatch = block.match(/<span[^>]*>([\s\S]*?)<\/span>/)
     let title = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : ''
     // ●や◆などの記号を除去
     title = title.replace(/^[●◆◇■□▲△▼▽★☆○◎]+\s*/, '')
 
     if (!title) continue
 
-    // コンテンツ抽出
-    const contentMatch = block.match(/<[^>]*class="[^"]*the_content[^"]*"[^>]*>([\s\S]*?)<\/div>/)
-    const content = contentMatch ? contentMatch[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : ''
+    // コンテンツ抽出（<p>タグ内）
+    const contentMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/)
+    const content = contentMatch ? contentMatch[1].replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : ''
 
-    // 詳細リンク抽出
-    const linkMatch = block.match(/<a[^>]*class="[^"]*the_permalink[^"]*"[^>]*href="([^"]*)"/)
+    // 詳細リンク抽出（<a class="base">タグ）
+    const linkMatch = block.match(/<a[^>]*class="[^"]*base[^"]*"[^>]*href="([^"]*)"/)
     const externalUrl = linkMatch ? linkMatch[1] : null
 
     // 日付抽出
@@ -114,7 +115,7 @@ function parseEventFromHtml(html: string, sourceRegion: string, sourceUrl: strin
       admissionFee,
       hasSales,
       description: content,
-      externalUrl: externalUrl ? `https://www.bonsai.co.jp${externalUrl}` : null,
+      externalUrl: externalUrl || null,
       sourceRegion,
       sourceUrl,
     })
