@@ -60,7 +60,7 @@ export default async function Home() {
               <span className="block">コミュニティSNS</span>
             </h2>
             <p className="text-sm sm:text-lg md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto drop-shadow-lg px-4">
-              BON-LOGは、盆栽を愛する全ての人が集まり、知識や経験を共有できるSNSプラットフォームです
+              BON-LOGは、盆栽を愛する全ての人が集まり、知識や経験を共有するSNSプラットフォームです
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {isLoggedIn ? (

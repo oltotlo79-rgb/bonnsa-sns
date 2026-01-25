@@ -311,7 +311,7 @@ export function AvatarUploader({ currentUrl, nickname }: AvatarUploaderProps) {
 
       {/* ファイル形式・サイズ制限の説明 */}
       <p className="text-xs text-muted-foreground mt-2">
-        JPEG、PNG、WebP形式（5MB以下）
+        JPEG、PNG、WebP形式（4MB以下）
       </p>
     </div>
   )

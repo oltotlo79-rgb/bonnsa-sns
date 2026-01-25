@@ -142,13 +142,18 @@ export default async function EditScheduledPostPage({
   return (
     <div className="max-w-2xl mx-auto py-4 px-4">
       {/* ヘッダー部分 - 戻るリンクとタイトル */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4">
         {/* 予約投稿一覧に戻るリンク */}
         <Link href="/posts/scheduled" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h1 className="text-xl font-bold">予約投稿を編集</h1>
       </div>
+
+      {/* 注意書き */}
+      <p className="text-sm text-muted-foreground mb-6">
+        ※ 設定時間と実際の投稿時間は5分程度ずれることがあります。
+      </p>
 
       {/* 予約投稿フォームコンポーネント（編集モード）
           genres: ジャンル選択オプション

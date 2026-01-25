@@ -45,7 +45,7 @@ export default function PrivacyPage() {
     <div className="prose prose-neutral dark:prose-invert max-w-none">
       <h1>プライバシーポリシー</h1>
       {/* 最終更新日の表示（法的文書として重要） */}
-      <p className="text-muted-foreground">最終更新日: 2024年1月1日</p>
+      <p className="text-muted-foreground">最終更新日: 2026年1月1日</p>
 
       {/* 前文: ポリシーの概要 */}
       <p>

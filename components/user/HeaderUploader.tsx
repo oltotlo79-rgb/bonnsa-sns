@@ -309,7 +309,7 @@ export function HeaderUploader({ currentUrl }: HeaderUploaderProps) {
 
       {/* ファイル形式・推奨サイズの説明 */}
       <p className="text-xs text-muted-foreground mt-2">
-        JPEG、PNG、WebP形式（5MB以下）、推奨サイズ: 1500x500px
+        JPEG、PNG、WebP形式（4MB以下）、推奨サイズ: 1500x500px
       </p>
     </div>
   )

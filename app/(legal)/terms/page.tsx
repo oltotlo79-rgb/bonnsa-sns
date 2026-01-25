@@ -42,7 +42,7 @@ export default function TermsPage() {
     <div className="prose prose-neutral dark:prose-invert max-w-none">
       <h1>利用規約</h1>
       {/* 最終更新日の表示（法的文書として重要） */}
-      <p className="text-muted-foreground">最終更新日: 2024年1月1日</p>
+      <p className="text-muted-foreground">最終更新日: 2026年1月1日</p>
 
       {/* 前文: 規約の概要と適用範囲 */}
       <p>
