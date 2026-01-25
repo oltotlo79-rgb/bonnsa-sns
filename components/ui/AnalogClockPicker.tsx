@@ -430,85 +430,98 @@ export function AnalogClockPicker({
         </div>
       </button>
 
-      {/* 時計ピッカードロップダウン */}
+      {/* 時計ピッカー（モバイル: 中央モーダル、デスクトップ: ドロップダウン） */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 p-4 bg-card border rounded-xl shadow-lg">
-          {/* 時刻表示（時/分の切り替えボタン） */}
-          <div className="flex items-center justify-center gap-1 mb-4">
-            {/* 時間表示ボタン */}
-            <button
-              type="button"
-              onClick={() => setMode('hours')}
-              className={`text-3xl font-bold px-2 py-1 rounded transition-colors ${
-                mode === 'hours'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
-              }`}
-            >
-              {hours.toString().padStart(2, '0')}
-            </button>
-            {/* 区切り文字 */}
-            <span className="text-3xl font-bold">:</span>
-            {/* 分表示ボタン */}
-            <button
-              type="button"
-              onClick={() => setMode('minutes')}
-              className={`text-3xl font-bold px-2 py-1 rounded transition-colors ${
-                mode === 'minutes'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
-              }`}
-            >
-              {minutes.toString().padStart(2, '0')}
-            </button>
-          </div>
-
-          {/* 時計の文字盤 */}
+        <>
+          {/* モバイル用オーバーレイ背景 */}
           <div
-            ref={clockRef}
-            className="relative w-56 h-56 rounded-full bg-muted/50 border-2 select-none"
-            // マウスイベント
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            // タッチイベント
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {/* 中心の点 */}
-            <div className="absolute top-1/2 left-1/2 w-2 h-2 -mt-1 -ml-1 bg-primary rounded-full z-10" />
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => {
+              setIsOpen(false)
+              setMode('hours')
+            }}
+          />
+          {/* 時計ピッカー本体 */}
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 md:absolute md:inset-auto md:p-0 md:mt-2">
+            <div className="p-4 bg-card border rounded-xl shadow-lg max-w-[280px] w-full md:max-w-none md:w-auto">
+              {/* 時刻表示（時/分の切り替えボタン） */}
+              <div className="flex items-center justify-center gap-1 mb-4">
+                {/* 時間表示ボタン */}
+                <button
+                  type="button"
+                  onClick={() => setMode('hours')}
+                  className={`text-3xl font-bold px-2 py-1 rounded transition-colors ${
+                    mode === 'hours'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  {hours.toString().padStart(2, '0')}
+                </button>
+                {/* 区切り文字 */}
+                <span className="text-3xl font-bold">:</span>
+                {/* 分表示ボタン */}
+                <button
+                  type="button"
+                  onClick={() => setMode('minutes')}
+                  className={`text-3xl font-bold px-2 py-1 rounded transition-colors ${
+                    mode === 'minutes'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  }`}
+                >
+                  {minutes.toString().padStart(2, '0')}
+                </button>
+              </div>
 
-            {/* 数字（モードに応じて時間または分を表示） */}
-            {mode === 'hours' ? renderHourNumbers() : renderMinuteNumbers()}
-          </div>
+              {/* 時計の文字盤 */}
+              <div
+                ref={clockRef}
+                className="relative w-56 h-56 mx-auto rounded-full bg-muted/50 border-2 select-none"
+                // マウスイベント
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                // タッチイベント
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {/* 中心の点 */}
+                <div className="absolute top-1/2 left-1/2 w-2 h-2 -mt-1 -ml-1 bg-primary rounded-full z-10" />
 
-          {/* アクションボタン */}
-          <div className="flex justify-end gap-2 mt-4">
-            {/* キャンセルボタン */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false)
-                setMode('hours')
-              }}
-              className="px-3 py-1.5 text-sm rounded-lg hover:bg-muted"
-            >
-              キャンセル
-            </button>
-            {/* OKボタン */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false)
-                setMode('hours')
-              }}
-              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              OK
-            </button>
+                {/* 数字（モードに応じて時間または分を表示） */}
+                {mode === 'hours' ? renderHourNumbers() : renderMinuteNumbers()}
+              </div>
+
+              {/* アクションボタン */}
+              <div className="flex justify-end gap-2 mt-4">
+                {/* キャンセルボタン */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false)
+                    setMode('hours')
+                  }}
+                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-muted"
+                >
+                  キャンセル
+                </button>
+                {/* OKボタン */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false)
+                    setMode('hours')
+                  }}
+                  className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

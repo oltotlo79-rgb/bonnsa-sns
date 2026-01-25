@@ -84,7 +84,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org https://*.googlesyndication.com https://*.google.com https://*.google.co.jp https://*.doubleclick.net https://*.gstatic.com",
     "media-src 'self' blob: https://*.blob.core.windows.net https://*.r2.dev",
     "connect-src 'self' https://*.blob.core.windows.net https://*.r2.dev https://*.r2.cloudflarestorage.com https://*.googlesyndication.com https://*.google.com https://*.doubleclick.net https://*.google-analytics.com https://*.adtrafficquality.google",
-    "frame-src https://*.doubleclick.net https://*.google.com https://*.googlesyndication.com",
+    "frame-src https://*.doubleclick.net https://*.google.com https://*.googlesyndication.com https://*.adtrafficquality.google",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
