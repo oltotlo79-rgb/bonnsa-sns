@@ -160,10 +160,6 @@ export default function RootLayout({
     // lang属性で日本語を指定
     // suppressHydrationWarningはテーマ切り替え時のハイドレーション警告を抑制
     <html lang="ja" suppressHydrationWarning>
-      <head>
-        {/* Google AdSenseスクリプトを<head>内に配置 */}
-        <GoogleAdSense />
-      </head>
       <body
         // CSS変数として各フォントを設定し、font-sansをデフォルトに
         // antialiasedでフォントのアンチエイリアスを有効化
@@ -171,6 +167,8 @@ export default function RootLayout({
       >
         {/* 共通プロバイダーで子コンポーネントをラップ */}
         <Providers>{children}</Providers>
+        {/* Google AdSenseスクリプト */}
+        <GoogleAdSense />
       </body>
     </html>
   );

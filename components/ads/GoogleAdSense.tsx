@@ -3,10 +3,10 @@
  * @description Google AdSenseスクリプトローダーコンポーネント
  *
  * このコンポーネントは、Google AdSenseの広告配信に必要なスクリプトを
- * ページに読み込むためのコンポーネントです。ルートレイアウトに配置して使用します。
+ * ページに読み込むためのコンポーネントです。ルートレイアウトのhead内に配置して使用します。
  *
  * @features
- * - AdSenseスクリプトの遅延読み込み（lazyOnload戦略）
+ * - AdSenseスクリプトのSSR対応（HTMLソースに直接出力）
  * - 環境変数による有効/無効の切り替え
  * - クロスオリジン対応
  *
@@ -18,9 +18,11 @@
  * export default function RootLayout({ children }) {
  *   return (
  *     <html>
+ *       <head>
+ *         <GoogleAdSense />
+ *       </head>
  *       <body>
  *         {children}
- *         <GoogleAdSense />
  *       </body>
  *     </html>
  *   )
@@ -30,13 +32,8 @@
  * @env
  * - NEXT_PUBLIC_ADSENSE_CLIENT_ID: AdSenseのクライアントID（ca-pub-xxxxx形式）
  */
-'use client'
 
-// ============================================================
-// インポート
-// ============================================================
-
-import { useEffect } from 'react'
+import Script from 'next/script'
 
 // ============================================================
 // メインコンポーネント
@@ -46,34 +43,19 @@ import { useEffect } from 'react'
  * Google AdSenseスクリプトローダーコンポーネント
  *
  * AdSenseの広告配信スクリプトをページに読み込む。
- * Next.jsのScriptコンポーネントはdata-nscript属性を追加するが、
- * AdSenseはこれをサポートしていないため、useEffectで直接挿入する。
+ * Next.jsのScriptコンポーネントを使用してSSR対応。
  *
- * @returns null（スクリプトはheadに直接挿入される）
+ * @returns AdSenseスクリプトタグ
  */
 export function GoogleAdSense() {
-  useEffect(() => {
-    // 既にスクリプトが存在する場合はスキップ
-    if (document.querySelector('script[src*="adsbygoogle.js"]')) {
-      return
-    }
+  const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-7644314630384219'
 
-    const clientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || 'ca-pub-7644314630384219'
-
-    const script = document.createElement('script')
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`
-    script.async = true
-    script.crossOrigin = 'anonymous'
-    document.head.appendChild(script)
-
-    return () => {
-      // クリーンアップ（SPAナビゲーション時）
-      const existingScript = document.querySelector('script[src*="adsbygoogle.js"]')
-      if (existingScript) {
-        existingScript.remove()
-      }
-    }
-  }, [])
-
-  return null
+  return (
+    <Script
+      id="google-adsense"
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${clientId}`}
+      strategy="afterInteractive"
+      crossOrigin="anonymous"
+    />
+  )
 }
