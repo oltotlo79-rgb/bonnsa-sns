@@ -2,6 +2,11 @@ import { auth } from '@/lib/auth'
 import { uploadFile } from '@/lib/storage'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkUserRateLimit, checkDailyLimit } from '@/lib/rate-limit'
+import {
+  validateImageFile,
+  validateVideoFile,
+  generateSafeFileName,
+} from '@/lib/file-validation'
 
 // 動画の最大ファイルサイズ（50MB - モバイル向けに制限）
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024
@@ -64,10 +69,26 @@ export async function POST(request: NextRequest) {
 
     // ファイルをBufferに変換
     const buffer = Buffer.from(await file.arrayBuffer())
+
+    // ファイルシグネチャ検証（MIMEタイプ偽装防止）
+    if (isImage) {
+      const validation = validateImageFile(buffer, file.type)
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 })
+      }
+    } else if (isVideo) {
+      const validation = validateVideoFile(buffer, file.type)
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 400 })
+      }
+    }
+
+    // 安全なファイル名を生成（パストラバーサル防止）
+    const safeFileName = generateSafeFileName(file.name, file.type)
     const folder = isVideo ? 'post-videos' : 'post-images'
 
     // ストレージにアップロード
-    const result = await uploadFile(buffer, file.name, file.type, folder)
+    const result = await uploadFile(buffer, safeFileName, file.type, folder)
 
     if (!result.success || !result.url) {
       return NextResponse.json(
@@ -82,8 +103,12 @@ export async function POST(request: NextRequest) {
       type: isVideo ? 'video' : 'image',
     })
   } catch (error) {
+    // サーバーログには詳細を記録（デバッグ用）
     console.error('Media upload error:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: 'Error: ' + message }, { status: 500 })
+    // クライアントには一般的なメッセージを返す（情報漏洩防止）
+    return NextResponse.json(
+      { error: 'アップロード中にエラーが発生しました。しばらく経ってから再試行してください' },
+      { status: 500 }
+    )
   }
 }

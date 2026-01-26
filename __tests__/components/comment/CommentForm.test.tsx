@@ -73,12 +73,12 @@ describe('CommentForm', () => {
   })
 
   it('文字数超過時は送信できない', async () => {
-    const user = userEvent.setup()
     render(<CommentForm postId="post-1" />)
 
     const textarea = screen.getByPlaceholderText('コメントを入力...')
-    // 501文字入力
-    await user.type(textarea, 'あ'.repeat(501))
+    // 501文字入力（fireEvent.changeで高速化）
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(textarea, { target: { value: 'あ'.repeat(501) } })
 
     const submitButton = screen.getByRole('button', { name: /コメントする/i })
     expect(submitButton).toBeDisabled()
@@ -195,12 +195,12 @@ describe('CommentForm', () => {
   })
 
   it('文字数が50以下になると警告色になる', async () => {
-    const user = userEvent.setup()
     render(<CommentForm postId="post-1" />)
 
     const textarea = screen.getByPlaceholderText('コメントを入力...')
-    // 451文字入力で残り49文字
-    await user.type(textarea, 'あ'.repeat(451))
+    // 451文字入力で残り49文字（fireEvent.changeで高速化）
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(textarea, { target: { value: 'あ'.repeat(451) } })
 
     await waitFor(() => {
       expect(screen.getByText('49')).toHaveClass('text-yellow-500')
@@ -208,12 +208,12 @@ describe('CommentForm', () => {
   })
 
   it('文字数超過時は警告色（destructive）になる', async () => {
-    const user = userEvent.setup()
     render(<CommentForm postId="post-1" />)
 
     const textarea = screen.getByPlaceholderText('コメントを入力...')
-    // 501文字入力で-1
-    await user.type(textarea, 'あ'.repeat(501))
+    // 501文字入力で-1（fireEvent.changeで高速化）
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(textarea, { target: { value: 'あ'.repeat(501) } })
 
     await waitFor(() => {
       expect(screen.getByText('-1')).toHaveClass('text-destructive')
@@ -251,7 +251,9 @@ describe('CommentForm', () => {
     render(<CommentForm postId="post-1" />)
 
     const textarea = screen.getByPlaceholderText('コメントを入力...')
-    await user.type(textarea, 'テストコメント')
+    // fireEvent.changeでIME問題を回避
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(textarea, { target: { value: 'テストコメント' } })
 
     expect(textarea).toHaveValue('テストコメント')
 

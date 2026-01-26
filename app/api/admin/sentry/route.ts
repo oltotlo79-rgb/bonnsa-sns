@@ -65,8 +65,6 @@ export async function GET() {
     }
 
     const apiUrl = `${baseUrl}/api/0/organizations/${org}/issues/?query=is:unresolved+project:${project}&limit=10`
-    console.log('Sentry API URL:', apiUrl)
-    console.log('Token prefix:', authToken.substring(0, 10) + '...')
 
     const response = await fetch(apiUrl, {
         headers: {
@@ -77,41 +75,34 @@ export async function GET() {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Sentry API error:', response.status, errorText)
-      console.error('Request URL:', apiUrl)
-      console.error('Token length:', authToken.length)
+      // サーバーログには詳細を記録（本番環境ではログ管理システムで保護）
+      console.error('Sentry API error:', response.status)
 
       let helpMessage = ''
-      let errorDetail = ''
       try {
         const errorJson = JSON.parse(errorText)
-        errorDetail = errorJson.detail || errorText
+        // エラー詳細はログのみに記録し、クライアントには返さない
+        console.error('Sentry API error detail:', errorJson.detail || errorText)
       } catch {
-        errorDetail = errorText
+        console.error('Sentry API error detail:', errorText)
       }
 
       if (response.status === 403) {
         helpMessage = 'トークンの権限不足です。Internal Integrationで作成してください。'
       } else if (response.status === 401) {
-        helpMessage = `トークンが無効です。詳細: ${errorDetail}`
+        helpMessage = 'トークンが無効です。設定を確認してください。'
       } else if (response.status === 400) {
-        helpMessage = `リクエストエラー: ${errorDetail}`
+        helpMessage = 'リクエストエラーが発生しました。'
       } else if (response.status === 404) {
-        helpMessage = 'プロジェクトが見つかりません。SENTRY_ORG/SENTRY_PROJECTを確認してください。'
+        helpMessage = 'プロジェクトが見つかりません。設定を確認してください。'
       }
 
+      // クライアントには一般的なエラー情報のみを返す（機密情報は含めない）
       return NextResponse.json({
         success: false,
         error: `Sentry API: ${response.status}`,
         helpText: helpMessage,
-        helpUrl: 'https://bon-log.sentry.io/settings/developer-settings/',
-        debug: {
-          url: apiUrl,
-          tokenLength: authToken.length,
-          tokenPrefix: authToken.substring(0, 15),
-          org,
-          project,
-        }
+        helpUrl: 'https://sentry.io/settings/developer-settings/',
       })
     }
 

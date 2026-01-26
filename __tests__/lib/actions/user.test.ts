@@ -26,6 +26,12 @@ jest.mock('@/lib/storage', () => ({
   uploadFile: mockUploadFile,
 }))
 
+// ファイル検証モック
+jest.mock('@/lib/file-validation', () => ({
+  validateImageFile: jest.fn().mockReturnValue({ valid: true, detectedType: 'image/jpeg' }),
+  generateSafeFileName: jest.fn().mockReturnValue('mock-uuid.jpg'),
+}))
+
 describe('User Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()

@@ -59,6 +59,12 @@ import { z } from 'zod'
  */
 import { uploadFile } from '@/lib/storage'
 
+/**
+ * ファイル検証関数
+ * シグネチャ検証でMIMEタイプ偽装を防止
+ */
+import { validateImageFile, generateSafeFileName } from '@/lib/file-validation'
+
 // ============================================================
 // バリデーションスキーマ
 // ============================================================
@@ -485,13 +491,36 @@ export async function uploadAvatar(formData: FormData) {
    */
   const buffer = Buffer.from(await file.arrayBuffer())
 
+  // ------------------------------------------------------------
+  // ファイルシグネチャ検証（MIMEタイプ偽装防止）
+  // ------------------------------------------------------------
+
+  /**
+   * ファイルの先頭バイト（マジックバイト）を検証し、
+   * 実際のファイル形式が主張されたMIMEタイプと一致するか確認
+   */
+  const validation = validateImageFile(buffer, file.type, allowedTypes)
+  if (!validation.valid) {
+    return { error: validation.error || '無効な画像ファイルです' }
+  }
+
+  // ------------------------------------------------------------
+  // 安全なファイル名を生成（パストラバーサル防止）
+  // ------------------------------------------------------------
+
+  /**
+   * 元のファイル名を使用せず、UUIDベースの安全なファイル名を生成
+   * これにより「../../etc/passwd」のような攻撃を防止
+   */
+  const safeFileName = generateSafeFileName(file.name, file.type)
+
   /**
    * uploadFile 関数でストレージにアップロード
    *
    * 環境に応じてローカル or Azure Blob Storage を使用
    * 'avatars' フォルダに保存
    */
-  const result = await uploadFile(buffer, file.name, file.type, 'avatars')
+  const result = await uploadFile(buffer, safeFileName, file.type, 'avatars')
 
   if (!result.success || !result.url) {
     return { error: result.error || 'アップロードに失敗しました' }
@@ -596,7 +625,31 @@ export async function uploadHeader(formData: FormData) {
    * 'headers' フォルダに保存
    */
   const buffer = Buffer.from(await file.arrayBuffer())
-  const result = await uploadFile(buffer, file.name, file.type, 'headers')
+
+  // ------------------------------------------------------------
+  // ファイルシグネチャ検証（MIMEタイプ偽装防止）
+  // ------------------------------------------------------------
+
+  /**
+   * ファイルの先頭バイト（マジックバイト）を検証し、
+   * 実際のファイル形式が主張されたMIMEタイプと一致するか確認
+   */
+  const validation = validateImageFile(buffer, file.type, allowedTypes)
+  if (!validation.valid) {
+    return { error: validation.error || '無効な画像ファイルです' }
+  }
+
+  // ------------------------------------------------------------
+  // 安全なファイル名を生成（パストラバーサル防止）
+  // ------------------------------------------------------------
+
+  /**
+   * 元のファイル名を使用せず、UUIDベースの安全なファイル名を生成
+   * これにより「../../etc/passwd」のような攻撃を防止
+   */
+  const safeFileName = generateSafeFileName(file.name, file.type)
+
+  const result = await uploadFile(buffer, safeFileName, file.type, 'headers')
 
   if (!result.success || !result.url) {
     return { error: result.error || 'アップロードに失敗しました' }

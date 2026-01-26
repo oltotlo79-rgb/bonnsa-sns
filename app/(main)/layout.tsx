@@ -99,7 +99,7 @@ export default async function MainLayout({
       </div>
 
       {/* モバイルボトムナビ - スマートフォン向けの下部固定ナビゲーション */}
-      <MobileNav userId={session.user.id} />
+      <MobileNav userId={session.user.id} isPremium={isPremium} />
 
       {/* トースト通知表示領域
           useToastフックからの通知メッセージをここに表示 */}

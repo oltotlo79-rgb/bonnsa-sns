@@ -209,6 +209,41 @@ function BonsaiIcon({ className }: { className?: string }) {
   )
 }
 
+/** カレンダープラスアイコン（予約投稿用・プレミアム機能） */
+function CalendarPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8" />
+      <path d="M3 10h18" />
+      <path d="M16 19h6" />
+      <path d="M19 16v6" />
+    </svg>
+  )
+}
+
+/** 棒グラフアイコン（投稿分析用・プレミアム機能） */
+function BarChartIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" x2="12" y1="20" y2="10" />
+      <line x1="18" x2="18" y1="20" y2="4" />
+      <line x1="6" x2="6" y1="20" y2="14" />
+    </svg>
+  )
+}
+
+/** 王冠アイコン（プレミアム機能の識別用） */
+function CrownIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+      <path d="M5 21h14" />
+    </svg>
+  )
+}
+
 // ============================================================
 // 型定義
 // ============================================================
@@ -225,6 +260,8 @@ type NavItem = {
   icon: React.FC<{ className?: string }>
   /** 表示ラベル */
   label: string
+  /** プレミアム機能かどうか */
+  premium?: boolean
 }
 
 // ============================================================
@@ -257,6 +294,16 @@ const moreMenuItems: NavItem[] = [
 ]
 
 /**
+ * プレミアム会員専用メニュー項目
+ *
+ * プレミアム会員のみ「もっと見る」メニューに表示される追加項目
+ */
+const premiumMenuItems: NavItem[] = [
+  { href: '/posts/scheduled', icon: CalendarPlusIcon, label: '予約投稿', premium: true },
+  { href: '/analytics', icon: BarChartIcon, label: '投稿分析', premium: true },
+]
+
+/**
  * フッターリンク
  *
  * もっと見るメニューの下部に表示される法的リンクなど
@@ -274,6 +321,8 @@ const footerLinks: NavItem[] = [
 type MobileNavProps = {
   /** 現在ログイン中のユーザーID（プロフィールリンクに使用） */
   userId?: string
+  /** プレミアム会員かどうか */
+  isPremium?: boolean
 }
 
 // ============================================================
@@ -296,7 +345,7 @@ type MobileNavProps = {
  * - メニュー外クリックで閉じる処理
  * - ページ遷移時にメニューを閉じる処理
  */
-export function MobileNav({ userId }: MobileNavProps) {
+export function MobileNav({ userId, isPremium }: MobileNavProps) {
   const pathname = usePathname()
   const [showMoreMenu, setShowMoreMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -421,6 +470,35 @@ export function MobileNav({ userId }: MobileNavProps) {
                   </Link>
                 )
               })}
+
+              {/* プレミアム会員専用メニュー */}
+              {isPremium && (
+                <>
+                  <div className="border-t" />
+                  <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-1">
+                    <CrownIcon className="w-3 h-3 text-yellow-500" />
+                    <span>プレミアム</span>
+                  </div>
+                  {premiumMenuItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                    const Icon = item.icon
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors ${
+                          isActive ? 'text-primary bg-primary/5' : ''
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="text-sm">{item.label}</span>
+                        <CrownIcon className="w-3 h-3 text-yellow-500 ml-auto" />
+                      </Link>
+                    )
+                  })}
+                </>
+              )}
 
               <div className="border-t" />
 

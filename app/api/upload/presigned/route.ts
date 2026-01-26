@@ -19,6 +19,9 @@ const ALLOWED_VIDEO_TYPES = [
   'video/webm',
 ]
 
+// 許可するフォルダ（パストラバーサル防止）
+const ALLOWED_FOLDERS = ['posts', 'post-videos', 'avatars', 'headers']
+
 /**
  * MIMEタイプから拡張子を取得
  */
@@ -41,6 +44,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { contentType, fileSize, folder = 'posts' } = body
+
+    // フォルダパラメータの検証（パストラバーサル防止）
+    if (!ALLOWED_FOLDERS.includes(folder)) {
+      return NextResponse.json(
+        { error: '無効なフォルダです' },
+        { status: 400 }
+      )
+    }
 
     // バリデーション
     if (!contentType || !fileSize) {

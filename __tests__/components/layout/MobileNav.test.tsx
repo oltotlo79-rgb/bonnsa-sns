@@ -209,4 +209,44 @@ describe('MobileNav', () => {
     const moreButton = screen.getByRole('button')
     expect(moreButton).toHaveClass('text-primary')
   })
+
+  it('プレミアム会員の場合、もっと見るメニューにプレミアム項目を表示する', async () => {
+    mockPathname.mockReturnValue('/feed')
+    render(<MobileNav userId="user-1" isPremium={true} />)
+
+    // もっと見るボタンをクリック
+    const moreButton = screen.getByRole('button')
+    fireEvent.click(moreButton)
+
+    // プレミアムメニュー項目が表示される
+    expect(screen.getByText('予約投稿')).toBeInTheDocument()
+    expect(screen.getByText('投稿分析')).toBeInTheDocument()
+    expect(screen.getByText('プレミアム')).toBeInTheDocument()
+  })
+
+  it('プレミアム会員でない場合、プレミアム項目を表示しない', () => {
+    mockPathname.mockReturnValue('/feed')
+    render(<MobileNav userId="user-1" isPremium={false} />)
+
+    // もっと見るボタンをクリック
+    const moreButton = screen.getByRole('button')
+    fireEvent.click(moreButton)
+
+    // プレミアムメニュー項目が表示されない
+    expect(screen.queryByText('予約投稿')).not.toBeInTheDocument()
+    expect(screen.queryByText('投稿分析')).not.toBeInTheDocument()
+  })
+
+  it('isPremiumがundefinedの場合、プレミアム項目を表示しない', () => {
+    mockPathname.mockReturnValue('/feed')
+    render(<MobileNav userId="user-1" />)
+
+    // もっと見るボタンをクリック
+    const moreButton = screen.getByRole('button')
+    fireEvent.click(moreButton)
+
+    // プレミアムメニュー項目が表示されない
+    expect(screen.queryByText('予約投稿')).not.toBeInTheDocument()
+    expect(screen.queryByText('投稿分析')).not.toBeInTheDocument()
+  })
 })

@@ -99,6 +99,12 @@ import {
   logPasswordResetSuccess,
 } from '@/lib/security-logger'
 
+/**
+ * レート制限関数
+ * パスワードリセット等のブルートフォース攻撃防止に使用
+ */
+import { rateLimit } from '@/lib/rate-limit'
+
 // ============================================================
 // IPアドレス取得（内部関数）
 // ============================================================
@@ -432,6 +438,23 @@ export async function registerUser(data: {
  */
 export async function requestPasswordReset(email: string) {
   const ip = await getClientIp()
+
+  // ------------------------------------------------------------
+  // レート制限チェック（メールスパム防止）
+  // ------------------------------------------------------------
+
+  /**
+   * IPアドレスベースのレート制限
+   * 1時間に3回まで（メールスパム攻撃防止）
+   */
+  const rateLimitResult = await rateLimit(`password-reset:${ip}`, {
+    windowMs: 60 * 60 * 1000, // 1時間
+    maxRequests: 3,           // 3回まで
+  })
+
+  if (!rateLimitResult.success) {
+    return { error: 'パスワードリセットの要求が多すぎます。しばらく経ってからお試しください。' }
+  }
 
   // ------------------------------------------------------------
   // セキュリティログに記録
