@@ -58,7 +58,11 @@ export default withSentryConfig(nextConfig, {
 
   // Next.js内部ファイル（ソースマップなし）の警告を抑制
   sourcemaps: {
-    ignore: ['**/node_modules/**', '**/*_client-reference-manifest*'],
+    ignore: [
+      '**/node_modules/**',
+      '**/*_client-reference-manifest*',
+      '**/*-manifest.js',  // 全てのmanifestファイルを除外
+    ],
   },
 
   // パフォーマンス最適化
