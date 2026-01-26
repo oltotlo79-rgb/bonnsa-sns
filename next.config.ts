@@ -56,6 +56,11 @@ export default withSentryConfig(nextConfig, {
   silent: !process.env.CI, // CI以外ではログを抑制
   widenClientFileUpload: true,
 
+  // Next.js内部ファイル（ソースマップなし）の警告を抑制
+  sourcemaps: {
+    ignore: ['**/node_modules/**', '**/*_client-reference-manifest*'],
+  },
+
   // パフォーマンス最適化
   tunnelRoute: '/monitoring', // Ad blockerを回避するトンネルルート
 });

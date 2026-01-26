@@ -141,21 +141,21 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
   /**
    * ISO日付文字列またはDateからYYYY-MM-DD形式の文字列を取得
    * UTCタイムゾーン変換による日付のずれを防ぐため、
-   * 文字列の場合は直接日付部分を抽出する
+   * 常にISO文字列から日付部分を直接抽出する
    *
    * @param date - Dateオブジェクトまたは日付文字列
    * @returns YYYY-MM-DD形式の文字列
    */
   const getDateString = (date: Date | string): string => {
-    if (typeof date === 'string') {
-      // ISO文字列から日付部分を直接抽出（例: "2026-05-03T15:00:00.000Z" → "2026-05-03"）
-      // これによりタイムゾーン変換による日付のずれを防ぐ
-      const match = date.match(/^(\d{4}-\d{2}-\d{2})/)
-      if (match) {
-        return match[1]
-      }
+    // 文字列でもDateオブジェクトでも、ISO文字列から日付部分を抽出
+    // これによりタイムゾーン変換による日付のずれを防ぐ
+    // 例: "2026-05-03T15:00:00.000Z" → "2026-05-03"
+    const isoString = typeof date === 'string' ? date : date.toISOString()
+    const match = isoString.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (match) {
+      return match[1]
     }
-    // Dateオブジェクトの場合はformat()を使用（ローカルタイムゾーンの日付）
+    // フォールバック（通常は到達しない）
     return format(new Date(date), 'yyyy-MM-dd')
   }
 
