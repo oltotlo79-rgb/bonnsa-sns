@@ -81,7 +81,7 @@ export interface MembershipLimits {
  * ## 設定値の根拠
  * - maxPostLength: 500文字（Twitterと同程度）
  * - maxImages: 4枚（一般的なSNSの標準）
- * - maxVideos: 2本（ストレージコスト考慮）
+ * - maxVideos: 1本（ストレージコスト考慮）
  * - maxDailyPosts: 20件（スパム対策）
  * - canSchedulePost: false（プレミアム限定機能）
  * - canViewAnalytics: false（プレミアム限定機能）
@@ -89,7 +89,7 @@ export interface MembershipLimits {
 const FREE_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
-  maxVideos: 2,
+  maxVideos: 1,
   maxDailyPosts: 20,
   canSchedulePost: false,
   canViewAnalytics: false,

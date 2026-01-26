@@ -42,7 +42,6 @@ import {
   endOfMonth,     // 月の末日を取得
   startOfWeek,    // 週の初日を取得
   endOfWeek,      // 週の末日を取得
-  startOfDay,     // 日付の時刻を00:00:00にリセット
   eachDayOfInterval, // 期間内の全日付を配列で取得
   isSameMonth,    // 2つの日付が同じ月かどうか判定
   addMonths,      // 月を加算
@@ -140,21 +139,45 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   /**
+   * ISO日付文字列またはDateからYYYY-MM-DD形式の文字列を取得
+   * UTCタイムゾーン変換による日付のずれを防ぐため、
+   * 文字列の場合は直接日付部分を抽出する
+   *
+   * @param date - Dateオブジェクトまたは日付文字列
+   * @returns YYYY-MM-DD形式の文字列
+   */
+  const getDateString = (date: Date | string): string => {
+    if (typeof date === 'string') {
+      // ISO文字列から日付部分を直接抽出（例: "2026-05-03T15:00:00.000Z" → "2026-05-03"）
+      // これによりタイムゾーン変換による日付のずれを防ぐ
+      const match = date.match(/^(\d{4}-\d{2}-\d{2})/)
+      if (match) {
+        return match[1]
+      }
+    }
+    // Dateオブジェクトの場合はformat()を使用（ローカルタイムゾーンの日付）
+    return format(new Date(date), 'yyyy-MM-dd')
+  }
+
+  /**
    * 指定した日に開催されているイベントを取得する関数
    * 複数日にまたがるイベントも考慮
+   * タイムゾーンの影響を排除するため、日付文字列で比較
    *
    * @param day - 対象の日付
    * @returns その日に開催されているイベントの配列
    */
   const getEventsForDay = (day: Date) => {
-    const dayStart = startOfDay(day)
+    // YYYY-MM-DD形式の文字列で比較（タイムゾーンによるずれを防ぐ）
+    const dayStr = format(day, 'yyyy-MM-dd')
+
     return events.filter((event) => {
-      // 時刻部分を無視して日付のみで比較
-      const eventStart = startOfDay(new Date(event.startDate))
+      // イベント日付を文字列として比較
+      const startStr = getDateString(event.startDate)
       // 終了日がない場合は開始日を終了日として扱う
-      const eventEnd = event.endDate ? startOfDay(new Date(event.endDate)) : eventStart
-      // 日付が開始日〜終了日の範囲内にあるかチェック
-      return dayStart >= eventStart && dayStart <= eventEnd
+      const endStr = event.endDate ? getDateString(event.endDate) : startStr
+      // 日付文字列が開始日〜終了日の範囲内にあるかチェック
+      return dayStr >= startStr && dayStr <= endStr
     })
   }
 
