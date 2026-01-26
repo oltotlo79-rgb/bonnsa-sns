@@ -259,7 +259,6 @@ describe('Usage Service', () => {
     it('ページネーションを処理する', async () => {
       process.env.RESEND_API_KEY = 'test-key'
 
-      const now = new Date()
       // 古い日付のメールを作成して今月にカウントされないようにする
       const oldDate = new Date()
       oldDate.setMonth(oldDate.getMonth() - 2)

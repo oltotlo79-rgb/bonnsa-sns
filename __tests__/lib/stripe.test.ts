@@ -33,7 +33,7 @@ describe('Stripe Module', () => {
 
       expect(() => {
         // Proxyを通じてアクセスすると初期化が試みられる
-        stripe.customers
+        void stripe.customers
       }).toThrow('STRIPE_SECRET_KEY is not set')
     })
 

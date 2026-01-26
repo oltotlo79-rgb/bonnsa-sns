@@ -13,7 +13,7 @@ jest.mock('@/lib/db', () => ({
 // Next.js cache mock
 const mockRevalidateTag = jest.fn()
 jest.mock('next/cache', () => ({
-  unstable_cache: (fn: Function, _keys: string[], _options: object) => fn,
+  unstable_cache: <T extends (...args: unknown[]) => unknown>(fn: T) => fn,
   revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
 }))
 

@@ -22,6 +22,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 // Prismaデータベースクライアント
 import { prisma } from '@/lib/db'
+// 認証状態の確認
+import { auth } from '@/lib/auth'
 
 /**
  * ページの動的レンダリングを強制
@@ -75,7 +77,7 @@ function LogoIcon({ className }: { className?: string }) {
  * サービス開始前の場合はトップページへリダイレクトします。
  *
  * 構成:
- * - ヘッダー: ロゴ、ログイン・新規登録リンク
+ * - ヘッダー: ロゴ、ログイン状態に応じたナビゲーション
  * - メインコンテンツ: 各ページのコンテンツ
  * - フッター: 関連ページへのリンク、コピーライト
  *
@@ -90,6 +92,10 @@ export default async function PublicLayout({
   // usersテーブルが空の場合はトップページへリダイレクト
   await checkUsersExist()
 
+  // セッション状態を確認
+  const session = await auth()
+  const isLoggedIn = !!session?.user
+
   return (
     <div className="min-h-screen bg-background">
       {/* ヘッダー: サイトロゴとナビゲーションリンク */}
@@ -100,20 +106,31 @@ export default async function PublicLayout({
             <LogoIcon className="w-6 h-6 text-primary" />
             <span className="font-bold text-lg">BON-LOG</span>
           </Link>
-          {/* 認証関連リンク */}
+          {/* ナビゲーション: ログイン状態に応じて表示を切り替え */}
           <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ログイン
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              新規登録
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/feed"
+                className="text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              >
+                タイムラインへ
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  ログイン
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-sm px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                >
+                  新規登録
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

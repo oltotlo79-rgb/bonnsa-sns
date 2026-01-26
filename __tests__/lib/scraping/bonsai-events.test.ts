@@ -6,7 +6,6 @@ import {
   BONSAI_EVENT_SOURCES,
   scrapeEventsFromRegion,
   scrapeAllEvents,
-  type ScrapedEvent,
 } from '@/lib/scraping/bonsai-events'
 
 // グローバルfetchのモック
