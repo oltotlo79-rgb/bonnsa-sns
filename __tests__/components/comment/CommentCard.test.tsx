@@ -364,12 +364,12 @@ describe('CommentCard', () => {
     })
   })
 
-  it('currentUserIdがnullの場合は返信ボタンを表示しない', () => {
+  it('currentUserIdがundefinedの場合は返信ボタンを表示しない', () => {
     render(
       <CommentCard
         comment={mockComment}
         postId="post-1"
-        currentUserId={null}
+        currentUserId={undefined}
       />
     )
     expect(screen.queryByRole('button', { name: /返信/i })).not.toBeInTheDocument()

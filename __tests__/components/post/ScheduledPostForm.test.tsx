@@ -63,6 +63,9 @@ describe('ScheduledPostForm', () => {
     maxImages: 4,
     maxVideos: 1,
     maxScheduledPosts: 10,
+    maxDailyPosts: 20,
+    canSchedulePost: true,
+    canViewAnalytics: false,
   }
 
   beforeEach(() => {

@@ -3,13 +3,20 @@ import { ThemeProvider, useTheme } from '@/components/theme/ThemeProvider'
 import { act } from 'react'
 
 // localStorageモック
-const mockLocalStorage = {
+type MockLocalStorage = {
+  store: Record<string, string>
+  getItem: jest.Mock<string | null, [string]>
+  setItem: jest.Mock<void, [string, string]>
+  clear: jest.Mock<void, []>
+}
+
+const mockLocalStorage: MockLocalStorage = {
   store: {} as Record<string, string>,
-  getItem: jest.fn((key: string) => mockLocalStorage.store[key] || null),
-  setItem: jest.fn((key: string, value: string) => {
+  getItem: jest.fn((key: string): string | null => mockLocalStorage.store[key] || null),
+  setItem: jest.fn((key: string, value: string): void => {
     mockLocalStorage.store[key] = value
   }),
-  clear: jest.fn(() => {
+  clear: jest.fn((): void => {
     mockLocalStorage.store = {}
   }),
 }
