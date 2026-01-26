@@ -1209,8 +1209,8 @@ export async function getGenres() {
  * - 動画: MP4, WebM, MOV
  *
  * ## ファイルサイズ制限
- * - 画像: 5MB以下
- * - 動画: 512MB以下
+ * - 画像: 4MB以下
+ * - 動画: 256MB以下
  *
  * ## 使用例
  * ```tsx
@@ -1273,12 +1273,12 @@ export async function uploadPostMedia(formData: FormData) {
   /**
    * ファイルサイズチェック
    *
-   * 動画: 512MB以下
-   * 画像: 5MB以下
+   * 動画: 256MB以下
+   * 画像: 4MB以下
    */
-  const maxSize = isVideo ? 512 * 1024 * 1024 : 5 * 1024 * 1024
+  const maxSize = isVideo ? 256 * 1024 * 1024 : 4 * 1024 * 1024
   if (file.size > maxSize) {
-    return { error: isVideo ? '動画は512MB以下にしてください' : '画像は5MB以下にしてください' }
+    return { error: isVideo ? '動画は256MB以下にしてください' : '画像は4MB以下にしてください' }
   }
 
   /**

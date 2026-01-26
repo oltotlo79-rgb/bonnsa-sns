@@ -70,8 +70,8 @@
 - [x] 画像形式チェック（JPEG, PNG, WebP, GIF）
 - [x] 動画形式チェック（MP4, MOV）
 - [x] ファイルサイズ制限
-  - [x] 画像: 5MB/枚
-  - [x] 動画: 512MB
+  - [x] 画像: 4MB/枚
+  - [x] 動画: 256MB
 - [ ] Azure Blob Storageへのアップロード実装（TODO）
 
 ### 投稿制限

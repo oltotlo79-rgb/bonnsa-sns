@@ -179,6 +179,10 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
       description,
       images: ['/og-image.jpg'],
     },
+    // 正規URLを指定（重複コンテンツ対策）
+    alternates: {
+      canonical: `${baseUrl}/events/${id}`,
+    },
   }
 }
 

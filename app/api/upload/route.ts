@@ -8,10 +8,10 @@ import {
   generateSafeFileName,
 } from '@/lib/file-validation'
 
-// 動画の最大ファイルサイズ（50MB - モバイル向けに制限）
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024
-// 画像の最大ファイルサイズ（5MB）
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+// 動画の最大ファイルサイズ（256MB）
+const MAX_VIDEO_SIZE = 256 * 1024 * 1024
+// 画像の最大ファイルサイズ（4MB）
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024
 
 export async function POST(request: NextRequest) {
   try {

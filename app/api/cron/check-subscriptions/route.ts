@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { sendSubscriptionExpiringEmail, sendSubscriptionExpiredEmail } from '@/lib/email'
+import { verifyCronAuth } from '@/lib/cron-auth'
 
 // Vercel Cron Job用 - サブスクリプション期限切れチェック
 // cron: 0 0 * * * (毎日0時に実行)
 
 export async function GET(request: NextRequest) {
-  // Vercel CronまたはAPIキー認証
+  // HMAC署名ベースの認証
   const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
+  const timestampHeader = request.headers.get('x-cron-timestamp')
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = verifyCronAuth(authHeader, timestampHeader)
+  if (!authResult.valid) {
+    return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -106,12 +108,13 @@ export async function GET(request: NextRequest) {
 
 // 期限切れ間近の通知（オプション）
 export async function POST(request: NextRequest) {
-  // Vercel CronまたはAPIキー認証
+  // HMAC署名ベースの認証
   const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
+  const timestampHeader = request.headers.get('x-cron-timestamp')
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = verifyCronAuth(authHeader, timestampHeader)
+  if (!authResult.valid) {
+    return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 })
   }
 
   try {

@@ -166,6 +166,10 @@ export async function generateMetadata({ params }: ShopDetailPageProps): Promise
       description,
       images: ['/og-image.jpg'],
     },
+    // 正規URLを指定（重複コンテンツ対策）
+    alternates: {
+      canonical: `${baseUrl}/shops/${id}`,
+    },
   }
 }
 

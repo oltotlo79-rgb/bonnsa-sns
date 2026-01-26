@@ -238,18 +238,18 @@ describe('User Actions', () => {
       expect(result).toEqual({ error: 'ファイルが選択されていません' })
     })
 
-    it('ファイルサイズが5MBを超える場合、エラーを返す', async () => {
+    it('ファイルサイズが4MBを超える場合、エラーを返す', async () => {
       const { uploadAvatar } = await import('@/lib/actions/user')
 
-      // 6MBのファイルをモック
-      const largeContent = new Array(6 * 1024 * 1024).fill('a').join('')
+      // 5MBのファイルをモック
+      const largeContent = new Array(5 * 1024 * 1024).fill('a').join('')
       const mockFile = new File([largeContent], 'large.jpg', { type: 'image/jpeg' })
       const formData = new FormData()
       formData.append('file', mockFile)
 
       const result = await uploadAvatar(formData)
 
-      expect(result).toEqual({ error: 'ファイルサイズは5MB以下にしてください' })
+      expect(result).toEqual({ error: 'ファイルサイズは4MB以下にしてください' })
     })
 
     it('許可されていないファイル形式の場合、エラーを返す', async () => {

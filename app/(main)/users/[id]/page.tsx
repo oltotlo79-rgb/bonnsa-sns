@@ -109,6 +109,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [ogImage],
     },
+    // 正規URLを指定（重複コンテンツ対策）
+    alternates: {
+      canonical: `${baseUrl}/users/${id}`,
+    },
   }
 }
 

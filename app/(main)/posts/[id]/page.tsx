@@ -59,6 +59,9 @@ import { AdBanner } from '@/components/ads'
 // クライアントサイドナビゲーション用
 import Link from 'next/link'
 
+// SEO用のJSON-LD構造化データコンポーネント
+import { ArticleJsonLd } from '@/components/seo/JsonLd'
+
 /**
  * ページパラメータの型定義
  * Next.js 15以降ではparamsはPromiseとして渡される
@@ -126,6 +129,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: truncated,
       images: [ogImage],
     },
+    // 正規URLを指定（重複コンテンツ対策）
+    alternates: {
+      canonical: `${baseUrl}/posts/${id}`,
+    },
   }
 }
 
@@ -157,6 +164,7 @@ export default async function PostDetailPage({ params }: Props) {
   }
 
   const post = postResult.post
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bon-log.com'
 
   // 投稿閲覧を分析用に記録
   // 自分以外の投稿を閲覧した場合のみ記録（自己閲覧は除外）
@@ -167,6 +175,19 @@ export default async function PostDetailPage({ params }: Props) {
   }
 
   return (
+    <>
+      {/* SEO用のJSON-LD構造化データ（Article） */}
+      <ArticleJsonLd
+        headline={post.content ? (post.content.length > 100 ? post.content.slice(0, 100) + '...' : post.content) : '投稿'}
+        datePublished={post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString()}
+        author={{
+          name: post.user.nickname,
+          url: `${baseUrl}/users/${post.user.id}`,
+        }}
+        url={`${baseUrl}/posts/${id}`}
+        image={post.media?.[0]?.url}
+        description={post.content ? (post.content.length > 150 ? post.content.slice(0, 150) + '...' : post.content) : undefined}
+      />
     <div className="max-w-2xl mx-auto">
       <div className="bg-card rounded-lg border overflow-hidden">
         {/* ナビゲーションリンク - タイムラインへ戻る */}
@@ -214,5 +235,6 @@ export default async function PostDetailPage({ params }: Props) {
         </div>
       </div>
     </div>
+    </>
   )
 }

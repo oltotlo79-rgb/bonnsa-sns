@@ -844,7 +844,7 @@ export async function getCommentCount(postId: string) {
  * コメントに添付する画像または動画をストレージにアップロードします。
  *
  * ## 投稿用メディアとの違い
- * - ファイルサイズ制限が小さい（画像5MB、動画100MB）
+ * - ファイルサイズ制限が小さい（画像4MB、動画256MB）
  * - 保存フォルダが異なる（comment-images, comment-videos）
  *
  * ## サポートするファイル形式
@@ -919,13 +919,13 @@ export async function uploadCommentMedia(formData: FormData) {
   /**
    * ファイルサイズチェック
    *
-   * コメント用の制限（投稿用より小さめ）：
-   * - 動画: 100MB（投稿は200MB）
-   * - 画像: 5MB（投稿は10MB）
+   * コメント用の制限：
+   * - 動画: 256MB
+   * - 画像: 4MB
    */
-  const maxSize = isVideo ? 100 * 1024 * 1024 : 5 * 1024 * 1024
+  const maxSize = isVideo ? 256 * 1024 * 1024 : 4 * 1024 * 1024
   if (file.size > maxSize) {
-    return { error: isVideo ? '動画は100MB以下にしてください' : '画像は5MB以下にしてください' }
+    return { error: isVideo ? '動画は256MB以下にしてください' : '画像は4MB以下にしてください' }
   }
 
   try {

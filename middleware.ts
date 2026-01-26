@@ -75,10 +75,21 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   )
 
   // Content Security Policy
-  // Google AdSense用のドメインを追加（ワイルドカードで広くカバー）
+  // セキュリティ強化版 - Google AdSense互換
+  //
+  // 注意事項:
+  // - 'unsafe-inline' (script): Google AdSense動的スクリプト用（nonce移行を検討）
+  // - 'unsafe-inline' (style): Tailwind CSS + インラインスタイル用
+  // - 'wasm-unsafe-eval': WASM使用時のみ必要（現在不要）
+  //
+  // 将来の改善:
+  // - script-srcをnonce-basedに移行（next/script対応）
+  // - report-uriでCSP違反をモニタリング
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googlesyndication.com https://*.googletagservices.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net https://*.adtrafficquality.google", // Next.js + Google AdSense
+    // script-src: 'unsafe-eval'を削除（本番Next.jsでは不要）
+    // Google AdSenseは'unsafe-inline'が必要
+    "script-src 'self' 'unsafe-inline' https://*.googlesyndication.com https://*.googletagservices.com https://*.google.com https://*.googleadservices.com https://*.doubleclick.net https://*.adtrafficquality.google",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://*.blob.core.windows.net https://*.r2.dev https://images.unsplash.com https://*.tile.openstreetmap.org https://*.googlesyndication.com https://*.google.com https://*.google.co.jp https://*.doubleclick.net https://*.gstatic.com https://*.adtrafficquality.google",
@@ -88,6 +99,10 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    // オブジェクト埋め込み禁止（Flash等の脆弱性対策）
+    "object-src 'none'",
+    // HTTP→HTTPSへの自動アップグレード
+    "upgrade-insecure-requests",
   ]
   response.headers.set('Content-Security-Policy', cspDirectives.join('; '))
 

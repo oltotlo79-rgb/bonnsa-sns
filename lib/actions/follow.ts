@@ -268,6 +268,14 @@ export async function getFollowStatus(userId: string) {
   }
 
   // ------------------------------------------------------------
+  // レート制限チェック（列挙攻撃対策）
+  // ------------------------------------------------------------
+  const rateLimitResult = await checkUserRateLimit(session.user.id, 'read')
+  if (!rateLimitResult.success) {
+    return { following: false, error: 'リクエストが多すぎます' }
+  }
+
+  // ------------------------------------------------------------
   // フォロー状態を確認
   // ------------------------------------------------------------
 
@@ -324,6 +332,17 @@ export async function getFollowStatus(userId: string) {
  * ```
  */
 export async function getFollowers(userId: string, cursor?: string, limit = 20) {
+  // ------------------------------------------------------------
+  // レート制限チェック（列挙攻撃対策）
+  // ------------------------------------------------------------
+  const session = await auth()
+  if (session?.user?.id) {
+    const rateLimitResult = await checkUserRateLimit(session.user.id, 'read')
+    if (!rateLimitResult.success) {
+      return { users: [], nextCursor: undefined, error: 'リクエストが多すぎます' }
+    }
+  }
+
   /**
    * フォロー関係を取得
    *
@@ -419,6 +438,17 @@ export async function getFollowers(userId: string, cursor?: string, limit = 20) 
  * ```
  */
 export async function getFollowing(userId: string, cursor?: string, limit = 20) {
+  // ------------------------------------------------------------
+  // レート制限チェック（列挙攻撃対策）
+  // ------------------------------------------------------------
+  const session = await auth()
+  if (session?.user?.id) {
+    const rateLimitResult = await checkUserRateLimit(session.user.id, 'read')
+    if (!rateLimitResult.success) {
+      return { users: [], nextCursor: undefined, error: 'リクエストが多すぎます' }
+    }
+  }
+
   /**
    * フォロー関係を取得
    *

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifyCronAuth } from '@/lib/cron-auth'
 
 type TransactionClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
 
@@ -7,12 +8,13 @@ type TransactionClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' 
 // cron: */5 * * * * (5分ごとに実行)
 
 export async function GET(request: NextRequest) {
-  // Vercel CronまたはAPIキー認証
+  // HMAC署名ベースの認証
   const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
+  const timestampHeader = request.headers.get('x-cron-timestamp')
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authResult = verifyCronAuth(authHeader, timestampHeader)
+  if (!authResult.valid) {
+    return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 })
   }
 
   try {

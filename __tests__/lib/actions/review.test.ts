@@ -351,17 +351,17 @@ describe('Review Actions', () => {
       expect(result).toEqual({ error: '画像ファイルを選択してください' })
     })
 
-    it('5MBを超えるファイルはエラーを返す', async () => {
+    it('4MBを超えるファイルはエラーを返す', async () => {
       const { uploadReviewImage } = await import('@/lib/actions/review')
       const formData = new FormData()
-      // 6MBのダミーデータを作成
-      const largeData = new Uint8Array(6 * 1024 * 1024)
+      // 5MBのダミーデータを作成
+      const largeData = new Uint8Array(5 * 1024 * 1024)
       const largeFile = new File([largeData], 'large.jpg', { type: 'image/jpeg' })
       formData.append('file', largeFile)
 
       const result = await uploadReviewImage(formData)
 
-      expect(result).toEqual({ error: '画像は5MB以下にしてください' })
+      expect(result).toEqual({ error: '画像は4MB以下にしてください' })
     })
   })
 

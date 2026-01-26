@@ -67,9 +67,9 @@ const MIN_RATING = 1
 const MAX_RATING = 5
 
 /**
- * 画像の最大サイズ（5MB）
+ * 画像の最大サイズ（4MB）
  */
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024
 
 // ============================================================
 // レビュー投稿
@@ -596,7 +596,7 @@ export async function getReviews(shopId: string, cursor?: string, limit = 10) {
  *
  * ## バリデーション
  * - 画像ファイル形式のみ許可
- * - 最大5MB
+ * - 最大4MB
  *
  * ## 処理フロー
  * 1. 認証チェック
@@ -665,10 +665,10 @@ export async function uploadReviewImage(formData: FormData) {
    * ファイルサイズチェック
    *
    * file.size はバイト単位
-   * 5 * 1024 * 1024 = 5MB
+   * 4 * 1024 * 1024 = 4MB
    */
   if (file.size > MAX_IMAGE_SIZE) {
-    return { error: '画像は5MB以下にしてください' }
+    return { error: '画像は4MB以下にしてください' }
   }
 
   // ------------------------------------------------------------

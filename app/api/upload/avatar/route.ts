@@ -19,8 +19,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ファイルが選択されていません' }, { status: 400 })
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'ファイルサイズは5MB以下にしてください' }, { status: 400 })
+    if (file.size > 4 * 1024 * 1024) {
+      return NextResponse.json({ error: 'ファイルサイズは4MB以下にしてください' }, { status: 400 })
     }
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
