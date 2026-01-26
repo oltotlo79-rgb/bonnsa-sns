@@ -714,6 +714,7 @@ export const createMockPrismaClient = () => ({
     createMany: jest.fn(),
     delete: jest.fn(),
     deleteMany: jest.fn(),
+    groupBy: jest.fn(),
   },
   // サブスクリプション関連
   subscription: {

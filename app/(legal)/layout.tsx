@@ -88,9 +88,11 @@ export default function LegalLayout({
         <div className="max-w-4xl mx-auto px-4 py-6">
           {/* 関連ページへのクイックリンク */}
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground mb-4">
+            <Link href="/about" className="hover:text-foreground">BON-LOGについて</Link>
             <Link href="/terms" className="hover:text-foreground">利用規約</Link>
             <Link href="/privacy" className="hover:text-foreground">プライバシーポリシー</Link>
             <Link href="/help" className="hover:text-foreground">ヘルプ</Link>
+            <Link href="/contact" className="hover:text-foreground">お問い合わせ</Link>
           </div>
           {/* コピーライト表示 */}
           <p className="text-center text-xs text-muted-foreground">

@@ -1,0 +1,17 @@
+# BON-LOG robots.txt
+# https://bon-log.com/robots.txt
+
+# すべての検索エンジンボットに対するルール
+User-agent: *
+
+# 許可するパス
+Allow: /
+
+# クロールを禁止するパス
+Disallow: /admin/
+Disallow: /api/
+Disallow: /settings/
+Disallow: /_next/
+
+# サイトマップの場所
+Sitemap: https://bon-log.com/sitemap.xml

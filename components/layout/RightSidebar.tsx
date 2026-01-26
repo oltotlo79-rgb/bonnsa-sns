@@ -255,6 +255,8 @@ export async function RightSidebar() {
 
         {/* 法的リンク: 利用規約、プライバシー、特商法表記、ヘルプ */}
         <div className="flex flex-wrap gap-3">
+          <Link href="/about" className="hover:text-primary transition-colors">BON-LOGについて</Link>
+          <span className="text-border">|</span>
           <Link href="/terms" className="hover:text-primary transition-colors">利用規約</Link>
           <span className="text-border">|</span>
           <Link href="/privacy" className="hover:text-primary transition-colors">プライバシー</Link>
@@ -262,6 +264,8 @@ export async function RightSidebar() {
           <Link href="/tokushoho" className="hover:text-primary transition-colors">特商法表記</Link>
           <span className="text-border">|</span>
           <Link href="/help" className="hover:text-primary transition-colors">ヘルプ</Link>
+          <span className="text-border">|</span>
+          <Link href="/contact" className="hover:text-primary transition-colors">お問い合わせ</Link>
         </div>
 
         {/* コピーライト表示 */}
