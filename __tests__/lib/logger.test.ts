@@ -5,11 +5,16 @@
 // グローバルモックを解除して実際のモジュールをテスト
 jest.unmock('@/lib/logger')
 
+// process.envの型をキャストするヘルパー
+const setNodeEnv = (env: string) => {
+  (process.env as { NODE_ENV: string }).NODE_ENV = env
+}
+
 describe('Logger Module', () => {
   const originalEnv = process.env.NODE_ENV
 
   afterAll(() => {
-    process.env.NODE_ENV = originalEnv
+    setNodeEnv(originalEnv || 'test')
   })
 
   describe('Development Environment', () => {
@@ -20,7 +25,7 @@ describe('Logger Module', () => {
 
     beforeEach(() => {
       jest.resetModules()
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
       // 各テストの前にスパイを設定
       consoleLogSpy = jest.spyOn(console, 'log').mockImplementation()
       consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
@@ -78,7 +83,7 @@ describe('Logger Module', () => {
 
     beforeEach(() => {
       jest.resetModules()
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
       consoleLogSpy = jest.spyOn(console, 'log').mockImplementation()
       consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
       consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation()
@@ -117,7 +122,7 @@ describe('Logger Module', () => {
 
     beforeEach(() => {
       jest.resetModules()
-      process.env.NODE_ENV = 'test'
+      setNodeEnv('test')
       consoleLogSpy = jest.spyOn(console, 'log').mockImplementation()
     })
 
@@ -136,7 +141,7 @@ describe('Logger Module', () => {
   describe('Default Export', () => {
     beforeEach(() => {
       jest.resetModules()
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
     })
 
     it('デフォルトエクスポートも同じloggerオブジェクト', async () => {
