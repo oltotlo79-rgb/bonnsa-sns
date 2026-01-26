@@ -31,6 +31,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 // Google AdSenseスクリプトコンポーネント
 import { GoogleAdSense } from "@/components/ads";
+// SEO用JSON-LD構造化データコンポーネント
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/JsonLd";
 
 /**
  * Noto Sans JPフォントの設定
@@ -107,7 +109,7 @@ export const metadata: Metadata = {
     description: '盆栽を愛する全ての人が集まり、知識や経験を共有できるSNSプラットフォーム。',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/api/og',  // 動的OG画像生成API
         width: 1200,
         height: 630,
         alt: 'BON-LOG - 盆栽愛好家のためのコミュニティSNS',
@@ -119,7 +121,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'BON-LOG - 盆栽愛好家のためのコミュニティSNS',
     description: '盆栽を愛する全ての人が集まり、知識や経験を共有できるSNSプラットフォーム。',
-    images: ['/og-image.jpg'],
+    images: ['/api/og'],  // 動的OG画像生成API
   },
   // 検索エンジンクローラー設定
   robots: {
@@ -165,6 +167,20 @@ export default function RootLayout({
         // antialiasedでフォントのアンチエイリアスを有効化
         className={`${notoSansJP.variable} ${geistMono.variable} ${shipporiMincho.variable} font-sans antialiased`}
       >
+        {/* SEO: 組織情報の構造化データ（ナレッジパネル用） */}
+        <OrganizationJsonLd
+          name="BON-LOG"
+          url={baseUrl}
+          logo={`${baseUrl}/logo.png`}
+          description="盆栽愛好家のためのコミュニティSNS"
+        />
+        {/* SEO: ウェブサイト情報の構造化データ（サイトリンク検索ボックス用） */}
+        <WebSiteJsonLd
+          name="BON-LOG"
+          url={baseUrl}
+          description="盆栽を愛する全ての人が集まり、知識や経験を共有できるSNSプラットフォーム。"
+          searchUrl={`${baseUrl}/search?q=`}
+        />
         {/* 共通プロバイダーで子コンポーネントをラップ */}
         <Providers>{children}</Providers>
         {/* Google AdSenseスクリプト */}

@@ -1,47 +1,149 @@
 /**
+ * ============================================================================
+ * いいね機能のServer Actionsテスト
+ * ============================================================================
+ *
+ * このファイルは、投稿やコメントへの「いいね」機能をテストします。
+ *
+ * ## いいね機能とは？
+ * SNSでおなじみの機能で、投稿やコメントに対して
+ * 「良いね」という意思表示をする機能です。
+ *
+ * ## テストの対象
+ * - togglePostLike: 投稿へのいいねのON/OFF切り替え
+ * - toggleCommentLike: コメントへのいいねのON/OFF切り替え
+ * - getPostLikeStatus: 投稿のいいね状態を取得
+ * - getLikedPosts: ユーザーがいいねした投稿一覧を取得
+ *
+ * ## いいね機能の仕組み
+ * 1. ユーザーがいいねボタンをクリック
+ * 2. まだいいねしていなければ、いいねを追加（Likeレコード作成）
+ * 3. 既にいいねしていれば、いいねを削除（Likeレコード削除）
+ * 4. 他人の投稿にいいねした場合、通知を送信
+ *
+ * ## トグル（Toggle）パターン
+ * ON/OFFを切り替える操作パターン。
+ * 1回クリック→ON、もう1回クリック→OFF
+ * いいね、フォロー、ブックマークなどでよく使われる。
+ *
  * @jest-environment node
  */
 
+// ============================================================================
+// インポートとモックのセットアップ
+// ============================================================================
+
+/**
+ * テストユーティリティとモックデータのインポート
+ *
+ * - createMockPrismaClient: Prismaクライアントのモック
+ * - mockUser: テスト用のユーザーデータ
+ * - mockPost: テスト用の投稿データ
+ * - mockComment: テスト用のコメントデータ
+ */
 import { createMockPrismaClient, mockUser, mockPost, mockComment } from '../../utils/test-utils'
 
-// Prismaモック
+/**
+ * Prismaクライアントのモック
+ * ----------------------------------------------------------------------------
+ * データベース操作を模擬。実際のDBに接続せずにテストできる。
+ */
 const mockPrisma = createMockPrismaClient()
 jest.mock('@/lib/db', () => ({
   prisma: mockPrisma,
 }))
 
-// 認証モック
+/**
+ * 認証機能のモック
+ * ----------------------------------------------------------------------------
+ * auth()関数をモック化し、任意の認証状態をシミュレート。
+ * 認証済み/未認証の両方のケースをテストできる。
+ */
 const mockAuth = jest.fn()
 jest.mock('@/lib/auth', () => ({
   auth: () => mockAuth(),
 }))
 
-// revalidatePathモック
+/**
+ * キャッシュ再検証のモック
+ * ----------------------------------------------------------------------------
+ * revalidatePath: 指定したパスのキャッシュを無効化する関数。
+ * いいね後にUIを更新するために使用される。
+ *
+ * Next.jsのキャッシュとは：
+ * サーバーコンポーネントの出力をキャッシュして高速化する仕組み。
+ * データ変更後は再検証（キャッシュ更新）が必要。
+ */
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
 }))
 
-// レート制限モック
+/**
+ * レート制限のモック
+ * ----------------------------------------------------------------------------
+ * レート制限: 短時間に大量のリクエストを防ぐ仕組み。
+ * スパム対策やサーバー負荷軽減のために使用。
+ *
+ * 例：1分間に100回までいいね可能、それ以上はブロック
+ */
 const mockCheckUserRateLimit = jest.fn().mockResolvedValue({ success: true })
 jest.mock('@/lib/rate-limit', () => ({
   checkUserRateLimit: (...args: unknown[]) => mockCheckUserRateLimit(...args),
 }))
 
-// analyticsモック
+/**
+ * 分析機能のモック
+ * ----------------------------------------------------------------------------
+ * いいねの受信を記録する分析機能。
+ * プレミアム会員向けの詳細な分析に使用される。
+ */
 jest.mock('@/lib/actions/analytics', () => ({
   recordLikeReceived: jest.fn().mockResolvedValue(undefined),
 }))
 
+// ============================================================================
+// テストスイート
+// ============================================================================
 describe('Like Actions', () => {
+  /**
+   * 各テスト前の準備
+   *
+   * - モックの呼び出し履歴をクリア
+   * - デフォルトで認証済み状態を設定
+   */
   beforeEach(() => {
     jest.clearAllMocks()
+    // デフォルトで認証済みユーザーとして設定
     mockAuth.mockResolvedValue({
       user: { id: mockUser.id },
     })
   })
 
+  // ============================================================
+  // togglePostLike（投稿へのいいね切り替え）
+  // ============================================================
+  /**
+   * togglePostLike関数のテスト
+   *
+   * この関数は、投稿へのいいねをON/OFF切り替えます。
+   *
+   * 処理の流れ：
+   * 1. 認証チェック
+   * 2. レート制限チェック
+   * 3. 既存のいいねを検索
+   * 4. いいねがあれば削除、なければ作成
+   * 5. 他人の投稿なら通知を作成
+   * 6. キャッシュを再検証
+   */
   describe('togglePostLike (投稿)', () => {
+    /**
+     * テストケース1: 未認証の場合
+     *
+     * いいね機能は認証が必要。
+     * 未認証ユーザーにはエラーを返す。
+     */
     it('認証なしの場合はエラーを返す', async () => {
+      // 未認証状態を設定
       mockAuth.mockResolvedValue(null)
 
       const { togglePostLike } = await import('@/lib/actions/like')
@@ -50,33 +152,64 @@ describe('Like Actions', () => {
       expect(result).toEqual({ error: '認証が必要です' })
     })
 
+    /**
+     * テストケース2: いいねを追加
+     *
+     * シナリオ：
+     * - ユーザーがまだいいねしていない投稿
+     * - いいねを追加する
+     *
+     * 期待結果：
+     * - success: true
+     * - liked: true（いいね済みになった）
+     * - Likeレコードが作成される
+     */
     it('いいねしていない場合は追加する', async () => {
+      // 既存のいいねがない
       mockPrisma.like.findFirst.mockResolvedValue(null)
+      // いいね作成が成功
       mockPrisma.like.create.mockResolvedValue({
         id: 'like-1',
         userId: mockUser.id,
         postId: mockPost.id,
-        commentId: null,
+        commentId: null,  // 投稿へのいいねなのでコメントIDはnull
       })
+      // 投稿情報を返す（通知判定用）
       mockPrisma.post.findUnique.mockResolvedValue({
         ...mockPost,
-        userId: mockUser.id,
+        userId: mockUser.id,  // 自分の投稿
       })
 
       const { togglePostLike } = await import('@/lib/actions/like')
       const result = await togglePostLike('post-id')
 
+      // 結果を検証
       expect(result).toEqual({ success: true, liked: true })
+      // いいねが作成されたことを確認
       expect(mockPrisma.like.create).toHaveBeenCalled()
     })
 
+    /**
+     * テストケース3: いいねを削除
+     *
+     * シナリオ：
+     * - ユーザーが既にいいねしている投稿
+     * - いいねを解除する
+     *
+     * 期待結果：
+     * - success: true
+     * - liked: false（いいね解除になった）
+     * - Likeレコードが削除される
+     */
     it('いいね済みの場合は削除する', async () => {
+      // 既存のいいねがある
       mockPrisma.like.findFirst.mockResolvedValue({
         id: 'like-1',
         userId: mockUser.id,
         postId: mockPost.id,
         commentId: null,
       })
+      // 削除が成功
       mockPrisma.like.delete.mockResolvedValue({})
 
       const { togglePostLike } = await import('@/lib/actions/like')
@@ -86,6 +219,18 @@ describe('Like Actions', () => {
       expect(mockPrisma.like.delete).toHaveBeenCalled()
     })
 
+    /**
+     * テストケース4: 他人の投稿へのいいねで通知が送られる
+     *
+     * シナリオ：
+     * - 他人の投稿にいいねする
+     * - 投稿者に通知が送られる
+     *
+     * 通知の仕組み：
+     * - userId: 通知を受け取る人（投稿者）
+     * - actorId: アクションを起こした人（いいねした人）
+     * - type: 通知の種類（'like'）
+     */
     it('他人の投稿にいいねすると通知が作成される', async () => {
       mockPrisma.like.findFirst.mockResolvedValue(null)
       mockPrisma.like.create.mockResolvedValue({
@@ -94,37 +239,49 @@ describe('Like Actions', () => {
         postId: mockPost.id,
         commentId: null,
       })
+      // 他人の投稿
       mockPrisma.post.findUnique.mockResolvedValue({
         ...mockPost,
-        userId: 'other-user-id',
+        userId: 'other-user-id',  // 投稿者は別のユーザー
       })
       mockPrisma.notification.create.mockResolvedValue({})
 
       const { togglePostLike } = await import('@/lib/actions/like')
       await togglePostLike('post-id')
 
+      // 通知が作成されたことを確認
+      // expect.objectContaining: オブジェクトの一部だけを検証
       expect(mockPrisma.notification.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            userId: 'other-user-id',
-            actorId: mockUser.id,
-            type: 'like',
+            userId: 'other-user-id', // 投稿者に通知
+            actorId: mockUser.id,    // いいねした人
+            type: 'like',            // 通知タイプ
           }),
         })
       )
     })
 
+    /**
+     * テストケース5: 自分の投稿へのいいねでは通知が送られない
+     *
+     * 自分で自分に通知を送る必要はないので、
+     * 自分の投稿へのいいねでは通知を作成しない。
+     */
     it('自分の投稿にいいねしても通知は作成されない', async () => {
       mockPrisma.like.findFirst.mockResolvedValue(null)
       mockPrisma.like.create.mockResolvedValue({})
+      // 自分の投稿
       mockPrisma.post.findUnique.mockResolvedValue({
         ...mockPost,
-        userId: mockUser.id,
+        userId: mockUser.id,  // 投稿者は自分
       })
 
       const { togglePostLike } = await import('@/lib/actions/like')
       await togglePostLike('post-id')
 
+      // 通知が作成されていないことを確認
+      // not.toHaveBeenCalled(): 呼ばれていないことを確認
       expect(mockPrisma.notification.create).not.toHaveBeenCalled()
     })
   })
