@@ -92,7 +92,7 @@ const mockGenres = {
 const mockLimits = {
   maxPostLength: 500,
   maxImages: 4,
-  maxVideos: 2,
+  maxVideos: 1,
   canSchedulePost: false,
   canViewAnalytics: false,
 }

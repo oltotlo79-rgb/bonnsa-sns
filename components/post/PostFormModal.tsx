@@ -228,7 +228,7 @@ function FileTextIcon({ className }: { className?: string }) {
 const DEFAULT_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
-  maxVideos: 2,
+  maxVideos: 1,
 }
 
 // ============================================================
@@ -270,7 +270,7 @@ const DEFAULT_LIMITS: MembershipLimits = {
  * ```tsx
  * <PostFormModal
  *   genres={{ '盆栽': [...] }}
- *   limits={{ maxPostLength: 500, maxImages: 4, maxVideos: 2 }}
+ *   limits={{ maxPostLength: 500, maxImages: 4, maxVideos: 1 }}
  *   isOpen={isModalOpen}
  *   onClose={() => setIsModalOpen(false)}
  *   draftCount={3}

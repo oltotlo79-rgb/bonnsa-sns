@@ -394,7 +394,7 @@ describe('Subscription Actions', () => {
       expect(result.isPremium).toBe(false)
       expect(result.limits.maxPostLength).toBe(500)
       expect(result.limits.maxImages).toBe(4)
-      expect(result.limits.maxVideos).toBe(2)
+      expect(result.limits.maxVideos).toBe(1)
       expect(result.limits.canSchedulePost).toBe(false)
       expect(result.limits.canViewAnalytics).toBe(false)
     })

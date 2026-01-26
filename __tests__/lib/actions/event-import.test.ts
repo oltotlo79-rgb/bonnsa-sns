@@ -82,6 +82,8 @@ describe('Event Import Actions', () => {
       ]
       mockScrapeAllEvents.mockResolvedValue(mockEvents)
       mockPrisma.event.findFirst.mockResolvedValue(null)
+      // checkDuplicates用のモック（既存イベントなし）
+      mockPrisma.event.findMany.mockResolvedValue([])
 
       const { scrapeExternalEvents } = await import('@/lib/actions/event-import')
       const result = await scrapeExternalEvents()
@@ -131,6 +133,15 @@ describe('Event Import Actions', () => {
       ]
       mockScrapeAllEvents.mockResolvedValue(mockEvents)
       mockPrisma.event.findFirst.mockResolvedValue({ id: 'existing-event' })
+      // checkDuplicates用のモック（類似イベントが存在）
+      mockPrisma.event.findMany.mockResolvedValue([
+        {
+          title: '既存の展示会',
+          startDate: new Date('2025-04-01'), // 異なる日付
+          endDate: null,
+          prefecture: '東京都',
+        },
+      ])
 
       const { scrapeExternalEvents } = await import('@/lib/actions/event-import')
       const result = await scrapeExternalEvents()
@@ -172,6 +183,8 @@ describe('Event Import Actions', () => {
       ]
       mockScrapeEventsFromRegion.mockResolvedValue(mockEvents)
       mockPrisma.event.findFirst.mockResolvedValue(null)
+      // checkDuplicates用のモック（既存イベントなし）
+      mockPrisma.event.findMany.mockResolvedValue([])
 
       const { scrapeEventsByRegion } = await import('@/lib/actions/event-import')
       const result = await scrapeEventsByRegion('関東')
@@ -237,6 +250,7 @@ describe('Event Import Actions', () => {
           sourceRegion: '関東',
           sourceUrl: 'https://example.com',
           isDuplicate: false,
+          duplicateType: null,
         },
       ]
 
@@ -268,6 +282,7 @@ describe('Event Import Actions', () => {
           sourceRegion: '関東',
           sourceUrl: 'https://example.com',
           isDuplicate: false,
+          duplicateType: null,
         },
       ]
 
@@ -301,6 +316,7 @@ describe('Event Import Actions', () => {
           sourceRegion: '関東',
           sourceUrl: 'https://example.com',
           isDuplicate: true,
+          duplicateType: 'similar' as const,
         },
       ]
 
@@ -335,6 +351,7 @@ describe('Event Import Actions', () => {
           sourceRegion: '関東',
           sourceUrl: 'https://example.com',
           isDuplicate: false,
+          duplicateType: null,
         },
       ]
 

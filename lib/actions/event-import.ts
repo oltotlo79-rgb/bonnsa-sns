@@ -18,6 +18,14 @@ import {
 } from '@/lib/scraping/bonsai-events'
 
 /**
+ * 重複タイプの定義
+ * - 'exact': 完全重複（同タイトル・同期間・同都道府県）→ 表示しない
+ * - 'similar': 類似イベント（類似タイトル・同都道府県・異なる期間）→ 黄色警告
+ * - null: 重複なし
+ */
+export type DuplicateType = 'exact' | 'similar' | null
+
+/**
  * インポート用イベントデータの型（クライアントに送信可能な形式）
  */
 export interface ImportableEvent {
@@ -35,7 +43,9 @@ export interface ImportableEvent {
   externalUrl: string | null
   sourceRegion: string
   sourceUrl: string
-  isDuplicate: boolean // 既存イベントと重複の可能性
+  isDuplicate: boolean // 後方互換性のため残す（similarの場合true）
+  duplicateType: DuplicateType // 重複タイプ
+  similarEventTitle?: string // 類似イベントのタイトル（警告表示用）
 }
 
 /**
@@ -59,34 +69,99 @@ async function checkAdminAuth(): Promise<{ userId: string } | { error: string }>
 }
 
 /**
- * 重複チェック
- * タイトルと開始日が同じイベントが既に存在するかチェック
+ * 重複チェック結果の型
  */
-async function checkDuplicates(events: ScrapedEvent[]): Promise<Map<string, boolean>> {
-  const duplicateMap = new Map<string, boolean>()
+interface DuplicateCheckResult {
+  type: DuplicateType
+  similarEventTitle?: string
+}
+
+/**
+ * タイトルの類似度を計算（簡易版）
+ * タイトルの先頭10文字が一致、または一方が他方を含む場合に類似とみなす
+ */
+function isSimilarTitle(title1: string, title2: string): boolean {
+  const normalized1 = title1.replace(/\s+/g, '').toLowerCase()
+  const normalized2 = title2.replace(/\s+/g, '').toLowerCase()
+
+  // 完全一致
+  if (normalized1 === normalized2) return true
+
+  // 先頭10文字が一致
+  if (normalized1.substring(0, 10) === normalized2.substring(0, 10)) return true
+
+  // 一方が他方を含む
+  if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return true
+
+  return false
+}
+
+/**
+ * 日付が同じかどうかをチェック（日付部分のみ比較）
+ */
+function isSameDate(date1: Date | null, date2: Date | null): boolean {
+  if (!date1 && !date2) return true
+  if (!date1 || !date2) return false
+
+  return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0]
+}
+
+/**
+ * 重複チェック
+ * - 完全重複: 同タイトル・同期間・同都道府県 → 'exact'
+ * - 類似イベント: 類似タイトル・同都道府県・異なる期間 → 'similar'
+ * - 重複なし: null
+ */
+async function checkDuplicates(events: ScrapedEvent[]): Promise<Map<string, DuplicateCheckResult>> {
+  const duplicateMap = new Map<string, DuplicateCheckResult>()
 
   for (const event of events) {
     if (!event.startDate) {
-      duplicateMap.set(event.title, false)
+      duplicateMap.set(event.title, { type: null })
       continue
     }
 
-    // タイトルの類似性チェック（完全一致または部分一致）
-    const existingEvent = await prisma.event.findFirst({
+    // 同じ都道府県で類似タイトルのイベントを検索
+    const existingEvents = await prisma.event.findMany({
       where: {
-        OR: [
-          { title: event.title },
-          { title: { contains: event.title.substring(0, 10) } },
-        ],
-        startDate: {
-          gte: new Date(event.startDate.getTime() - 24 * 60 * 60 * 1000), // 1日前
-          lte: new Date(event.startDate.getTime() + 24 * 60 * 60 * 1000), // 1日後
-        },
         isHidden: false,
+        ...(event.prefecture && { prefecture: event.prefecture }),
+      },
+      select: {
+        title: true,
+        startDate: true,
+        endDate: true,
+        prefecture: true,
       },
     })
 
-    duplicateMap.set(event.title, !!existingEvent)
+    let duplicateResult: DuplicateCheckResult = { type: null }
+
+    for (const existing of existingEvents) {
+      // タイトルが類似しているかチェック
+      if (!isSimilarTitle(event.title, existing.title)) {
+        continue
+      }
+
+      // 完全重複チェック: 同タイトル・同期間・同都道府県
+      const isSameStartDate = isSameDate(event.startDate, existing.startDate)
+      const isSameEndDate = isSameDate(event.endDate, existing.endDate)
+      const isSamePrefecture = event.prefecture === existing.prefecture
+
+      if (isSameStartDate && isSameEndDate && isSamePrefecture) {
+        // 完全重複 → 表示しない
+        duplicateResult = { type: 'exact', similarEventTitle: existing.title }
+        break // 完全重複が見つかったらそれ以上チェック不要
+      }
+
+      // 類似イベント: 類似タイトル・同都道府県・異なる期間
+      if (isSamePrefecture && (!isSameStartDate || !isSameEndDate)) {
+        duplicateResult = { type: 'similar', similarEventTitle: existing.title }
+        // 類似が見つかっても完全重複を探し続ける
+      }
+    }
+
+    duplicateMap.set(event.title, duplicateResult)
   }
 
   return duplicateMap
@@ -98,7 +173,7 @@ async function checkDuplicates(events: ScrapedEvent[]): Promise<Map<string, bool
 function toImportableEvent(
   event: ScrapedEvent,
   index: number,
-  isDuplicate: boolean
+  duplicateResult: DuplicateCheckResult
 ): ImportableEvent {
   return {
     id: `scraped-${index}-${Date.now()}`,
@@ -115,7 +190,9 @@ function toImportableEvent(
     externalUrl: event.externalUrl,
     sourceRegion: event.sourceRegion,
     sourceUrl: event.sourceUrl,
-    isDuplicate,
+    isDuplicate: duplicateResult.type === 'similar', // 後方互換性
+    duplicateType: duplicateResult.type,
+    similarEventTitle: duplicateResult.similarEventTitle,
   }
 }
 
@@ -123,7 +200,7 @@ function toImportableEvent(
  * 全地方のイベントをスクレイピング（プレビュー用）
  */
 export async function scrapeExternalEvents(): Promise<
-  { events: ImportableEvent[] } | { error: string }
+  { events: ImportableEvent[]; filteredCount: number } | { error: string }
 > {
   // 管理者チェック
   const authResult = await checkAdminAuth()
@@ -142,12 +219,23 @@ export async function scrapeExternalEvents(): Promise<
     // 重複チェック
     const duplicateMap = await checkDuplicates(scrapedEvents)
 
-    // ImportableEvent形式に変換
-    const events = scrapedEvents.map((event, index) =>
-      toImportableEvent(event, index, duplicateMap.get(event.title) || false)
-    )
+    // ImportableEvent形式に変換し、完全重複を除外
+    let filteredCount = 0
+    const events: ImportableEvent[] = []
 
-    return { events }
+    scrapedEvents.forEach((event, index) => {
+      const duplicateResult = duplicateMap.get(event.title) || { type: null }
+
+      // 完全重複は除外
+      if (duplicateResult.type === 'exact') {
+        filteredCount++
+        return
+      }
+
+      events.push(toImportableEvent(event, index, duplicateResult))
+    })
+
+    return { events, filteredCount }
   } catch (error) {
     console.error('Scraping error:', error)
     return { error: 'スクレイピング中にエラーが発生しました' }
@@ -159,7 +247,7 @@ export async function scrapeExternalEvents(): Promise<
  */
 export async function scrapeEventsByRegion(
   regionId: string
-): Promise<{ events: ImportableEvent[] } | { error: string }> {
+): Promise<{ events: ImportableEvent[]; filteredCount: number } | { error: string }> {
   // 管理者チェック
   const authResult = await checkAdminAuth()
   if ('error' in authResult) {
@@ -187,11 +275,23 @@ export async function scrapeEventsByRegion(
 
     const duplicateMap = await checkDuplicates(scrapedEvents)
 
-    const events = scrapedEvents.map((event, index) =>
-      toImportableEvent(event, index, duplicateMap.get(event.title) || false)
-    )
+    // ImportableEvent形式に変換し、完全重複を除外
+    let filteredCount = 0
+    const events: ImportableEvent[] = []
 
-    return { events }
+    scrapedEvents.forEach((event, index) => {
+      const duplicateResult = duplicateMap.get(event.title) || { type: null }
+
+      // 完全重複は除外
+      if (duplicateResult.type === 'exact') {
+        filteredCount++
+        return
+      }
+
+      events.push(toImportableEvent(event, index, duplicateResult))
+    })
+
+    return { events, filteredCount }
   } catch (error) {
     console.error('Scraping error:', error)
     return { error: 'スクレイピング中にエラーが発生しました' }

@@ -20,7 +20,7 @@
 |------|----------|----------|
 | 投稿文字数 | 500文字 | 2000文字 |
 | 画像添付 | 4枚 | 6枚 |
-| 動画添付 | 2本 | 3本 |
+| 動画添付 | 1本 | 3本 |
 | 予約投稿 | × | ○ |
 | 投稿分析 | × | ○ |
 
@@ -252,7 +252,7 @@ export interface MembershipLimits {
 const FREE_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
-  maxVideos: 2,
+  maxVideos: 1,
   canSchedulePost: false,
   canViewAnalytics: false,
 }

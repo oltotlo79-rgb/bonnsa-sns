@@ -196,12 +196,12 @@ function FileTextIcon({ className }: { className?: string }) {
  *
  * @property maxPostLength - 500文字まで
  * @property maxImages - 4枚まで
- * @property maxVideos - 2本まで
+ * @property maxVideos - 1本まで
  */
 const DEFAULT_LIMITS: MembershipLimits = {
   maxPostLength: 500,
   maxImages: 4,
-  maxVideos: 2,
+  maxVideos: 1,
 }
 
 

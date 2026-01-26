@@ -40,6 +40,8 @@ export function EventImportClient() {
   const [error, setError] = useState<string | null>(null)
   // 成功メッセージ
   const [success, setSuccess] = useState<string | null>(null)
+  // 除外された重複件数
+  const [filteredCount, setFilteredCount] = useState<number>(0)
   // 選択された地方
   const [selectedRegion, setSelectedRegion] = useState<string>('all')
   // 編集中のイベント
@@ -56,6 +58,7 @@ export function EventImportClient() {
     setSuccess(null)
     setEvents([])
     setSelectedIds(new Set())
+    setFilteredCount(0)
 
     try {
       const result = selectedRegion === 'all'
@@ -66,7 +69,8 @@ export function EventImportClient() {
         setError(result.error)
       } else {
         setEvents(result.events)
-        // 重複でないイベントを初期選択
+        setFilteredCount(result.filteredCount)
+        // 重複でないイベントを初期選択（類似イベントは選択しない）
         const nonDuplicateIds = new Set(
           result.events
             .filter((e) => !e.isDuplicate && e.startDate)
@@ -285,7 +289,7 @@ export function EventImportClient() {
       {events.length > 0 && (
         <div className="bg-card rounded-lg border">
           {/* ヘッダー */}
-          <div className="px-4 py-3 border-b bg-muted/50 flex items-center justify-between">
+          <div className="px-4 py-3 border-b bg-muted/50 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -295,12 +299,17 @@ export function EventImportClient() {
               />
               <span className="text-sm font-medium">
                 取得結果: {events.length}件
+                {filteredCount > 0 && (
+                  <span className="text-muted-foreground">
+                    （完全重複 {filteredCount}件は除外済み）
+                  </span>
+                )}
                 {selectedIds.size > 0 && ` (${selectedIds.size}件選択中)`}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 rounded">黄色</span>
-              <span>= 重複の可能性あり</span>
+              <span>= 類似イベントが登録済み（期間違い）</span>
             </div>
           </div>
 
@@ -348,10 +357,12 @@ export function EventImportClient() {
                           onChange={(e) => handleInlineUpdate(event.id, 'title', e.target.value)}
                           className="w-full px-2 py-1 border rounded bg-background text-sm"
                         />
-                        {event.isDuplicate && (
-                          <span className="ml-1 px-1 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">
-                            重複？
-                          </span>
+                        {event.duplicateType === 'similar' && (
+                          <div className="mt-1">
+                            <span className="px-1 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded" title={event.similarEventTitle}>
+                              類似: {event.similarEventTitle?.substring(0, 15)}...
+                            </span>
+                          </div>
                         )}
                       </td>
                       {/* 開始日 */}
@@ -476,12 +487,17 @@ export function EventImportClient() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-medium text-sm">{event.title}</h3>
-                        {event.isDuplicate && (
-                          <span className="px-2 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded flex-shrink-0">
-                            重複？
+                        {event.duplicateType === 'similar' && (
+                          <span className="px-2 py-0.5 text-xs bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded flex-shrink-0" title={event.similarEventTitle}>
+                            類似あり
                           </span>
                         )}
                       </div>
+                      {event.duplicateType === 'similar' && event.similarEventTitle && (
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                          ⚠️ 類似イベント: 「{event.similarEventTitle}」
+                        </p>
+                      )}
 
                       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span>

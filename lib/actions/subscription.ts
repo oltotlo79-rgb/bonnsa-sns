@@ -531,7 +531,7 @@ export async function cancelSubscriptionImmediately() {
  * ## 無料会員の制限
  * - 投稿: 500文字
  * - 画像: 4枚
- * - 動画: 2本
+ * - 動画: 1本
  * - 予約投稿: 不可
  * - アナリティクス: 不可
  *
@@ -567,7 +567,7 @@ export async function getMembershipInfo() {
       limits: {
         maxPostLength: 500,
         maxImages: 4,
-        maxVideos: 2,
+        maxVideos: 1,
         canSchedulePost: false,
         canViewAnalytics: false,
       },
@@ -614,7 +614,7 @@ export async function getMembershipInfo() {
        */
       maxPostLength: 500,
       maxImages: 4,
-      maxVideos: 2,
+      maxVideos: 1,
       canSchedulePost: false,
       canViewAnalytics: false,
     },

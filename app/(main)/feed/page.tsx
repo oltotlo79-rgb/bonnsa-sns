@@ -77,7 +77,7 @@ export default async function FeedPage() {
     // タイムラインの投稿を取得
     getTimeline(),
     // 会員プランに応じた制限値を取得（未ログイン時はデフォルト値）
-    session?.user?.id ? getMembershipLimits(session.user.id) : Promise.resolve({ maxPostLength: 500, maxImages: 4, maxVideos: 2, canSchedulePost: false, canViewAnalytics: false }),
+    session?.user?.id ? getMembershipLimits(session.user.id) : Promise.resolve({ maxPostLength: 500, maxImages: 4, maxVideos: 1, canSchedulePost: false, canViewAnalytics: false }),
     // 下書き投稿数を取得
     getDraftCount(),
     // ユーザーの盆栽一覧を取得（未ログイン時は空配列）
