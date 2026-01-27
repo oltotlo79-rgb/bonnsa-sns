@@ -60,10 +60,15 @@ import Image from 'next/image'
 
 /**
  * UIコンポーネント
- * shadcn/uiのButtonとTextareaを使用
+ * shadcn/uiのButtonを使用
  */
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+
+/**
+ * メンション機能付きテキストエリア
+ * @入力でユーザーをオートコンプリート
+ */
+import { MentionTextarea } from '@/components/common/MentionTextarea'
 
 /**
  * Server Actions
@@ -641,13 +646,13 @@ export function PostForm({ genres, limits = DEFAULT_LIMITS, draftCount = 0 }: Po
 
   return (
     <form onSubmit={handleSubmit} className="bg-card rounded-lg border p-4">
-      <Textarea
+      <MentionTextarea
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="いまどうしてる？"
+        onChange={setContent}
+        placeholder="いまどうしてる？ @でユーザーをメンション"
         rows={3}
         maxLength={maxChars}
-        className="resize-none border-0 focus-visible:ring-0 p-0 text-base"
+        className="border-0 focus-visible:ring-0 p-0 text-base"
       />
 
       {/* メディアプレビュー */}

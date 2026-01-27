@@ -121,6 +121,12 @@ import { CommentLikeButton } from './CommentLikeButton'
  */
 import { deleteComment, getReplies } from '@/lib/actions/comment'
 
+/**
+ * メンションユーティリティ
+ * コンテンツをセグメントに分割
+ */
+import { parseContentSegments, type ContentSegment } from '@/lib/mention-utils'
+
 // ============================================================
 // 型定義
 // ============================================================
@@ -173,18 +179,29 @@ type Comment = {
 }
 
 /**
+ * メンションユーザー情報の型
+ */
+type MentionUser = {
+  id: string
+  nickname: string
+  avatarUrl: string | null
+}
+
+/**
  * CommentCardコンポーネントのprops型
  *
  * @property comment - 表示するコメントデータ
  * @property postId - コメントが属する投稿のID
  * @property currentUserId - 現在ログイン中のユーザーID（未ログイン時はundefined）
  * @property isReply - このコメントが返信かどうか（デフォルト: false）
+ * @property mentionUsers - メンションユーザー情報（キー: ユーザーID）
  */
 type CommentCardProps = {
   comment: Comment
   postId: string
   currentUserId?: string
   isReply?: boolean
+  mentionUsers?: Map<string, MentionUser>
 }
 
 // ============================================================
@@ -214,6 +231,7 @@ export function CommentCard({
   postId,
   currentUserId,
   isReply = false,
+  mentionUsers = new Map(),
 }: CommentCardProps) {
   /**
    * Next.jsのルーターインスタンス
@@ -271,6 +289,49 @@ export function CommentCard({
     addSuffix: true,
     locale: ja,
   })
+
+  // ------------------------------------------------------------
+  // ヘルパー関数
+  // ------------------------------------------------------------
+
+  /**
+   * メンションとハッシュタグをリンク化する関数
+   *
+   * @param content - コメント本文
+   * @returns React要素の配列
+   */
+  function renderContent(content: string) {
+    const segments: ContentSegment[] = parseContentSegments(content)
+
+    return segments.map((segment, i) => {
+      switch (segment.type) {
+        case 'mention': {
+          const user = mentionUsers.get(segment.userId)
+          return (
+            <Link
+              key={i}
+              href={`/users/${segment.userId}`}
+              className="text-primary hover:underline font-medium"
+            >
+              @{user?.nickname || 'unknown'}
+            </Link>
+          )
+        }
+        case 'hashtag':
+          return (
+            <Link
+              key={i}
+              href={`/search?q=${encodeURIComponent(segment.tag)}`}
+              className="text-bonsai-green hover:underline"
+            >
+              {segment.tag}
+            </Link>
+          )
+        default:
+          return <span key={i}>{segment.content}</span>
+      }
+    })
+  }
 
   // ------------------------------------------------------------
   // イベントハンドラ
@@ -397,7 +458,7 @@ export function CommentCard({
           {/* コメント本文テキスト */}
           {comment.content && (
             <p className="text-sm mt-1 whitespace-pre-wrap break-words">
-              {comment.content}
+              {renderContent(comment.content)}
             </p>
           )}
 
@@ -558,6 +619,7 @@ export function CommentCard({
                   postId={postId}
                   currentUserId={currentUserId}
                   isReply
+                  mentionUsers={mentionUsers}
                 />
               ))}
             </div>

@@ -43,7 +43,12 @@ import Image from 'next/image'
  * UIコンポーネント
  */
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+
+/**
+ * メンション機能付きテキストエリア
+ * @入力でユーザーをオートコンプリート
+ */
+import { MentionTextarea } from '@/components/common/MentionTextarea'
 
 /**
  * Server Actions
@@ -478,13 +483,14 @@ export function CommentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="relative">
-        <Textarea
+        <MentionTextarea
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={setContent}
           placeholder={placeholder}
-          className="min-h-[80px] resize-none pr-16"
+          className="min-h-[80px] pr-16"
           disabled={isPending}
           autoFocus={autoFocus}
+          maxLength={maxLength}
         />
         <div
           className={`absolute bottom-2 right-2 text-xs ${

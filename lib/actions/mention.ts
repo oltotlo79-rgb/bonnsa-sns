@@ -1,21 +1,22 @@
 /**
  * メンション機能のServer Actions
  *
- * このファイルは、投稿内のメンション（@ユーザー名）に関する
+ * このファイルは、投稿内のメンション（<@userId>形式）に関する
  * サーバーサイドの処理を提供します。
  *
  * ## 機能概要
  * - メンション候補ユーザーの検索（オートコンプリート）
  * - メンションされたユーザーへの通知送信
  * - 最近メンションしたユーザーの取得
+ * - メンションユーザー情報の解決
+ *
+ * ## メンション形式
+ * - 保存形式: `<@userId>` （例: `<@clxxxxxxxxxx>`）
+ * - 表示形式: `@nickname` （リンク付き）
  *
  * ## メンションとは
- * 投稿内で @ユーザー名 の形式で他のユーザーを言及する機能です。
+ * 投稿内で <@userId> の形式で他のユーザーを言及する機能です。
  * メンションされたユーザーには通知が送信されます。
- *
- * ## 対応文字
- * - 英数字（a-z, A-Z, 0-9）
- * - アンダースコア（_）
  *
  * @module lib/actions/mention
  */
@@ -44,66 +45,11 @@ import { auth } from '@/lib/auth'
  */
 import logger from '@/lib/logger'
 
-// ============================================================
-// 定数・正規表現
-// ============================================================
-
 /**
- * メンションを抽出する正規表現
- *
- * ## マッチするパターン
- * - @username
- * - @user_name
- * - @User123
- *
- * ## 注意
- * 日本語には対応していない（英数字とアンダースコアのみ）
+ * メンションユーティリティ
+ * ユーザーID形式のメンション抽出に使用
  */
-const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g
-
-// ============================================================
-// 内部関数
-// ============================================================
-
-/**
- * テキストからメンションを抽出（内部関数）
- *
- * ## 処理内容
- * 1. 正規表現でメンションをマッチ
- * 2. @ を除去
- * 3. 小文字に変換
- * 4. 重複を除去
- *
- * @param text - 抽出元のテキスト
- * @returns ユーザー名の配列（@ なし）
- *
- * @example
- * ```typescript
- * extractMentions('@User1 さんと @user2 と @User1')
- * // → ['user1', 'user2']
- * ```
- */
-function extractMentions(text: string): string[] {
-  if (!text) return []
-
-  /**
-   * 正規表現でマッチ
-   */
-  const matches = text.match(MENTION_REGEX)
-  if (!matches) return []
-
-  /**
-   * @ を除去して小文字に変換
-   *
-   * slice(1) で最初の1文字（@）を除去
-   */
-  const mentions = matches.map((m: string) => m.slice(1).toLowerCase())
-
-  /**
-   * Set で重複を除去して配列に戻す
-   */
-  return [...new Set(mentions)]
-}
+import { extractMentionIds } from '@/lib/mention-utils'
 
 // ============================================================
 // メンション候補検索
@@ -240,20 +186,20 @@ export async function searchMentionUsers(query: string, limit: number = 10) {
  * メンションされたユーザーに通知を送信
  *
  * ## 機能概要
- * 投稿の本文からメンションを抽出し、
+ * 投稿の本文から <@userId> 形式のメンションを抽出し、
  * 該当するユーザーに通知を送信します。
  *
  * ## 処理フロー
- * 1. テキストからメンションを抽出
- * 2. ニックネームでユーザーを検索
+ * 1. テキストから <@userId> 形式でユーザーIDを抽出
+ * 2. ユーザーIDで直接ユーザーを検索
  * 3. 各ユーザーに通知を作成
  *
  * ## 呼び出しタイミング
  * 投稿作成時に自動的に呼び出される
  *
- * ## 注意
- * ニックネームは一意ではない可能性があるため、
- * 同名のユーザー全員に通知が送信される
+ * ## メンション形式
+ * - 保存形式: `<@userId>` （例: `<@clxxxxxxxxxx>`）
+ * - ユーザーIDで直接特定するため、同名ユーザーへの重複通知は発生しない
  *
  * @param postId - 投稿ID
  * @param content - 投稿の本文
@@ -277,11 +223,11 @@ export async function notifyMentionedUsers(
   if (!content) return
 
   // ------------------------------------------------------------
-  // メンションを抽出
+  // メンションを抽出（<@userId> 形式）
   // ------------------------------------------------------------
 
-  const mentionedNames = extractMentions(content)
-  if (mentionedNames.length === 0) return
+  const mentionedUserIds = extractMentionIds(content)
+  if (mentionedUserIds.length === 0) return
 
   try {
     // ------------------------------------------------------------
@@ -289,16 +235,15 @@ export async function notifyMentionedUsers(
     // ------------------------------------------------------------
 
     /**
-     * ニックネームでユーザーを検索
+     * ユーザーIDで直接検索
      *
-     * 注意: ニックネームは一意ではない可能性があるため、
-     * 実際のシステムではユーザーIDを使用することを推奨
+     * ユーザーIDは一意なので、確実に正しいユーザーに通知が送られる
      */
     const users = await prisma.user.findMany({
       where: {
-        nickname: { in: mentionedNames, mode: 'insensitive' },
+        id: { in: mentionedUserIds },
         isSuspended: false,
-        id: { not: authorId },  // 自分を除外
+        NOT: { id: authorId },  // 自分を除外
       },
       select: { id: true },
     })
@@ -332,40 +277,65 @@ export async function notifyMentionedUsers(
 }
 
 // ============================================================
-// メンションのリンク変換（内部関数）
+// メンションユーザー情報の解決
 // ============================================================
 
 /**
- * テキスト内のメンションをリンクに変換（内部関数・クライアント用）
+ * メンションされたユーザーの情報を取得
  *
  * ## 機能概要
- * @username 形式のテキストをHTMLリンクに変換します。
+ * ユーザーIDの配列から、表示に必要なユーザー情報を取得します。
+ * 投稿表示時にメンションをニックネーム表示に変換するために使用。
  *
- * ## 用途
- * 投稿本文の表示時にメンションをクリック可能にする
- *
- * @param text - 変換元のテキスト
- * @returns HTMLリンクを含むテキスト
+ * @param userIds - ユーザーIDの配列
+ * @returns ユーザー情報のMap（キー: ユーザーID）
  *
  * @example
  * ```typescript
- * formatMentionsToLinks('@user1 さんと @user2 へ')
- * // → '<a href="/users/search?q=user1">@user1</a> さんと <a href="/users/search?q=user2">@user2</a> へ'
+ * const userIds = extractMentionIds(post.content)
+ * const users = await resolveMentionUsers(userIds)
+ * // users.get('cl123') → { id: 'cl123', nickname: 'john', avatarUrl: '...' }
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- 将来のUI表示用に保持
-function formatMentionsToLinks(text: string): string {
-  if (!text) return ''
+export async function resolveMentionUsers(userIds: string[]): Promise<Map<string, {
+  id: string
+  nickname: string
+  avatarUrl: string | null
+}>> {
+  if (!userIds || userIds.length === 0) {
+    return new Map()
+  }
 
-  /**
-   * 正規表現で置換
-   *
-   * encodeURIComponent でURLエンコード
-   */
-  return text.replace(MENTION_REGEX, (match: string, username: string) => {
-    return `<a href="/users/search?q=${encodeURIComponent(username)}" class="text-primary hover:underline">${match}</a>`
-  })
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: userIds },
+        isSuspended: false,
+      },
+      select: {
+        id: true,
+        nickname: true,
+        avatarUrl: true,
+      },
+    })
+
+    const userMap = new Map<string, {
+      id: string
+      nickname: string
+      avatarUrl: string | null
+    }>()
+
+    for (const user of users) {
+      userMap.set(user.id, user)
+    }
+
+    return userMap
+  } catch (error) {
+    logger.error('Resolve mention users error:', error)
+    return new Map()
+  }
 }
+
 
 // ============================================================
 // 最近メンションしたユーザー取得
@@ -383,8 +353,8 @@ function formatMentionsToLinks(text: string): string {
  *
  * ## 処理フロー
  * 1. 自分の最近の投稿を取得
- * 2. 各投稿からメンションを抽出
- * 3. ユニークなメンションを取得
+ * 2. 各投稿から <@userId> 形式のメンションを抽出
+ * 3. ユニークなユーザーIDを取得
  * 4. ユーザー情報を取得
  *
  * @param limit - 取得件数（デフォルト: 5）
@@ -429,22 +399,22 @@ export async function getRecentMentionedUsers(limit: number = 5) {
   })
 
   // ------------------------------------------------------------
-  // メンションを収集
+  // メンションを収集（<@userId>形式）
   // ------------------------------------------------------------
 
   /**
-   * 各投稿からメンションを抽出して配列に追加
+   * 各投稿からメンションIDを抽出して配列に追加
    */
-  const mentionedNames: string[] = []
+  const mentionedUserIds: string[] = []
   for (const post of recentPosts) {
     if (post.content) {
-      const mentions = extractMentions(post.content)
-      mentionedNames.push(...mentions)
+      const ids = extractMentionIds(post.content)
+      mentionedUserIds.push(...ids)
     }
   }
 
   // ------------------------------------------------------------
-  // ユニークなメンションを取得
+  // ユニークなユーザーIDを取得
   // ------------------------------------------------------------
 
   /**
@@ -452,9 +422,9 @@ export async function getRecentMentionedUsers(limit: number = 5) {
    *
    * 最初に出現したものが優先される
    */
-  const uniqueMentions = [...new Set(mentionedNames)].slice(0, limit)
+  const uniqueUserIds = [...new Set(mentionedUserIds)].slice(0, limit)
 
-  if (uniqueMentions.length === 0) return []
+  if (uniqueUserIds.length === 0) return []
 
   // ------------------------------------------------------------
   // ユーザー情報を取得
@@ -462,7 +432,7 @@ export async function getRecentMentionedUsers(limit: number = 5) {
 
   const users = await prisma.user.findMany({
     where: {
-      nickname: { in: uniqueMentions, mode: 'insensitive' },
+      id: { in: uniqueUserIds },
       isSuspended: false,
     },
     select: {

@@ -92,6 +92,7 @@ import { DeletePostButton } from './DeletePostButton'
 import { LikeButton } from './LikeButton'
 import { BookmarkButton } from './BookmarkButton'
 import { ReportButton } from '@/components/report/ReportButton'
+import { parseContentSegments, type ContentSegment } from '@/lib/mention-utils'
 
 // ============================================================
 // 型定義
@@ -191,6 +192,17 @@ type Post = {
 }
 
 /**
+ * メンションユーザー情報の型
+ *
+ * メンションを表示する際に必要なユーザー情報。
+ */
+type MentionUser = {
+  id: string
+  nickname: string
+  avatarUrl: string | null
+}
+
+/**
  * PostCardコンポーネントのProps
  */
 type PostCardProps = {
@@ -204,6 +216,8 @@ type PostCardProps = {
   initialBookmarked?: boolean
   /** クリックによるナビゲーションを無効化（モーダル内などで使用） */
   disableNavigation?: boolean
+  /** メンションユーザー情報（キー: ユーザーID） */
+  mentionUsers?: Map<string, MentionUser>
 }
 
 // ============================================================
@@ -310,7 +324,7 @@ const CONTENT_TRUNCATE_LENGTH = 150
  * - カード全体のクリック: 投稿詳細ページへ遷移
  * - リンク/ボタンのクリック: e.stopPropagation()でバブリング停止
  */
-export function PostCard({ post, currentUserId, initialLiked, initialBookmarked, disableNavigation = false }: PostCardProps) {
+export function PostCard({ post, currentUserId, initialLiked, initialBookmarked, disableNavigation = false, mentionUsers = new Map() }: PostCardProps) {
   // ------------------------------------------------------------
   // フックとステート
   // ------------------------------------------------------------
@@ -371,40 +385,53 @@ export function PostCard({ post, currentUserId, initialLiked, initialBookmarked,
   // ------------------------------------------------------------
 
   /**
-   * ハッシュタグをリンク化する関数
+   * メンションとハッシュタグをリンク化する関数
    *
    * ## 処理内容
-   * 1. 正規表現でハッシュタグを分割
-   * 2. ハッシュタグ部分はLinkコンポーネントに変換
-   * 3. それ以外はそのままテキストとして表示
+   * 1. parseContentSegments でテキスト/メンション/ハッシュタグに分割
+   * 2. メンション: <@userId> 形式 → @nickname としてリンク表示
+   * 3. ハッシュタグ: #tag → 検索リンク表示
+   * 4. テキスト: そのまま表示
    *
-   * ## 正規表現の解説
-   * /(#[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+)/g
-   * - #: ハッシュ記号
-   * - \w: 英数字とアンダースコア
-   * - \u3040-\u309F: ひらがな
-   * - \u30A0-\u30FF: カタカナ
-   * - \u4E00-\u9FAF: 漢字
+   * ## メンション形式
+   * - 保存形式: `<@userId>` （例: `<@clxxxxxxxxxx>`）
+   * - 表示形式: `@nickname` （クリックでユーザーページへ）
    *
    * @param content - 本文
    * @returns React要素の配列
    */
   function renderContent(content: string) {
-    const parts = content.split(/(#[\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+)/g)
-    return parts.map((part, i) => {
-      if (part.startsWith('#')) {
-        return (
-          <Link
-            key={i}
-            href={`/search?q=${encodeURIComponent(part)}`}
-            className="text-bonsai-green hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {part}
-          </Link>
-        )
+    const segments: ContentSegment[] = parseContentSegments(content)
+
+    return segments.map((segment, i) => {
+      switch (segment.type) {
+        case 'mention': {
+          const user = mentionUsers.get(segment.userId)
+          return (
+            <Link
+              key={i}
+              href={`/users/${segment.userId}`}
+              className="text-primary hover:underline font-medium"
+              onClick={(e) => e.stopPropagation()}
+            >
+              @{user?.nickname || 'unknown'}
+            </Link>
+          )
+        }
+        case 'hashtag':
+          return (
+            <Link
+              key={i}
+              href={`/search?q=${encodeURIComponent(segment.tag)}`}
+              className="text-bonsai-green hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {segment.tag}
+            </Link>
+          )
+        default:
+          return <span key={i}>{segment.content}</span>
       }
-      return part
     })
   }
 

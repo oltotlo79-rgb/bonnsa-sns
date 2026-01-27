@@ -92,7 +92,7 @@ describe('Mention Actions', () => {
   // ============================================================
 
   describe('notifyMentionedUsers', () => {
-    it('メンションされたユーザーに通知を送信する', async () => {
+    it('メンションされたユーザーに通知を送信する（<@userId>形式）', async () => {
       const mockUsers = [
         { id: 'mentioned-user-1' },
         { id: 'mentioned-user-2' },
@@ -101,7 +101,8 @@ describe('Mention Actions', () => {
       mockPrisma.notification.createMany.mockResolvedValueOnce({ count: 2 })
 
       const { notifyMentionedUsers } = await import('@/lib/actions/mention')
-      await notifyMentionedUsers(mockPost.id, '@user1 @user2 こんにちは', mockUser.id)
+      // 新形式: <@userId>
+      await notifyMentionedUsers(mockPost.id, '<@mentioned-user-1> <@mentioned-user-2> こんにちは', mockUser.id)
 
       expect(mockPrisma.notification.createMany).toHaveBeenCalledWith({
         data: expect.arrayContaining([
@@ -131,11 +132,20 @@ describe('Mention Actions', () => {
       expect(mockPrisma.notification.createMany).not.toHaveBeenCalled()
     })
 
+    it('旧形式の@mentionはメンションとして認識しない', async () => {
+      const { notifyMentionedUsers } = await import('@/lib/actions/mention')
+      // 旧形式: @nickname（新システムでは認識しない）
+      await notifyMentionedUsers(mockPost.id, '@nonexistent_user こんにちは', mockUser.id)
+
+      expect(mockPrisma.user.findMany).not.toHaveBeenCalled()
+      expect(mockPrisma.notification.createMany).not.toHaveBeenCalled()
+    })
+
     it('該当ユーザーが見つからない場合、通知を送信しない', async () => {
       mockPrisma.user.findMany.mockResolvedValueOnce([])
 
       const { notifyMentionedUsers } = await import('@/lib/actions/mention')
-      await notifyMentionedUsers(mockPost.id, '@nonexistent_user こんにちは', mockUser.id)
+      await notifyMentionedUsers(mockPost.id, '<@nonexistent-user> こんにちは', mockUser.id)
 
       expect(mockPrisma.notification.createMany).not.toHaveBeenCalled()
     })
@@ -144,22 +154,23 @@ describe('Mention Actions', () => {
       mockPrisma.user.findMany.mockRejectedValueOnce(new Error('Database error'))
 
       const { notifyMentionedUsers } = await import('@/lib/actions/mention')
-      await expect(notifyMentionedUsers(mockPost.id, '@user1', mockUser.id)).resolves.not.toThrow()
+      await expect(notifyMentionedUsers(mockPost.id, '<@user1>', mockUser.id)).resolves.not.toThrow()
     })
 
     it('重複するメンションは1回だけ通知する', async () => {
-      const mockUsers = [{ id: 'mentioned-user-1' }]
+      const mockUsers = [{ id: 'user1' }]
       mockPrisma.user.findMany.mockResolvedValueOnce(mockUsers)
       mockPrisma.notification.createMany.mockResolvedValueOnce({ count: 1 })
 
       const { notifyMentionedUsers } = await import('@/lib/actions/mention')
-      await notifyMentionedUsers(mockPost.id, '@user1 @User1 @USER1 こんにちは', mockUser.id)
+      // 同じIDへの重複メンション
+      await notifyMentionedUsers(mockPost.id, '<@user1> <@user1> <@user1> こんにちは', mockUser.id)
 
-      // 重複が除去されてuser.findManyが呼ばれる
+      // 重複が除去されてuser.findManyが呼ばれる（IDベース）
       expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            nickname: { in: ['user1'], mode: 'insensitive' },
+            id: { in: ['user1'] },
           }),
         })
       )
@@ -171,10 +182,10 @@ describe('Mention Actions', () => {
   // ============================================================
 
   describe('getRecentMentionedUsers', () => {
-    it('最近メンションしたユーザーを取得できる', async () => {
+    it('最近メンションしたユーザーを取得できる（<@userId>形式）', async () => {
       const mockPosts = [
-        { content: '@user1 こんにちは' },
-        { content: '@user2 @user3 返信' },
+        { content: '<@user-1> こんにちは' },
+        { content: '<@user-2> <@user-3> 返信' },
       ]
       const mockUsers = [
         { id: 'user-1', nickname: 'user1', avatarUrl: '/avatar1.jpg' },
@@ -218,26 +229,96 @@ describe('Mention Actions', () => {
       expect(mockPrisma.user.findMany).not.toHaveBeenCalled()
     })
 
+    it('旧形式の@mentionは認識しない', async () => {
+      mockPrisma.post.findMany.mockResolvedValueOnce([
+        { content: '@user1 @user2 旧形式' },
+      ])
+
+      const { getRecentMentionedUsers } = await import('@/lib/actions/mention')
+      const result = await getRecentMentionedUsers()
+
+      expect(result).toEqual([])
+      expect(mockPrisma.user.findMany).not.toHaveBeenCalled()
+    })
+
     it('指定した件数で取得できる', async () => {
       mockPrisma.post.findMany.mockResolvedValueOnce([
-        { content: '@user1 @user2 @user3 @user4 @user5 @user6' },
+        { content: '<@user1> <@user2> <@user3> <@user4> <@user5> <@user6>' },
       ])
       mockPrisma.user.findMany.mockResolvedValueOnce([
-        { id: 'user-1', nickname: 'user1', avatarUrl: null },
-        { id: 'user-2', nickname: 'user2', avatarUrl: null },
-        { id: 'user-3', nickname: 'user3', avatarUrl: null },
+        { id: 'user1', nickname: 'user1', avatarUrl: null },
+        { id: 'user2', nickname: 'user2', avatarUrl: null },
+        { id: 'user3', nickname: 'user3', avatarUrl: null },
       ])
 
       const { getRecentMentionedUsers } = await import('@/lib/actions/mention')
       await getRecentMentionedUsers(3)
 
+      // IDベースで検索される
       expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            nickname: { in: ['user1', 'user2', 'user3'], mode: 'insensitive' },
+            id: { in: ['user1', 'user2', 'user3'] },
           }),
         })
       )
+    })
+  })
+
+  // ============================================================
+  // resolveMentionUsers
+  // ============================================================
+
+  describe('resolveMentionUsers', () => {
+    it('ユーザーIDからユーザー情報を解決できる', async () => {
+      const mockUsers = [
+        { id: 'user-1', nickname: 'user1', avatarUrl: '/avatar1.jpg' },
+        { id: 'user-2', nickname: 'user2', avatarUrl: null },
+      ]
+      mockPrisma.user.findMany.mockResolvedValueOnce(mockUsers)
+
+      const { resolveMentionUsers } = await import('@/lib/actions/mention')
+      const result = await resolveMentionUsers(['user-1', 'user-2'])
+
+      expect(result.get('user-1')).toEqual({
+        id: 'user-1',
+        nickname: 'user1',
+        avatarUrl: '/avatar1.jpg',
+      })
+      expect(result.get('user-2')).toEqual({
+        id: 'user-2',
+        nickname: 'user2',
+        avatarUrl: null,
+      })
+    })
+
+    it('空の配列の場合、空のMapを返す', async () => {
+      const { resolveMentionUsers } = await import('@/lib/actions/mention')
+      const result = await resolveMentionUsers([])
+
+      expect(result.size).toBe(0)
+    })
+
+    it('存在しないユーザーIDはMapに含まれない', async () => {
+      mockPrisma.user.findMany.mockResolvedValueOnce([
+        { id: 'user-1', nickname: 'user1', avatarUrl: null },
+      ])
+
+      const { resolveMentionUsers } = await import('@/lib/actions/mention')
+      const result = await resolveMentionUsers(['user-1', 'nonexistent'])
+
+      expect(result.size).toBe(1)
+      expect(result.get('user-1')).toBeDefined()
+      expect(result.get('nonexistent')).toBeUndefined()
+    })
+
+    it('エラーが発生した場合、空のMapを返す', async () => {
+      mockPrisma.user.findMany.mockRejectedValueOnce(new Error('Database error'))
+
+      const { resolveMentionUsers } = await import('@/lib/actions/mention')
+      const result = await resolveMentionUsers(['user-1'])
+
+      expect(result.size).toBe(0)
     })
   })
 })
