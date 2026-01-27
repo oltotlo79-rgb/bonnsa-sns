@@ -71,6 +71,9 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:ci
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+          TWO_FACTOR_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -109,6 +112,7 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
           NEXTAUTH_SECRET: "build-time-secret"
           NEXTAUTH_URL: "http://localhost:3000"
+          TWO_FACTOR_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
   # ===========================================
   # E2E Tests (一時的に無効化 - 手動実行推奨)
@@ -165,6 +169,7 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
           NEXTAUTH_SECRET: "e2e-test-secret"
           NEXTAUTH_URL: "http://localhost:3000"
+          TWO_FACTOR_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
       - name: Run E2E tests
         run: npx playwright test --project=chromium
@@ -173,6 +178,7 @@ jobs:
           NEXTAUTH_SECRET: "e2e-test-secret"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+          TWO_FACTOR_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         timeout-minutes: 15
 
       - name: Upload Playwright report
