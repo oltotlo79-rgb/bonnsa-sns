@@ -116,6 +116,37 @@ jest.mock('@/lib/actions/auth', () => ({
   clearLoginAttempts: jest.fn().mockResolvedValue(undefined),
 }))
 
+/**
+ * 2段階認証関連のServer Actionsのモック
+ * ----------------------------------------------------------------------------
+ * 2FAのチェックと検証をモック。
+ * テストではデフォルトで2FAを無効にする。
+ */
+jest.mock('@/lib/actions/two-factor', () => ({
+  // 2FAは不要として扱う
+  check2FARequired: jest.fn().mockResolvedValue({ required: false }),
+  // 2FA検証は成功として扱う
+  verify2FAToken: jest.fn().mockResolvedValue({ success: true }),
+}))
+
+/**
+ * デバイスフィンガープリント取得のモック
+ * ----------------------------------------------------------------------------
+ * FingerprintJSの呼び出しをモック。
+ */
+jest.mock('@/lib/fingerprint', () => ({
+  getFingerprintWithCache: jest.fn().mockResolvedValue('mock-fingerprint-123'),
+}))
+
+/**
+ * ブラックリスト関連のServer Actionsのモック
+ * ----------------------------------------------------------------------------
+ * デバイスブラックリストチェックをモック。
+ */
+jest.mock('@/lib/actions/blacklist', () => ({
+  isDeviceBlacklisted: jest.fn().mockResolvedValue(false),
+}))
+
 // ============================================================================
 // テストスイート
 // ============================================================================

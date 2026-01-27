@@ -60,6 +60,8 @@
 | NextAuth.js v5 | 認証 |
 | Prisma | ORM |
 | Zod | バリデーション |
+| otplib | TOTP（2段階認証） |
+| FingerprintJS | デバイス識別 |
 
 ### 2.3 インフラストラクチャ
 
@@ -92,14 +94,21 @@
 
 #### 3.1.1 ユーザー登録
 - メールアドレス + パスワードによる登録
-- パスワード要件: 8文字以上
+- パスワード要件:
+  - 8文字以上
+  - アルファベット（a-z, A-Z）を1文字以上含む
+  - 数字（0-9）を1文字以上含む
 - パスワードはbcryptでハッシュ化（ソルトラウンド10）
+- メールアドレスブラックリストチェック
+- デバイスフィンガープリントブラックリストチェック
 
 #### 3.1.2 ログイン
 - メールアドレス + パスワード認証
 - NextAuth.js (Auth.js v5) によるセッション管理
 - JWT戦略によるセッショントークン
 - ログイン履歴の記録（IPアドレス、ユーザーエージェント、成功/失敗）
+- デバイスフィンガープリントブラックリストチェック
+- 2段階認証（TOTP）対応（有効化している場合）
 
 #### 3.1.3 セキュリティ対策
 - ブルートフォース攻撃対策（Upstash Redisによるレート制限）
@@ -110,6 +119,28 @@
   - 1時間の有効期限
   - メールによるリセットリンク送信
   - IPベースのレート制限（1時間に3回まで）
+
+#### 3.1.4 2段階認証（TOTP）
+- Google Authenticator等のTOTPアプリ対応
+- QRコードによるセットアップ
+- 6桁の認証コード（30秒ごとに更新）
+- バックアップコード（8桁 × 10個）
+  - SHA-256ハッシュ化して保存
+  - 使用済みコードは無効化
+- TOTPシークレットはAES-256-GCMで暗号化して保存
+- 設定ページ: `/settings/security`
+
+#### 3.1.5 ブラックリスト機能
+- **メールアドレスブラックリスト**
+  - 登録禁止メールアドレスの管理
+  - 管理者が追加/削除可能
+  - 理由の記録
+
+- **デバイスフィンガープリントブラックリスト**
+  - FingerprintJSによるデバイス識別
+  - 不正利用デバイスのブロック
+  - 関連メールアドレスの記録
+  - 登録時・ログイン時にチェック
 
 ### 3.2 投稿機能
 
@@ -428,6 +459,17 @@
 - アクション種別でのフィルタリング
 - 日時、実行者、理由の記録
 
+#### 3.13.7 ブラックリスト管理
+- メールアドレスブラックリスト
+  - 一覧表示（検索、ページネーション）
+  - 追加（メールアドレス、理由）
+  - 削除
+- デバイスブラックリスト
+  - 一覧表示（検索、ページネーション）
+  - 追加（フィンガープリント、関連メール、理由）
+  - 削除
+- 管理画面: `/admin/blacklist`
+
 ### 3.14 広告機能（Google AdSense）
 
 #### 3.14.1 実装状況
@@ -459,12 +501,19 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 #### ユーザー関連
 | テーブル | 説明 |
 |---------|------|
-| users | ユーザー情報 |
+| users | ユーザー情報（2FAフィールド含む） |
 | follows | フォロー関係 |
 | follow_requests | フォローリクエスト |
 | blocks | ブロック関係 |
 | mutes | ミュート関係 |
 | login_histories | ログイン履歴 |
+| user_devices | ユーザーのデバイス情報 |
+
+#### セキュリティ関連
+| テーブル | 説明 |
+|---------|------|
+| email_blacklist | メールアドレスブラックリスト |
+| device_blacklist | デバイスフィンガープリントブラックリスト |
 
 #### 投稿関連
 | テーブル | 説明 |
@@ -535,12 +584,38 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 
 | 関数 | 説明 |
 |------|------|
-| `registerUser` | ユーザー登録 |
+| `registerUser` | ユーザー登録（ブラックリストチェック含む） |
 | `checkLoginAllowed` | ログイン許可チェック |
 | `recordLoginFailure` | ログイン失敗記録 |
 | `clearLoginAttempts` | 失敗カウントクリア |
 | `requestPasswordReset` | パスワードリセット要求（レート制限付き） |
 | `resetPassword` | パスワードリセット実行 |
+
+### 5.1.1 2段階認証 API
+
+| 関数 | 説明 |
+|------|------|
+| `setup2FA` | 2FAセットアップ開始（QRコード生成） |
+| `enable2FA` | 2FA有効化（TOTP検証後） |
+| `disable2FA` | 2FA無効化（パスワード確認） |
+| `verify2FAToken` | ログイン時の2FA検証 |
+| `check2FARequired` | 2FA必要性チェック |
+| `regenerateBackupCodes` | バックアップコード再生成 |
+| `get2FAStatus` | 2FA状態取得 |
+
+### 5.1.2 ブラックリスト API
+
+| 関数 | 説明 |
+|------|------|
+| `addEmailToBlacklist` | メールアドレスをブラックリストに追加 |
+| `removeEmailFromBlacklist` | メールアドレスをブラックリストから削除 |
+| `getEmailBlacklist` | メールブラックリスト一覧取得 |
+| `isEmailBlacklisted` | メールアドレスのブラックリストチェック |
+| `addDeviceToBlacklist` | デバイスをブラックリストに追加 |
+| `removeDeviceFromBlacklist` | デバイスをブラックリストから削除 |
+| `getDeviceBlacklist` | デバイスブラックリスト一覧取得 |
+| `isDeviceBlacklisted` | デバイスのブラックリストチェック |
+| `recordUserDevice` | ユーザーのデバイス情報を記録 |
 
 ### 5.2 投稿 API
 
@@ -676,6 +751,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `/settings` | 設定メニュー |
 | `/settings/profile` | プロフィール編集 |
 | `/settings/account` | アカウント設定 |
+| `/settings/security` | セキュリティ設定（2FA） |
 | `/settings/subscription` | プレミアム会員 |
 | `/settings/blocked` | ブロック一覧 |
 | `/settings/muted` | ミュート一覧 |
@@ -691,6 +767,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `/admin/events` | イベント管理 |
 | `/admin/shops` | 盆栽園管理 |
 | `/admin/reports` | 通報管理 |
+| `/admin/blacklist` | ブラックリスト管理 |
 | `/admin/logs` | 管理者ログ |
 
 ### 6.8 静的ページ
@@ -717,6 +794,8 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 ### 7.2 データ保護
 - パスワード: bcryptハッシュ化（ソルトラウンド10）
 - リセットトークン: SHA-256ハッシュ化
+- 2FAシークレット: AES-256-GCM暗号化
+- 2FAバックアップコード: SHA-256ハッシュ化
 - SQLインジェクション対策: Prismaによるパラメータ化クエリ
 - XSS対策: HTMLサニタイズ（sanitize.ts）
 
@@ -725,6 +804,9 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 - パスワードリセットレート制限（1時間に3回）
 - 管理者権限の分離
 - 自分のコンテンツのみ編集/削除可能
+- 2段階認証（TOTP）によるアカウント保護
+- メールアドレスブラックリストによる登録制限
+- デバイスフィンガープリントブラックリストによるアクセス制限
 
 ### 7.4 ファイルアップロードセキュリティ
 - ファイルシグネチャ（マジックバイト）検証
@@ -874,6 +956,9 @@ UPSTASH_REDIS_REST_TOKEN="..."
 # エラー監視（Sentry）
 SENTRY_DSN="https://..."
 NEXT_PUBLIC_SENTRY_DSN="https://..."
+
+# 2段階認証
+TWO_FACTOR_ENCRYPTION_KEY="..."  # 32バイトのhex文字列（node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"で生成）
 ```
 
 ### 12.2 オプション環境変数
@@ -929,3 +1014,4 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="..."
 | 2025-01-19 | 実装状況に基づき全面改訂 |
 | 2025-01-21 | 独自ドメイン(bon-log.com)設定、特定商取引法ページ追加 |
 | 2026-01-26 | セキュリティ機能追加（ファイル検証、レート制限、サニタイズ等）、AdSense実装、フォローリクエスト機能、SEO対策、About/Contactページ追加、テスト構成追加 |
+| 2026-01-27 | パスワードポリシー強化（英数字必須）、2段階認証（TOTP）実装、メールアドレス/デバイスブラックリスト機能追加 |
