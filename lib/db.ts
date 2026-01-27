@@ -77,6 +77,12 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient }
 // ============================================================
 
 /**
+ * CI/テスト環境かどうかを判定
+ * ダミーのDATABASE_URLの場合は実際の接続を行わない
+ */
+const isDummyDatabase = process.env.DATABASE_URL?.includes('dummy') || false
+
+/**
  * PostgreSQLの接続プールを作成
  *
  * ## 接続プールとは？
@@ -90,8 +96,11 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient }
  * - ssl: SSL/TLS接続の設定
  *   - 本番環境: { rejectUnauthorized: false } で自己署名証明書を許可
  *   - 開発環境: false でSSLを無効化（ローカルDBは通常SSLなし）
+ *
+ * ## CI環境での動作
+ * ダミーのDATABASE_URLの場合は、Poolを作成しない（テスト用モックを使用）
  */
-const pool = new Pool({
+const pool = isDummyDatabase ? null : new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 })
@@ -99,8 +108,9 @@ const pool = new Pool({
 /**
  * PrismaとPostgreSQLを接続するアダプターを作成
  * Prisma 5以降、PostgreSQLへの接続にはこのアダプターが必須
+ * CI環境ではnullになる（PrismaClientはアダプターなしで作成）
  */
-const adapter = new PrismaPg(pool)
+const adapter = pool ? new PrismaPg(pool) : null
 
 // ============================================================
 // PrismaClientのエクスポート
@@ -123,11 +133,15 @@ const adapter = new PrismaPg(pool)
  * - log: ログ出力の設定
  *   - 開発環境: ['query', 'error', 'warn'] - 詳細なログを出力
  *   - 本番環境: ['error'] - エラーのみ出力（パフォーマンス優先）
+ *
+ * ## CI環境での動作
+ * ダミーのDATABASE_URLの場合は、アダプターなしでPrismaClientを作成
+ * （テストではモックが使用されるため、実際の接続は不要）
  */
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    adapter: adapter, // ここでアダプターを渡すのが必須になりました
+    ...(adapter && { adapter }), // アダプターがある場合のみ渡す
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 
