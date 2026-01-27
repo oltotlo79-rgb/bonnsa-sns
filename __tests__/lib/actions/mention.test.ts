@@ -65,7 +65,29 @@ describe('Mention Actions', () => {
       expect(result).toEqual([])
     })
 
-    it('空のクエリの場合、空配列を返す', async () => {
+    it('空のクエリの場合、フォロー中ユーザーを返す', async () => {
+      mockPrisma.follow.findMany.mockResolvedValueOnce([
+        { followingId: 'following-user-1' },
+      ])
+      mockPrisma.user.findMany.mockResolvedValueOnce([
+        { id: 'following-user-1', nickname: 'followingUser', avatarUrl: null },
+      ])
+
+      const { searchMentionUsers } = await import('@/lib/actions/mention')
+      const result = await searchMentionUsers('')
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({
+        id: 'following-user-1',
+        nickname: 'followingUser',
+        isFollowing: true,
+      })
+    })
+
+    it('空のクエリでフォロー中ユーザーがいない場合、空配列を返す', async () => {
+      mockPrisma.follow.findMany.mockResolvedValueOnce([])
+      mockPrisma.user.findMany.mockResolvedValueOnce([])
+
       const { searchMentionUsers } = await import('@/lib/actions/mention')
       const result = await searchMentionUsers('')
 

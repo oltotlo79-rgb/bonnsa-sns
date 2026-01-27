@@ -101,12 +101,6 @@ export async function searchMentionUsers(query: string, limit: number = 10) {
   }
 
   // ------------------------------------------------------------
-  // クエリのバリデーション
-  // ------------------------------------------------------------
-
-  if (!query || query.length < 1) return []
-
-  // ------------------------------------------------------------
   // フォロー中のユーザーIDを取得
   // ------------------------------------------------------------
 
@@ -129,19 +123,26 @@ export async function searchMentionUsers(query: string, limit: number = 10) {
   // ------------------------------------------------------------
 
   /**
-   * ニックネームまたはメールアドレスで検索
+   * クエリが空の場合はフォロー中ユーザーのみ、
+   * そうでなければニックネームまたはメールアドレスで検索
    *
    * - OR: いずれかの条件にマッチ
    * - mode: 'insensitive': 大文字小文字を区別しない
    * - isSuspended: false: 停止中のユーザーを除外
    * - id: { not: ... }: 自分を除外
    */
+  const isEmptyQuery = !query || query.length === 0
+
   const users = await prisma.user.findMany({
     where: {
-      OR: [
-        { nickname: { contains: query, mode: 'insensitive' } },
-        { email: { startsWith: query, mode: 'insensitive' } },
-      ],
+      ...(isEmptyQuery
+        ? { id: { in: [...followingIdSet] } }  // 空クエリ: フォロー中のみ
+        : {
+            OR: [
+              { nickname: { contains: query, mode: 'insensitive' } },
+              { email: { startsWith: query, mode: 'insensitive' } },
+            ],
+          }),
       isSuspended: false,
       id: { not: session.user.id },
     },

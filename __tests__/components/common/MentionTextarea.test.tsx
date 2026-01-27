@@ -385,7 +385,11 @@ describe('MentionTextarea', () => {
   // ============================================================
 
   describe('エッジケース', () => {
-    it('空クエリでは検索しない', async () => {
+    it('@だけ入力するとフォロー中ユーザーを検索する', async () => {
+      mockSearchMentionUsers.mockResolvedValue([
+        { id: 'following-1', nickname: 'followingUser', avatarUrl: null, isFollowing: true },
+      ])
+
       render(<MentionTextarea {...defaultProps} />)
 
       const textarea = screen.getByPlaceholderText('テスト入力')
@@ -395,7 +399,7 @@ describe('MentionTextarea', () => {
         jest.advanceTimersByTime(400)
       })
 
-      expect(mockSearchMentionUsers).not.toHaveBeenCalled()
+      expect(mockSearchMentionUsers).toHaveBeenCalledWith('', 8)
     })
 
     it('@の後にスペースがある場合は検索しない', async () => {

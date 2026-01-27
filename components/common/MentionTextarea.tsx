@@ -146,14 +146,9 @@ export function MentionTextarea({
 
   /**
    * メンション候補を検索
+   * 空のクエリの場合はフォロー中ユーザーを表示
    */
   const searchUsers = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < 1) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
-
     setIsLoading(true)
 
     try {
