@@ -36,6 +36,7 @@ import { toggleFollow } from '@/lib/actions/follow'
 import { sendFollowRequest, cancelFollowRequest } from '@/lib/actions/follow-request'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
+import { useQueryClient } from '@tanstack/react-query'
 
 // ============================================================
 // 型定義
@@ -128,6 +129,7 @@ export function FollowButton({
 
   const router = useRouter()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // ------------------------------------------------------------
   // イベントハンドラ
@@ -153,10 +155,12 @@ export function FollowButton({
           variant: 'destructive',
         })
       }
+    } else {
+      // 成功時: React Queryキャッシュを無効化（タイムラインを更新）
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    router.refresh()
   }
 
   /**
@@ -184,10 +188,11 @@ export function FollowButton({
         title: 'リクエストを送信しました',
         description: '相手の承認をお待ちください',
       })
+      // 成功時: React Queryキャッシュを無効化
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    router.refresh()
   }
 
   /**
@@ -210,10 +215,11 @@ export function FollowButton({
       toast({
         title: 'リクエストをキャンセルしました',
       })
+      // 成功時: React Queryキャッシュを無効化
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    router.refresh()
   }
 
   /**

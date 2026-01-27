@@ -73,7 +73,7 @@ import { muteUser, unmuteUser } from '@/lib/actions/mute'
 
 /**
  * Next.js useRouter Hook
- * 操作後にページをリフレッシュして最新状態を反映するために使用
+ * 認証エラー時のリダイレクトに使用
  */
 import { useRouter } from 'next/navigation'
 
@@ -82,6 +82,12 @@ import { useRouter } from 'next/navigation'
  * 操作結果（成功/エラー）をユーザーに通知
  */
 import { useToast } from '@/hooks/use-toast'
+
+/**
+ * React QueryのuseQueryClientフック
+ * 操作成功時にタイムラインキャッシュを無効化
+ */
+import { useQueryClient } from '@tanstack/react-query'
 
 // ============================================================
 // 型定義
@@ -169,7 +175,7 @@ export function MuteButton({
 
   /**
    * Next.jsルーター
-   * 操作後にページをリフレッシュするために使用
+   * 認証エラー時のリダイレクトに使用
    */
   const router = useRouter()
 
@@ -178,6 +184,12 @@ export function MuteButton({
    * 操作結果をユーザーに通知
    */
   const { toast } = useToast()
+
+  /**
+   * React Queryクライアント
+   * タイムラインキャッシュの無効化に使用
+   */
+  const queryClient = useQueryClient()
 
   // ------------------------------------------------------------
   // イベントハンドラ
@@ -218,11 +230,11 @@ export function MuteButton({
         title: 'ミュートしました',
         description: `${nickname}さんをミュートしました`,
       })
+      // React Queryキャッシュを無効化（タイムラインからミュートユーザーの投稿を除外）
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    // ページをリフレッシュして最新状態を反映
-    router.refresh()
   }
 
   /**
@@ -259,11 +271,11 @@ export function MuteButton({
         title: 'ミュートを解除しました',
         description: `${nickname}さんのミュートを解除しました`,
       })
+      // React Queryキャッシュを無効化（タイムラインにミュート解除ユーザーの投稿を表示）
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    // ページをリフレッシュして最新状態を反映
-    router.refresh()
   }
 
   // ------------------------------------------------------------

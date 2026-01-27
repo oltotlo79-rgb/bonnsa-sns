@@ -70,7 +70,7 @@ import { blockUser, unblockUser } from '@/lib/actions/block'
 
 /**
  * Next.js useRouter Hook
- * 操作後にページをリフレッシュして最新状態を反映するために使用
+ * 認証エラー時のリダイレクトに使用
  */
 import { useRouter } from 'next/navigation'
 
@@ -79,6 +79,12 @@ import { useRouter } from 'next/navigation'
  * 操作結果（成功/エラー）をユーザーに通知
  */
 import { useToast } from '@/hooks/use-toast'
+
+/**
+ * React QueryのuseQueryClientフック
+ * 操作成功時にタイムラインキャッシュを無効化
+ */
+import { useQueryClient } from '@tanstack/react-query'
 
 // ============================================================
 // 型定義
@@ -166,7 +172,7 @@ export function BlockButton({
 
   /**
    * Next.jsルーター
-   * 操作後にページをリフレッシュするために使用
+   * 認証エラー時のリダイレクトに使用
    */
   const router = useRouter()
 
@@ -175,6 +181,12 @@ export function BlockButton({
    * 操作結果をユーザーに通知
    */
   const { toast } = useToast()
+
+  /**
+   * React Queryクライアント
+   * タイムラインキャッシュの無効化に使用
+   */
+  const queryClient = useQueryClient()
 
   // ------------------------------------------------------------
   // イベントハンドラ
@@ -215,11 +227,11 @@ export function BlockButton({
         title: 'ブロックしました',
         description: `${nickname}さんをブロックしました`,
       })
+      // React Queryキャッシュを無効化（タイムラインからブロックユーザーの投稿を除外）
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    // ページをリフレッシュして最新状態を反映
-    router.refresh()
   }
 
   /**
@@ -256,11 +268,11 @@ export function BlockButton({
         title: 'ブロックを解除しました',
         description: `${nickname}さんのブロックを解除しました`,
       })
+      // React Queryキャッシュを無効化
+      queryClient.invalidateQueries({ queryKey: ['timeline'] })
     }
 
     setLoading(false)
-    // ページをリフレッシュして最新状態を反映
-    router.refresh()
   }
 
   // ------------------------------------------------------------

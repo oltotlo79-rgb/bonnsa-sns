@@ -369,19 +369,25 @@ export async function getFollowRequestStatus(targetUserId: string) {
     return { hasRequest: false, status: null }
   }
 
-  const request = await prisma.followRequest.findUnique({
-    where: {
-      requesterId_targetId: {
-        requesterId: session.user.id,
-        targetId: targetUserId,
+  try {
+    const request = await prisma.followRequest.findUnique({
+      where: {
+        requesterId_targetId: {
+          requesterId: session.user.id,
+          targetId: targetUserId,
+        },
       },
-    },
-    select: { status: true },
-  })
+      select: { status: true },
+    })
 
-  return {
-    hasRequest: !!request,
-    status: request?.status || null,
+    return {
+      hasRequest: !!request,
+      status: request?.status || null,
+    }
+  } catch (error) {
+    // テーブルが存在しない場合やデータベースエラー時はデフォルト値を返す
+    console.error('getFollowRequestStatus error:', error)
+    return { hasRequest: false, status: null }
   }
 }
 
@@ -402,38 +408,44 @@ export async function getReceivedFollowRequests(cursor?: string, limit = 20) {
     return { requests: [], nextCursor: undefined }
   }
 
-  const requests = await prisma.followRequest.findMany({
-    where: {
-      targetId: session.user.id,
-      status: 'pending',
-    },
-    include: {
-      requester: {
-        select: {
-          id: true,
-          nickname: true,
-          avatarUrl: true,
-          bio: true,
+  try {
+    const requests = await prisma.followRequest.findMany({
+      where: {
+        targetId: session.user.id,
+        status: 'pending',
+      },
+      include: {
+        requester: {
+          select: {
+            id: true,
+            nickname: true,
+            avatarUrl: true,
+            bio: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    ...(cursor && {
-      cursor: { id: cursor },
-      skip: 1,
-    }),
-  })
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1,
+      }),
+    })
 
-  const hasMore = requests.length === limit
+    const hasMore = requests.length === limit
 
-  return {
-    requests: requests.map((r) => ({
-      id: r.id,
-      user: r.requester,
-      createdAt: r.createdAt,
-    })),
-    nextCursor: hasMore ? requests[requests.length - 1]?.id : undefined,
+    return {
+      requests: requests.map((r) => ({
+        id: r.id,
+        user: r.requester,
+        createdAt: r.createdAt,
+      })),
+      nextCursor: hasMore ? requests[requests.length - 1]?.id : undefined,
+    }
+  } catch (error) {
+    // テーブルが存在しない場合やデータベースエラー時
+    console.error('getReceivedFollowRequests error:', error)
+    return { requests: [], nextCursor: undefined }
   }
 }
 
@@ -454,38 +466,44 @@ export async function getSentFollowRequests(cursor?: string, limit = 20) {
     return { requests: [], nextCursor: undefined }
   }
 
-  const requests = await prisma.followRequest.findMany({
-    where: {
-      requesterId: session.user.id,
-      status: 'pending',
-    },
-    include: {
-      target: {
-        select: {
-          id: true,
-          nickname: true,
-          avatarUrl: true,
-          bio: true,
+  try {
+    const requests = await prisma.followRequest.findMany({
+      where: {
+        requesterId: session.user.id,
+        status: 'pending',
+      },
+      include: {
+        target: {
+          select: {
+            id: true,
+            nickname: true,
+            avatarUrl: true,
+            bio: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    ...(cursor && {
-      cursor: { id: cursor },
-      skip: 1,
-    }),
-  })
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1,
+      }),
+    })
 
-  const hasMore = requests.length === limit
+    const hasMore = requests.length === limit
 
-  return {
-    requests: requests.map((r) => ({
-      id: r.id,
-      user: r.target,
-      createdAt: r.createdAt,
-    })),
-    nextCursor: hasMore ? requests[requests.length - 1]?.id : undefined,
+    return {
+      requests: requests.map((r) => ({
+        id: r.id,
+        user: r.target,
+        createdAt: r.createdAt,
+      })),
+      nextCursor: hasMore ? requests[requests.length - 1]?.id : undefined,
+    }
+  } catch (error) {
+    // テーブルが存在しない場合やデータベースエラー時
+    console.error('getSentFollowRequests error:', error)
+    return { requests: [], nextCursor: undefined }
   }
 }
 
@@ -504,12 +522,18 @@ export async function getPendingFollowRequestCount() {
     return { count: 0 }
   }
 
-  const count = await prisma.followRequest.count({
-    where: {
-      targetId: session.user.id,
-      status: 'pending',
-    },
-  })
+  try {
+    const count = await prisma.followRequest.count({
+      where: {
+        targetId: session.user.id,
+        status: 'pending',
+      },
+    })
 
-  return { count }
+    return { count }
+  } catch (error) {
+    // テーブルが存在しない場合やデータベースエラー時
+    console.error('getPendingFollowRequestCount error:', error)
+    return { count: 0 }
+  }
 }
