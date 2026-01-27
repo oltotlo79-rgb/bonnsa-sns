@@ -32,6 +32,11 @@ jest.mock('@/lib/actions/draft', () => ({
   saveDraft: (...args: unknown[]) => mockSaveDraft(...args),
 }))
 
+// メンション検索モック
+jest.mock('@/lib/actions/mention', () => ({
+  searchMentionUsers: jest.fn().mockResolvedValue([]),
+}))
+
 const mockGenres = {
   '松柏類': [
     { id: 'genre-1', name: '黒松', category: '松柏類' },
@@ -49,7 +54,7 @@ describe('PostForm', () => {
 
   it('投稿フォームを表示する', () => {
     render(<PostForm genres={mockGenres} />)
-    expect(screen.getByPlaceholderText('いまどうしてる？')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '投稿する' })).toBeInTheDocument()
   })
 
@@ -57,7 +62,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    const textarea = screen.getByPlaceholderText('いまどうしてる？')
+    const textarea = screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション')
     await user.type(textarea, 'テスト投稿')
 
     // 500 - 5 = 495
@@ -73,7 +78,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト投稿')
 
     expect(screen.getByRole('button', { name: '投稿する' })).not.toBeDisabled()
   })
@@ -83,7 +88,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト投稿')
     await user.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
@@ -101,7 +106,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト下書き')
     await user.click(screen.getByRole('button', { name: '下書き保存' }))
 
     await waitFor(() => {
@@ -125,7 +130,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト投稿')
     await user.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
@@ -143,7 +148,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト下書き')
     await user.click(screen.getByRole('button', { name: '下書き保存' }))
 
     await waitFor(() => {
@@ -156,7 +161,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    const textarea = screen.getByPlaceholderText('いまどうしてる？')
+    const textarea = screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション')
     await user.type(textarea, 'テスト投稿')
     await user.click(screen.getByRole('button', { name: '投稿する' }))
 
@@ -170,7 +175,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    const textarea = screen.getByPlaceholderText('いまどうしてる？')
+    const textarea = screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション')
     await user.type(textarea, 'テスト下書き')
     await user.click(screen.getByRole('button', { name: '下書き保存' }))
 
@@ -184,7 +189,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト投稿')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト投稿')
     await user.click(screen.getByRole('button', { name: '投稿する' }))
 
     await waitFor(() => {
@@ -199,7 +204,7 @@ describe('PostForm', () => {
     const user = userEvent.setup()
     render(<PostForm genres={mockGenres} />)
 
-    await user.type(screen.getByPlaceholderText('いまどうしてる？'), 'テスト下書き')
+    await user.type(screen.getByPlaceholderText('いまどうしてる？ @でユーザーをメンション'), 'テスト下書き')
     await user.click(screen.getByRole('button', { name: '下書き保存' }))
 
     await waitFor(() => {

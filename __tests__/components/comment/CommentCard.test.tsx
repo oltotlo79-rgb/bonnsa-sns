@@ -375,4 +375,85 @@ describe('CommentCard', () => {
     expect(screen.queryByRole('button', { name: /返信/i })).not.toBeInTheDocument()
   })
 
+  // --------------------------------------------------------------------------
+  // メンション表示テスト
+  // --------------------------------------------------------------------------
+
+  it('メンションがリンクとして表示される', () => {
+    const mentionUsers = new Map([
+      ['user123', { id: 'user123', nickname: 'john', avatarUrl: null }],
+    ])
+    const commentWithMention = {
+      ...mockComment,
+      content: 'Hello <@user123> さん！',
+    }
+    render(
+      <CommentCard
+        comment={commentWithMention}
+        postId="post-1"
+        currentUserId="test-user-id"
+        mentionUsers={mentionUsers}
+      />
+    )
+
+    const mentionLink = screen.getByText('@john')
+    expect(mentionLink.closest('a')).toHaveAttribute('href', '/users/user123')
+  })
+
+  it('存在しないユーザーのメンションは@unknownと表示される', () => {
+    const mentionUsers = new Map<string, { id: string; nickname: string; avatarUrl: string | null }>()
+    const commentWithMention = {
+      ...mockComment,
+      content: 'Hello <@nonexistent> さん！',
+    }
+    render(
+      <CommentCard
+        comment={commentWithMention}
+        postId="post-1"
+        currentUserId="test-user-id"
+        mentionUsers={mentionUsers}
+      />
+    )
+
+    expect(screen.getByText('@unknown')).toBeInTheDocument()
+  })
+
+  it('ハッシュタグがリンクとして表示される', () => {
+    const commentWithHashtag = {
+      ...mockComment,
+      content: '盆栽について #盆栽 のタグで投稿',
+    }
+    render(
+      <CommentCard
+        comment={commentWithHashtag}
+        postId="post-1"
+        currentUserId="test-user-id"
+      />
+    )
+
+    const hashtagLink = screen.getByText('#盆栽')
+    expect(hashtagLink.closest('a')).toHaveAttribute('href', '/search?q=%23%E7%9B%86%E6%A0%BD')
+  })
+
+  it('メンションとハッシュタグが混在するコメントを正しく表示する', () => {
+    const mentionUsers = new Map([
+      ['user1', { id: 'user1', nickname: 'alice', avatarUrl: null }],
+    ])
+    const commentWithMixed = {
+      ...mockComment,
+      content: '<@user1> が #盆栽 について投稿しました',
+    }
+    render(
+      <CommentCard
+        comment={commentWithMixed}
+        postId="post-1"
+        currentUserId="test-user-id"
+        mentionUsers={mentionUsers}
+      />
+    )
+
+    expect(screen.getByText('@alice')).toBeInTheDocument()
+    expect(screen.getByText('#盆栽')).toBeInTheDocument()
+  })
+
 })

@@ -112,6 +112,55 @@ describe('mention-utils', () => {
         { type: 'mention', userId: 'cl456' },
       ])
     })
+
+    it('テキストのみ（メンションもハッシュタグもなし）の場合はtextセグメントを返す', () => {
+      // この場合は218-219行目のパスを通る
+      const result = parseContentSegments('普通のテキストです')
+      expect(result).toEqual([{ type: 'text', content: '普通のテキストです' }])
+    })
+
+    it('メンションで始まるテキストを処理できる', () => {
+      const result = parseContentSegments('<@user1> こんにちは')
+      expect(result).toEqual([
+        { type: 'mention', userId: 'user1' },
+        { type: 'text', content: ' こんにちは' },
+      ])
+    })
+
+    it('ハッシュタグで終わるテキストを処理できる', () => {
+      const result = parseContentSegments('チェック #tag')
+      expect(result).toEqual([
+        { type: 'text', content: 'チェック ' },
+        { type: 'hashtag', tag: '#tag' },
+      ])
+    })
+
+    it('複数のハッシュタグを連続して処理できる', () => {
+      const result = parseContentSegments('#tag1#tag2')
+      expect(result).toEqual([
+        { type: 'hashtag', tag: '#tag1' },
+        { type: 'hashtag', tag: '#tag2' },
+      ])
+    })
+
+    it('メンションとハッシュタグが交互に出現する場合を処理できる', () => {
+      const result = parseContentSegments('<@user1>#tag1<@user2>#tag2')
+      expect(result).toEqual([
+        { type: 'mention', userId: 'user1' },
+        { type: 'hashtag', tag: '#tag1' },
+        { type: 'mention', userId: 'user2' },
+        { type: 'hashtag', tag: '#tag2' },
+      ])
+    })
+
+    it('改行を含むテキストを処理できる', () => {
+      const result = parseContentSegments('Hello\n<@user1>\nWorld')
+      expect(result).toEqual([
+        { type: 'text', content: 'Hello\n' },
+        { type: 'mention', userId: 'user1' },
+        { type: 'text', content: '\nWorld' },
+      ])
+    })
   })
 
   // ============================================================

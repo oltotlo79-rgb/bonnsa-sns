@@ -410,6 +410,104 @@ describe('PostCard', () => {
   })
 
   // --------------------------------------------------------------------------
+  // メンション表示テスト
+  // --------------------------------------------------------------------------
+  /**
+   * テストケース: メンションのリンク表示
+   *
+   * 投稿内の <@userId> 形式のメンションが
+   * @nickname としてリンク表示されることを確認。
+   */
+  it('メンションがリンクとして表示される', () => {
+    const mentionUsers = new Map([
+      ['user123', { id: 'user123', nickname: 'john', avatarUrl: null }],
+    ])
+    const props = {
+      ...defaultProps,
+      post: {
+        ...defaultProps.post,
+        content: 'Hello <@user123> さん！',
+      },
+      mentionUsers,
+    }
+    render(<PostCard {...props} />)
+
+    // @john がリンクとして表示される
+    const mentionLink = screen.getByText('@john')
+    expect(mentionLink.closest('a')).toHaveAttribute('href', '/users/user123')
+  })
+
+  /**
+   * テストケース: 存在しないユーザーのメンション
+   *
+   * mentionUsersに含まれないユーザーIDの場合、
+   * @unknown と表示されることを確認。
+   */
+  it('存在しないユーザーのメンションは@unknownと表示される', () => {
+    const mentionUsers = new Map<string, { id: string; nickname: string; avatarUrl: string | null }>()
+    const props = {
+      ...defaultProps,
+      post: {
+        ...defaultProps.post,
+        content: 'Hello <@nonexistent> さん！',
+      },
+      mentionUsers,
+    }
+    render(<PostCard {...props} />)
+
+    expect(screen.getByText('@unknown')).toBeInTheDocument()
+  })
+
+  /**
+   * テストケース: 複数のメンションとハッシュタグの混在
+   *
+   * メンションとハッシュタグが混在する投稿が
+   * 正しく表示されることを確認。
+   */
+  it('複数のメンションとハッシュタグが正しく表示される', () => {
+    const mentionUsers = new Map([
+      ['user1', { id: 'user1', nickname: 'alice', avatarUrl: null }],
+      ['user2', { id: 'user2', nickname: 'bob', avatarUrl: null }],
+    ])
+    const props = {
+      ...defaultProps,
+      post: {
+        ...defaultProps.post,
+        content: '<@user1> と <@user2> が #盆栽 について話しています',
+      },
+      mentionUsers,
+    }
+    render(<PostCard {...props} />)
+
+    expect(screen.getByText('@alice')).toBeInTheDocument()
+    expect(screen.getByText('@bob')).toBeInTheDocument()
+    expect(screen.getByText('#盆栽')).toBeInTheDocument()
+  })
+
+  /**
+   * テストケース: 旧形式の@mentionは通常テキストとして表示
+   *
+   * 旧形式の @nickname は通常のテキストとして表示され、
+   * リンク化されないことを確認。
+   */
+  it('旧形式の@mentionは通常テキストとして表示される', () => {
+    const props = {
+      ...defaultProps,
+      post: {
+        ...defaultProps.post,
+        content: '@oldformat さんへのメッセージ',
+      },
+    }
+    render(<PostCard {...props} />)
+
+    // テキストは表示されるが、リンクではない
+    expect(screen.getByText(/oldformat/)).toBeInTheDocument()
+    // @oldformat がリンクになっていないことを確認
+    const text = screen.getByText(/oldformat/)
+    expect(text.closest('a')).toBeNull()
+  })
+
+  // --------------------------------------------------------------------------
   // リポスト・引用投稿テスト
   // --------------------------------------------------------------------------
   /**
