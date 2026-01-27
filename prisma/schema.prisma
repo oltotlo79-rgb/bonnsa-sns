@@ -89,6 +89,11 @@ model User {
   stripeCustomerId     String?   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
 
+  // 2段階認証（2FA）
+  twoFactorEnabled     Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret      String?   @map("two_factor_secret") // 暗号化されたTOTPシークレット
+  twoFactorBackupCodes String[]  @map("two_factor_backup_codes") // ハッシュ化されたバックアップコード
+
   // NextAuth.js relations
   accounts Account[]
   sessions Session[]
@@ -773,4 +778,45 @@ model UserAnalytics {
   @@index([userId])
   @@index([date])
   @@map("user_analytics")
+}
+
+// メールアドレスブラックリスト
+model EmailBlacklist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?  @db.Text // ブロック理由（管理用メモ）
+  createdBy String   @map("created_by") // 登録した管理者ID
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("email_blacklist")
+}
+
+// デバイスブラックリスト（フィンガープリントベース）
+model DeviceBlacklist {
+  id            String   @id @default(cuid())
+  fingerprint   String   @unique // デバイスフィンガープリント（ハッシュ）
+  reason        String?  @db.Text // ブロック理由
+  originalEmail String?  @map("original_email") // 元のブロックユーザーのメール（参考用）
+  createdBy     String   @map("created_by") // 登録した管理者ID
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([fingerprint])
+  @@map("device_blacklist")
+}
+
+// ユーザーのデバイス履歴（デバイスフィンガープリント記録用）
+model UserDevice {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  fingerprint String   // デバイスフィンガープリント
+  userAgent   String?  @map("user_agent") @db.Text
+  ipAddress   String?  @map("ip_address")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, fingerprint])
+  @@index([userId])
+  @@index([fingerprint])
+  @@map("user_devices")
 }

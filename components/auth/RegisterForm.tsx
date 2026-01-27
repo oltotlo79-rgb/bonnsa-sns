@@ -83,7 +83,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 /**
- * React useState フック
+ * React useState, useEffect フック
  *
  * コンポーネント内の状態管理に使用。
  * このコンポーネントでは以下の状態を管理:
@@ -92,10 +92,11 @@ import { useRouter } from 'next/navigation'
  * - showPassword: パスワード表示/非表示の状態
  * - showConfirmPassword: 確認用パスワード表示/非表示の状態
  * - agreedToTerms: 利用規約同意の状態
+ * - fingerprint: デバイスフィンガープリント
  *
  * @see {@link https://react.dev/reference/react/useState}
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 /**
  * shadcn/ui Buttonコンポーネント
@@ -148,6 +149,16 @@ import Link from 'next/link'
  * @see lib/actions/auth.ts
  */
 import { registerUser } from '@/lib/actions/auth'
+
+/**
+ * デバイスフィンガープリント取得関数
+ *
+ * FingerprintJSを使用してブラウザのフィンガープリントを収集。
+ * 不正利用防止のためのデバイス識別に使用される。
+ *
+ * @see lib/fingerprint.ts
+ */
+import { getFingerprintWithCache } from '@/lib/fingerprint'
 
 // ============================================================
 // アイコンコンポーネント
@@ -376,6 +387,34 @@ export function RegisterForm() {
    */
   const [agreedToTerms, setAgreedToTerms] = useState(false)
 
+  /**
+   * デバイスフィンガープリント
+   *
+   * FingerprintJSによって取得されたデバイス識別子。
+   * 不正利用防止のためにサーバーへ送信される。
+   */
+  const [fingerprint, setFingerprint] = useState<string | null>(null)
+
+  // ------------------------------------------------------------
+  // 副作用（useEffect フック）
+  // ------------------------------------------------------------
+
+  /**
+   * コンポーネントマウント時にデバイスフィンガープリントを取得
+   *
+   * FingerprintJSを使用してブラウザの特徴からフィンガープリントを生成。
+   * ブラックリストに登録されたデバイスからの登録を防止するために使用。
+   */
+  useEffect(() => {
+    async function collectFingerprint() {
+      const fp = await getFingerprintWithCache()
+      if (fp) {
+        setFingerprint(fp)
+      }
+    }
+    collectFingerprint()
+  }, [])
+
   // ------------------------------------------------------------
   // イベントハンドラ
   // ------------------------------------------------------------
@@ -513,6 +552,8 @@ export function RegisterForm() {
      * registerUser Server Actionを呼び出してユーザー登録を実行
      *
      * Server Action内で以下の処理が行われる:
+     * - メールアドレスのブラックリストチェック
+     * - デバイスフィンガープリントのブラックリストチェック
      * - メールアドレスの重複チェック
      * - パスワードのbcryptハッシュ化
      * - データベースへのユーザー情報保存
@@ -520,7 +561,12 @@ export function RegisterForm() {
      * @returns 成功時: { success: true, userId: string }
      * @returns 失敗時: { error: string }
      */
-    const result = await registerUser({ email, password, nickname })
+    const result = await registerUser({
+      email,
+      password,
+      nickname,
+      fingerprint: fingerprint || undefined,
+    })
 
     /**
      * 登録エラー時の処理

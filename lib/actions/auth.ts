@@ -82,6 +82,12 @@ import {
 } from '@/lib/login-tracker'
 
 /**
+ * パスワードバリデーション
+ * パスワード強度のチェックに使用
+ */
+import { validatePassword } from '@/lib/validations/password'
+
+/**
  * 入力サニタイズ
  * XSS攻撃防止のため入力値をクリーンアップ
  */
@@ -104,6 +110,12 @@ import {
  * パスワードリセット等のブルートフォース攻撃防止に使用
  */
 import { rateLimit } from '@/lib/rate-limit'
+
+/**
+ * ブラックリストチェック関数
+ * メール・デバイスのブラックリスト確認に使用
+ */
+import { isEmailBlacklisted, isDeviceBlacklisted } from '@/lib/actions/blacklist'
 
 // ============================================================
 // IPアドレス取得（内部関数）
@@ -347,7 +359,50 @@ export async function registerUser(data: {
   email: string
   password: string
   nickname: string
+  fingerprint?: string // デバイスフィンガープリント（オプション）
 }) {
+  // ------------------------------------------------------------
+  // パスワードバリデーション
+  // ------------------------------------------------------------
+
+  /**
+   * パスワード強度をサーバー側でもチェック
+   *
+   * クライアント側でもチェックしているが、
+   * セキュリティのためサーバー側でも必ず検証する
+   *
+   * 要件:
+   * - 8文字以上
+   * - アルファベットを1文字以上含む
+   * - 数字を1文字以上含む
+   */
+  const passwordValidation = validatePassword(data.password)
+  if (!passwordValidation.valid) {
+    return { error: passwordValidation.error }
+  }
+
+  // ------------------------------------------------------------
+  // ブラックリストチェック
+  // ------------------------------------------------------------
+
+  /**
+   * メールアドレスがブラックリストに登録されていないかチェック
+   */
+  const emailBlacklisted = await isEmailBlacklisted(data.email)
+  if (emailBlacklisted) {
+    return { error: 'このメールアドレスは利用できません' }
+  }
+
+  /**
+   * デバイスがブラックリストに登録されていないかチェック
+   */
+  if (data.fingerprint) {
+    const deviceBlacklisted = await isDeviceBlacklisted(data.fingerprint)
+    if (deviceBlacklisted) {
+      return { error: 'このデバイスからの登録は許可されていません' }
+    }
+  }
+
   // ------------------------------------------------------------
   // メール重複チェック
   // ------------------------------------------------------------

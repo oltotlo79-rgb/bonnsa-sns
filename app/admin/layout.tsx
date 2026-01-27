@@ -127,6 +127,20 @@ function ScrollTextIcon({ className }: { className?: string }) {
 }
 
 /**
+ * シールドアイコンコンポーネント（ブラックリスト用）
+ * @param className - CSSクラス名
+ * @returns SVGアイコン要素
+ */
+function ShieldBanIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+      <path d="m4.243 5.21 14.39 12.472"/>
+    </svg>
+  )
+}
+
+/**
  * トレンド上昇アイコンコンポーネント
  * @param className - CSSクラス名
  * @returns SVGアイコン要素
@@ -207,6 +221,7 @@ const navItems = [
   { href: '/admin/posts', label: '投稿管理', icon: FileTextIcon },
   { href: '/admin/reports', label: '通報管理', icon: AlertTriangleIcon },
   { href: '/admin/hidden', label: '非表示コンテンツ', icon: EyeOffIcon },
+  { href: '/admin/blacklist', label: 'ブラックリスト', icon: ShieldBanIcon },
   { href: '/admin/events', label: 'イベント管理', icon: CalendarIcon },
   { href: '/admin/shops', label: '盆栽園管理', icon: MapPinIcon },
   { href: '/admin/shop-requests', label: '変更リクエスト', icon: MessageSquareIcon },

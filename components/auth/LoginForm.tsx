@@ -72,17 +72,18 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 /**
- * React useState フック
+ * React useState, useEffect フック
  *
  * コンポーネント内の状態管理に使用。
  * このコンポーネントでは以下の状態を管理:
  * - error: エラーメッセージ
  * - loading: 送信中の状態
  * - showPassword: パスワード表示/非表示の状態
+ * - fingerprint: デバイスフィンガープリント
  *
  * @see {@link https://react.dev/reference/react/useState}
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 /**
  * shadcn/ui Buttonコンポーネント
@@ -135,6 +136,30 @@ import Link from 'next/link'
  * @see lib/actions/auth.ts
  */
 import { checkLoginAllowed } from '@/lib/actions/auth'
+
+/**
+ * 2段階認証関連のServer Actions
+ */
+import { check2FARequired, verify2FAToken } from '@/lib/actions/two-factor'
+
+/**
+ * デバイスフィンガープリント取得関数
+ *
+ * FingerprintJSを使用してブラウザのフィンガープリントを収集。
+ * 不正利用防止のためのデバイス識別に使用される。
+ *
+ * @see lib/fingerprint.ts
+ */
+import { getFingerprintWithCache } from '@/lib/fingerprint'
+
+/**
+ * デバイスブラックリストチェック用Server Action
+ *
+ * ログイン時にデバイスがブラックリストに登録されていないか確認。
+ *
+ * @see lib/actions/blacklist.ts
+ */
+import { isDeviceBlacklisted } from '@/lib/actions/blacklist'
 
 // ============================================================
 // アイコンコンポーネント
@@ -341,6 +366,42 @@ export function LoginForm() {
    */
   const [showPassword, setShowPassword] = useState(false)
 
+  /**
+   * 2段階認証関連の状態
+   */
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null)
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null)
+
+  /**
+   * デバイスフィンガープリント
+   *
+   * FingerprintJSによって取得されたデバイス識別子。
+   * ブラックリストチェックに使用される。
+   */
+  const [fingerprint, setFingerprint] = useState<string | null>(null)
+
+  // ------------------------------------------------------------
+  // 副作用（useEffect フック）
+  // ------------------------------------------------------------
+
+  /**
+   * コンポーネントマウント時にデバイスフィンガープリントを取得
+   *
+   * FingerprintJSを使用してブラウザの特徴からフィンガープリントを生成。
+   * ブラックリストに登録されたデバイスからのログインを防止するために使用。
+   */
+  useEffect(() => {
+    async function collectFingerprint() {
+      const fp = await getFingerprintWithCache()
+      if (fp) {
+        setFingerprint(fp)
+      }
+    }
+    collectFingerprint()
+  }, [])
+
   // ------------------------------------------------------------
   // イベントハンドラ
   // ------------------------------------------------------------
@@ -445,7 +506,66 @@ export function LoginForm() {
       }
 
       // ----------------------------------------------------------------
-      // NextAuth.jsによる認証処理
+      // デバイスブラックリストチェック
+      // ----------------------------------------------------------------
+
+      /**
+       * デバイスがブラックリストに登録されていないかチェック
+       *
+       * ブラックリストに登録されたデバイスからのログインを拒否する。
+       * これにより、不正利用ユーザーのデバイスからのアクセスを防止。
+       */
+      if (fingerprint) {
+        try {
+          const deviceBlocked = await isDeviceBlacklisted(fingerprint)
+          if (deviceBlocked) {
+            setError('このデバイスからのログインは許可されていません')
+            setLoading(false)
+            return
+          }
+        } catch (deviceCheckError) {
+          // デバイスチェックでエラーが発生してもログイン処理は続行（フェイルオープン）
+          console.error('Device blacklist check error:', deviceCheckError)
+        }
+      }
+
+      // ----------------------------------------------------------------
+      // 2段階認証チェック
+      // ----------------------------------------------------------------
+
+      /**
+       * 2FAが有効なユーザーかどうかをチェック
+       *
+       * 2FAが有効な場合は、パスワード認証後に追加の認証ステップが必要
+       */
+      const twoFactorCheck = await check2FARequired(email)
+
+      if (twoFactorCheck.required && twoFactorCheck.userId) {
+        // 2FA認証が必要な場合、認証情報を一時保存してステップを進める
+        // まずパスワードが正しいか確認するためNextAuth認証を実行
+        const preAuthResult = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        })
+
+        if (preAuthResult?.error) {
+          setError('メールアドレスまたはパスワードが間違っています')
+          setLoading(false)
+          return
+        }
+
+        // パスワード認証成功、2FAステップへ
+        // 注: この時点でセッションは作成されているが、2FA検証後に実際のリダイレクトを行う
+        setPendingUserId(twoFactorCheck.userId)
+        setPendingCredentials({ email, password })
+        setRequires2FA(true)
+        setLoading(false)
+        return
+      }
+
+      // ----------------------------------------------------------------
+      // NextAuth.jsによる認証処理（2FA不要の場合）
       // ----------------------------------------------------------------
 
       /**
@@ -509,8 +629,135 @@ export function LoginForm() {
   }
 
   // ------------------------------------------------------------
+  // 2段階認証検証ハンドラ
+  // ------------------------------------------------------------
+
+  /**
+   * 2FAコードを検証するハンドラ
+   *
+   * 2FAステップでユーザーが認証コードを入力した際に実行される。
+   * TOTPコードまたはバックアップコードを検証し、
+   * 成功した場合はフィードページへリダイレクトする。
+   */
+  async function handleVerify2FA(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    if (!pendingUserId) {
+      setError('認証情報が見つかりません。もう一度ログインしてください。')
+      setRequires2FA(false)
+      setLoading(false)
+      return
+    }
+
+    try {
+      const verifyResult = await verify2FAToken(pendingUserId, twoFactorCode)
+
+      if ('error' in verifyResult) {
+        setError(verifyResult.error)
+        setLoading(false)
+        return
+      }
+
+      // 2FA検証成功、フィードページへ遷移
+      router.push('/feed')
+      router.refresh()
+    } catch (err) {
+      console.error('2FA verification error:', err)
+      setError('認証中にエラーが発生しました。再度お試しください。')
+      setLoading(false)
+    }
+  }
+
+  /**
+   * 2FAステップをキャンセルしてログインフォームに戻る
+   */
+  function handleCancel2FA() {
+    setRequires2FA(false)
+    setTwoFactorCode('')
+    setPendingUserId(null)
+    setPendingCredentials(null)
+    setError(null)
+  }
+
+  // ------------------------------------------------------------
   // レンダリング
   // ------------------------------------------------------------
+
+  // 2段階認証ステップ
+  if (requires2FA) {
+    return (
+      <form onSubmit={handleVerify2FA} className="space-y-4">
+        {/* ============================================================ */}
+        {/* 2FA説明 */}
+        {/* ============================================================ */}
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-primary">
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold">2段階認証</h2>
+          <p className="text-sm text-muted-foreground">
+            認証アプリに表示されている6桁のコードを入力してください。
+          </p>
+          <p className="text-xs text-muted-foreground">
+            または、バックアップコードを入力できます。
+          </p>
+        </div>
+
+        {/* ============================================================ */}
+        {/* 認証コード入力 */}
+        {/* ============================================================ */}
+        <div className="space-y-2">
+          <Label htmlFor="twoFactorCode">認証コード</Label>
+          <Input
+            id="twoFactorCode"
+            name="twoFactorCode"
+            type="text"
+            inputMode="text"
+            placeholder="000000 または バックアップコード"
+            value={twoFactorCode}
+            onChange={(e) => setTwoFactorCode(e.target.value.toUpperCase())}
+            required
+            autoComplete="one-time-code"
+            className="text-center text-lg tracking-widest"
+          />
+        </div>
+
+        {/* ============================================================ */}
+        {/* エラーメッセージ表示エリア */}
+        {/* ============================================================ */}
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+
+        {/* ============================================================ */}
+        {/* ボタン */}
+        {/* ============================================================ */}
+        <div className="space-y-2">
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || !twoFactorCode}
+          >
+            {loading ? '確認中...' : '確認'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleCancel2FA}
+            disabled={loading}
+          >
+            キャンセル
+          </Button>
+        </div>
+      </form>
+    )
+  }
 
   return (
     /**

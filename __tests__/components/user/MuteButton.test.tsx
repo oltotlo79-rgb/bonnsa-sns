@@ -12,12 +12,21 @@ jest.mock('next-auth/react', () => ({
 }))
 
 // Next.js navigation モック
-const mockRefresh = jest.fn()
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    refresh: mockRefresh,
-  }),
+  useRouter: () => ({}),
 }))
+
+// React Query モック
+const mockInvalidateQueries = jest.fn()
+jest.mock('@tanstack/react-query', () => {
+  const actual = jest.requireActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      invalidateQueries: mockInvalidateQueries,
+    }),
+  }
+})
 
 // Toast モック
 const mockToast = jest.fn()
@@ -205,7 +214,7 @@ describe('MuteButton', () => {
     })
   })
 
-  it('処理完了後にルーターをリフレッシュする', async () => {
+  it('処理完了後にキャッシュを無効化する', async () => {
     mockMuteUser.mockResolvedValue({ success: true })
 
     const user = userEvent.setup()
@@ -220,7 +229,7 @@ describe('MuteButton', () => {
     await user.click(screen.getByRole('button', { name: 'ミュート' }))
 
     await waitFor(() => {
-      expect(mockRefresh).toHaveBeenCalled()
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['timeline'] })
     })
   })
 })

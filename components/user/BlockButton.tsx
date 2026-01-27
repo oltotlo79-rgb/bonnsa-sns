@@ -307,14 +307,16 @@ export function BlockButton({
             {/* ダイアログタイトル */}
             <AlertDialogTitle>{nickname}さんをブロックしますか?</AlertDialogTitle>
             {/* ダイアログ説明: ブロックの影響を箇条書きで説明 */}
-            <AlertDialogDescription>
-              ブロックすると、以下の操作が行われます:
-              <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>相互フォローが解除されます</li>
-                <li>相手の投稿が表示されなくなります</li>
-                <li>相手からのコメントが表示されなくなります</li>
-                <li>相手はあなたのプロフィールにアクセスできなくなります</li>
-              </ul>
+            <AlertDialogDescription asChild>
+              <div className="text-muted-foreground text-sm">
+                ブロックすると、以下の操作が行われます:
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>相互フォローが解除されます</li>
+                  <li>相手の投稿が表示されなくなります</li>
+                  <li>相手からのコメントが表示されなくなります</li>
+                  <li>相手はあなたのプロフィールにアクセスできなくなります</li>
+                </ul>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
