@@ -19,6 +19,7 @@ env:
   NODE_VERSION: '20'
   # Prisma用ダミー環境変数（実際のDB接続は不要）
   DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+  DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
   TWO_FACTOR_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 jobs:
@@ -157,6 +158,7 @@ jobs:
         run: npx prisma db push
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
+          DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -165,6 +167,7 @@ jobs:
         run: npm run build
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
+          DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
           NEXTAUTH_SECRET: "e2e-test-secret"
           NEXTAUTH_URL: "http://localhost:3000"
 
@@ -172,6 +175,7 @@ jobs:
         run: npx playwright test --project=chromium
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
+          DIRECT_URL: "postgresql://postgres:postgres@localhost:5432/bonsai_sns_test"
           NEXTAUTH_SECRET: "e2e-test-secret"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
