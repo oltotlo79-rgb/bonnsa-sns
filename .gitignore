@@ -33,6 +33,7 @@ yarn-error.log*
 # env files
 # .env - 開発環境のデフォルト値（機密情報なし）はコミット可能
 # .env.local - ローカル設定・機密情報は除外
+.env
 .env.local
 .env*.local
 
