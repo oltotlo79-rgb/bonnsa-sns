@@ -35,6 +35,7 @@ const mockUser = {
   header_url: null,
   bonsai_start_year: 2020,
   bonsai_start_month: 4,
+  birth_date: null,
 }
 
 describe('ProfileEditForm', () => {

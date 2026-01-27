@@ -40,6 +40,8 @@ interface EventsPageProps {
     prefecture?: string  // 都道府県
     view?: string        // 表示モード（calendar / list）
     showPast?: string    // 過去イベント表示フラグ
+    year?: string        // カレンダー表示年
+    month?: string       // カレンダー表示月（1-12）
   }>
 }
 
@@ -182,7 +184,11 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
       {/* イベント表示: カレンダーまたはリスト */}
       {view === 'calendar' ? (
         // カレンダー表示モード
-        <EventCalendarWrapper events={events} />
+        <EventCalendarWrapper
+          events={events}
+          initialYear={params.year ? parseInt(params.year, 10) : undefined}
+          initialMonth={params.month ? parseInt(params.month, 10) : undefined}
+        />
       ) : (
         // リスト表示モード
         <div>

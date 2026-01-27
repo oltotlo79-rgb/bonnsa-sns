@@ -30,10 +30,13 @@
 'use client'
 
 // React Hooks - カレンダーの現在月を管理するために使用
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 // Next.jsのLinkコンポーネント - イベント詳細ページへの遷移に使用
 import Link from 'next/link'
+
+// Next.jsのナビゲーションフック - URLクエリパラメータの更新に使用
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // date-fns関数群 - 日付計算とフォーマットに使用
 import {
@@ -76,6 +79,10 @@ interface EventCalendarProps {
   events: Event[]
   /** 月が変更されたときに呼ばれるコールバック関数 */
   onMonthChange?: (year: number, month: number) => void
+  /** 初期表示年（URLから取得） */
+  initialYear?: number
+  /** 初期表示月（1-12、URLから取得） */
+  initialMonth?: number
 }
 
 /**
@@ -115,12 +122,37 @@ function ChevronRightIcon({ className }: { className?: string }) {
  * @param props - コンポーネントのプロパティ
  * @returns イベントカレンダーのReact要素
  */
-export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
+export function EventCalendar({ events, onMonthChange, initialYear, initialMonth }: EventCalendarProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  /**
+   * 初期表示月を計算
+   * URLパラメータがある場合はそれを使用、なければ現在の日付
+   */
+  const getInitialDate = useCallback(() => {
+    if (initialYear && initialMonth) {
+      return new Date(initialYear, initialMonth - 1, 1)
+    }
+    return new Date()
+  }, [initialYear, initialMonth])
+
   /**
    * 現在表示している月を管理する状態
-   * 初期値は現在の日付
+   * 初期値はURLパラメータまたは現在の日付
    */
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(getInitialDate)
+
+  /**
+   * URLのクエリパラメータを更新する関数
+   * 既存のパラメータを維持しながら年月を更新
+   */
+  const updateUrlParams = useCallback((year: number, month: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('year', year.toString())
+    params.set('month', (month + 1).toString()) // monthは0-indexedなので+1
+    router.replace(`/events?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
 
   // ------------------------------------------------------------
   // カレンダー表示用の日付計算
@@ -183,33 +215,39 @@ export function EventCalendar({ events, onMonthChange }: EventCalendarProps) {
 
   /**
    * 前月に移動するハンドラ
-   * 表示月を1ヶ月前に変更し、コールバックを呼び出す
+   * 表示月を1ヶ月前に変更し、URLを更新する
    */
   const handlePrevMonth = () => {
     const newMonth = subMonths(currentMonth, 1)
     setCurrentMonth(newMonth)
+    // URLパラメータを更新
+    updateUrlParams(newMonth.getFullYear(), newMonth.getMonth())
     // 親コンポーネントに月の変更を通知
     onMonthChange?.(newMonth.getFullYear(), newMonth.getMonth())
   }
 
   /**
    * 次月に移動するハンドラ
-   * 表示月を1ヶ月後に変更し、コールバックを呼び出す
+   * 表示月を1ヶ月後に変更し、URLを更新する
    */
   const handleNextMonth = () => {
     const newMonth = addMonths(currentMonth, 1)
     setCurrentMonth(newMonth)
+    // URLパラメータを更新
+    updateUrlParams(newMonth.getFullYear(), newMonth.getMonth())
     // 親コンポーネントに月の変更を通知
     onMonthChange?.(newMonth.getFullYear(), newMonth.getMonth())
   }
 
   /**
    * 今日の月に移動するハンドラ
-   * 表示月を現在の月に戻し、コールバックを呼び出す
+   * 表示月を現在の月に戻し、URLを更新する
    */
   const handleToday = () => {
     const today = new Date()
     setCurrentMonth(today)
+    // URLパラメータを更新
+    updateUrlParams(today.getFullYear(), today.getMonth())
     // 親コンポーネントに月の変更を通知
     onMonthChange?.(today.getFullYear(), today.getMonth())
   }

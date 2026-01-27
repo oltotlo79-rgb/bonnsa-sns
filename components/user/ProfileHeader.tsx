@@ -104,6 +104,7 @@ type ProfileHeaderProps = {
     location: string | null
     bonsaiStartYear: number | null
     bonsaiStartMonth: number | null
+    birthDate: Date | string | null
     isPublic: boolean
     createdAt: string | Date
     postsCount: number
@@ -199,9 +200,41 @@ function SproutIcon({ className }: { className?: string }) {
   )
 }
 
+/**
+ * ユーザーアイコン
+ * 年齢の表示に使用
+ *
+ * @param className - 追加するCSSクラス
+ */
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="8" r="5" />
+      <path d="M20 21a8 8 0 1 0-16 0" />
+    </svg>
+  )
+}
+
 // ============================================================
 // ヘルパー関数
 // ============================================================
+
+/**
+ * 生年月日をフォーマットする
+ *
+ * @param birthDate - 生年月日（nullの場合はnullを返す）
+ * @returns フォーマットされた生年月日文字列（例: "1990年5月15日"）
+ */
+function formatBirthDate(birthDate: Date | string | null): string | null {
+  if (!birthDate) return null
+
+  const birth = new Date(birthDate)
+  const year = birth.getFullYear()
+  const month = birth.getMonth() + 1
+  const day = birth.getDate()
+
+  return `${year}年${month}月${day}日`
+}
 
 /**
  * 盆栽歴を計算する
@@ -301,6 +334,9 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, 
 
   // 盆栽歴を計算
   const bonsaiExperience = calculateBonsaiExperience(user.bonsaiStartYear, user.bonsaiStartMonth)
+
+  // 生年月日をフォーマット
+  const formattedBirthDate = formatBirthDate(user.birthDate)
 
   return (
     <div className="bg-card rounded-lg border">
@@ -404,6 +440,13 @@ export function ProfileHeader({ user, isOwner, isFollowing, isBlocked, isMuted, 
             <span className="flex items-center gap-1">
               <MapPinIcon className="w-4 h-4" />
               {user.location}
+            </span>
+          )}
+          {/* 生年月日 */}
+          {formattedBirthDate && (
+            <span className="flex items-center gap-1">
+              <UserIcon className="w-4 h-4" />
+              {formattedBirthDate}生
             </span>
           )}
           {/* 盆栽歴 */}

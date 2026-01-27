@@ -76,6 +76,7 @@ model User {
   location         String?
   bonsaiStartYear  Int?      @map("bonsai_start_year")  // 盆栽を始めた年（任意）
   bonsaiStartMonth Int?      @map("bonsai_start_month") // 盆栽を始めた月（任意）
+  birthDate        DateTime? @map("birth_date") @db.Date // 生年月日（任意）
   isPublic         Boolean   @default(true) @map("is_public")
   isSuspended      Boolean   @default(false) @map("is_suspended")
   suspendedAt      DateTime? @map("suspended_at")

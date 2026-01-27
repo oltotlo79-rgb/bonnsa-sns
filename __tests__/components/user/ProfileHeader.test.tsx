@@ -48,6 +48,7 @@ const mockUser = {
   location: '東京都',
   bonsaiStartYear: 2020,
   bonsaiStartMonth: 4,
+  birthDate: null,
   isPublic: true,
   createdAt: '2023-01-15T00:00:00.000Z',
   postsCount: 100,

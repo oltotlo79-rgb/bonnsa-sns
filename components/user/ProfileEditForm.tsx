@@ -117,6 +117,7 @@ type ProfileEditFormProps = {
     header_url: string | null
     bonsai_start_year: number | null
     bonsai_start_month: number | null
+    birth_date: string | null
   }
 }
 
@@ -299,6 +300,20 @@ export function ProfileEditForm({ user }: ProfileEditFormProps) {
             placeholder="自己紹介を入力..."
           />
           <p className="text-xs text-muted-foreground">最大200文字</p>
+        </div>
+
+        {/* 生年月日入力フィールド */}
+        <div className="space-y-2">
+          <Label htmlFor="birthDate">生年月日（任意）</Label>
+          <Input
+            type="date"
+            id="birthDate"
+            name="birthDate"
+            defaultValue={user.birth_date || ''}
+            max={new Date().toISOString().split('T')[0]}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">プロフィールに表示されます</p>
         </div>
 
         {/* 盆栽開始時期選択フィールド */}

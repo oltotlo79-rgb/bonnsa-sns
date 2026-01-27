@@ -57,6 +57,10 @@ interface Event {
 interface EventCalendarWrapperProps {
   /** 表示するイベントの配列 */
   events: Event[]
+  /** 初期表示年（URLから取得） */
+  initialYear?: number
+  /** 初期表示月（1-12、URLから取得） */
+  initialMonth?: number
 }
 
 /**
@@ -92,9 +96,11 @@ const EventCalendar = dynamic(
  *
  * @param props - コンポーネントのプロパティ
  * @param props.events - 表示するイベントの配列
+ * @param props.initialYear - 初期表示年
+ * @param props.initialMonth - 初期表示月（1-12）
  * @returns 動的にインポートされたEventCalendarコンポーネント
  */
-export function EventCalendarWrapper({ events }: EventCalendarWrapperProps) {
+export function EventCalendarWrapper({ events, initialYear, initialMonth }: EventCalendarWrapperProps) {
   // 動的インポートされたEventCalendarにpropsを渡して表示
-  return <EventCalendar events={events} />
+  return <EventCalendar events={events} initialYear={initialYear} initialMonth={initialMonth} />
 }

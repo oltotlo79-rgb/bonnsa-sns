@@ -69,6 +69,7 @@ export default async function ProfileEditPage() {
       headerUrl: true,           // ヘッダー画像URL
       bonsaiStartYear: true,     // 盆栽開始年
       bonsaiStartMonth: true,    // 盆栽開始月
+      birthDate: true,           // 生年月日
     },
   })
 
@@ -88,6 +89,7 @@ export default async function ProfileEditPage() {
     header_url: user.headerUrl,
     bonsai_start_year: user.bonsaiStartYear,
     bonsai_start_month: user.bonsaiStartMonth,
+    birth_date: user.birthDate ? user.birthDate.toISOString().split('T')[0] : null,
   }
 
   // プロフィール編集ページのUIをレンダリング

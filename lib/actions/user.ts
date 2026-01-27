@@ -89,6 +89,7 @@ const profileSchema = z.object({
   location: z.string().max(100, '居住地域は100文字以内で入力してください').optional(),
   bonsaiStartYear: z.number().int().min(1900).max(new Date().getFullYear()).nullable().optional(),
   bonsaiStartMonth: z.number().int().min(1).max(12).nullable().optional(),
+  birthDate: z.string().nullable().optional(),
 })
 
 // ============================================================
@@ -290,12 +291,16 @@ export async function updateProfile(formData: FormData) {
    * safeParse はエラーをスローせず、
    * 結果オブジェクト { success, data?, error? } を返す
    */
+  // 生年月日の処理
+  const birthDateStr = formData.get('birthDate') as string
+
   const result = profileSchema.safeParse({
     nickname: formData.get('nickname'),
     bio: formData.get('bio') || '',
     location: formData.get('location') || '',
     bonsaiStartYear: isNaN(bonsaiStartYear as number) ? null : bonsaiStartYear,
     bonsaiStartMonth: isNaN(bonsaiStartMonth as number) ? null : bonsaiStartMonth,
+    birthDate: birthDateStr || null,
   })
 
   if (!result.success) {
@@ -318,6 +323,7 @@ export async function updateProfile(formData: FormData) {
        */
       bonsaiStartYear: result.data.bonsaiStartYear ?? null,
       bonsaiStartMonth: result.data.bonsaiStartMonth ?? null,
+      birthDate: result.data.birthDate ? new Date(result.data.birthDate) : null,
     },
   })
 
