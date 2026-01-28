@@ -3,7 +3,8 @@
  */
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+// userEventは将来のテスト拡張用に保持
+// import userEvent from '@testing-library/user-event'
 import { MentionTextarea } from '@/components/common/MentionTextarea'
 
 // searchMentionUsersのモック

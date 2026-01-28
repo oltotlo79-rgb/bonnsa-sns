@@ -32,7 +32,6 @@ import {
   recordFailedLogin,
   resetLoginAttempts,
   getLoginKey,
-  LoginCheckResult,
 } from '@/lib/login-tracker'
 
 describe('Login Tracker Module', () => {

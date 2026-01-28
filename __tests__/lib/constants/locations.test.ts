@@ -407,9 +407,10 @@ describe('Location Constants', () => {
   describe('データの整合性', () => {
     it('重複するvalueがない（ALL_LOCATIONS内）', () => {
       const values = ALL_LOCATIONS.map((loc) => loc.value)
-      const uniqueValues = new Set(values)
+      const _uniqueValues = new Set(values)
       // 北海道と中国は地方と都道府県/国で重複する可能性がある
       // これは意図的な設計なので、一意性チェックは行わない
+      // _uniqueValuesはSetの作成テスト用
       expect(values.length).toBe(ALL_LOCATIONS.length)
     })
 

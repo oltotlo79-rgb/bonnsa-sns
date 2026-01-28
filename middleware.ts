@@ -241,7 +241,7 @@ export default auth(async (req) => {
   }
 
   const isLoggedIn = !!req.auth
-  const userId = req.auth?.user?.id
+  const _userId = req.auth?.user?.id // 将来の機能拡張用
 
   // メンテナンスモードのチェック（動的インポートでEdge互換）
   // 静的ファイルとメンテナンスページ自体はスキップ

@@ -316,6 +316,7 @@ export function TwoFactorSettings() {
               認証アプリ（Google Authenticator等）で下のQRコードをスキャンしてください。
             </p>
             <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element -- QRコードはbase64データURLのため最適化不要 */}
               <img src={qrCode} alt="2FA QRコード" className="w-48 h-48" />
             </div>
             {secret && (

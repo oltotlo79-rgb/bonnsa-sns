@@ -172,9 +172,9 @@ export function BlockButton({
 
   /**
    * Next.jsルーター
-   * 認証エラー時のリダイレクトに使用
+   * 認証エラー時のリダイレクトに使用（将来の機能拡張用）
    */
-  const router = useRouter()
+  const _router = useRouter()
 
   /**
    * トースト通知

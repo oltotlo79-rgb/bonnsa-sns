@@ -372,7 +372,7 @@ export function LoginForm() {
   const [requires2FA, setRequires2FA] = useState(false)
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
-  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [_pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null)
 
   /**
    * デバイスフィンガープリント

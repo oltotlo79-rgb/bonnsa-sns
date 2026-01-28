@@ -18,6 +18,8 @@
  * @module lib/csrf
  */
 
+import crypto from 'crypto'
+
 import { headers } from 'next/headers'
 
 /**
@@ -131,7 +133,6 @@ export async function validateOrigin(): Promise<{
  * @returns CSRFトークン
  */
 export function generateCsrfToken(sessionId: string): string {
-  const crypto = require('crypto')
   const secret = process.env.NEXTAUTH_SECRET || 'development-secret'
 
   return crypto
@@ -151,7 +152,6 @@ export function verifyCsrfToken(token: string, sessionId: string): boolean {
   const expectedToken = generateCsrfToken(sessionId)
 
   // タイミング攻撃を防ぐための定数時間比較
-  const crypto = require('crypto')
   return crypto.timingSafeEqual(
     Buffer.from(token),
     Buffer.from(expectedToken)
