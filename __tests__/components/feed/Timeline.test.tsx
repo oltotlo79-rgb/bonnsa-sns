@@ -140,7 +140,7 @@ describe('Timeline', () => {
     render(<Timeline initialPosts={mockPosts} currentUserId="test-user-id" />)
 
     await waitFor(() => {
-      expect(screen.getByText('これ以上投稿はありません')).toBeInTheDocument()
+      expect(screen.getByText(/すべての投稿を表示しました/)).toBeInTheDocument()
     })
   })
 })

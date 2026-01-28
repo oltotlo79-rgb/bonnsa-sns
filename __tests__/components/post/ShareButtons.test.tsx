@@ -35,17 +35,17 @@ describe('ShareButtons', () => {
 
   it('すべてのシェアボタンを表示する', () => {
     render(<ShareButtons {...defaultProps} />)
-    expect(screen.getByTitle('X(Twitter)でシェア')).toBeInTheDocument()
-    expect(screen.getByTitle('Facebookでシェア')).toBeInTheDocument()
-    expect(screen.getByTitle('LINEでシェア')).toBeInTheDocument()
-    expect(screen.getByTitle('リンクをコピー')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'X(Twitter)でシェア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Facebookでシェア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'LINEでシェア' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'リンクをコピー' })).toBeInTheDocument()
   })
 
   it('Xボタンをクリックするとシェアウィンドウを開く', async () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} />)
 
-    await user.click(screen.getByTitle('X(Twitter)でシェア'))
+    await user.click(screen.getByRole('button', { name: 'X(Twitter)でシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining('twitter.com/intent/tweet'),
@@ -58,7 +58,7 @@ describe('ShareButtons', () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} />)
 
-    await user.click(screen.getByTitle('Facebookでシェア'))
+    await user.click(screen.getByRole('button', { name: 'Facebookでシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining('facebook.com/sharer'),
@@ -71,7 +71,7 @@ describe('ShareButtons', () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} />)
 
-    await user.click(screen.getByTitle('LINEでシェア'))
+    await user.click(screen.getByRole('button', { name: 'LINEでシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining('line.me'),
@@ -87,7 +87,7 @@ describe('ShareButtons', () => {
     // コピー前は「リンク」テキストが表示されている
     expect(screen.getByText('リンク')).toBeInTheDocument()
 
-    await user.click(screen.getByTitle('リンクをコピー'))
+    await user.click(screen.getByRole('button', { name: 'リンクをコピー' }))
 
     // コピー後は「コピー済」が表示される
     await waitFor(() => {
@@ -99,7 +99,7 @@ describe('ShareButtons', () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} />)
 
-    await user.click(screen.getByTitle('X(Twitter)でシェア'))
+    await user.click(screen.getByRole('button', { name: 'X(Twitter)でシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining(encodeURIComponent(defaultProps.title)),
@@ -113,7 +113,7 @@ describe('ShareButtons', () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} text={customText} />)
 
-    await user.click(screen.getByTitle('X(Twitter)でシェア'))
+    await user.click(screen.getByRole('button', { name: 'X(Twitter)でシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining(encodeURIComponent(customText)),
@@ -126,7 +126,7 @@ describe('ShareButtons', () => {
     const user = userEvent.setup()
     render(<ShareButtons {...defaultProps} />)
 
-    await user.click(screen.getByTitle('X(Twitter)でシェア'))
+    await user.click(screen.getByRole('button', { name: 'X(Twitter)でシェア' }))
 
     expect(mockWindowOpen).toHaveBeenCalledWith(
       expect.stringContaining(encodeURIComponent(defaultProps.url)),

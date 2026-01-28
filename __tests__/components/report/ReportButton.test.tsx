@@ -22,7 +22,7 @@ describe('ReportButton', () => {
   it('menuバリアントでボタンを表示する（デフォルト）', () => {
     render(<ReportButton {...defaultProps} />)
 
-    const button = screen.getByRole('button', { name: /通報する/i })
+    const button = screen.getByRole('button', { name: 'このコンテンツを通報' })
     expect(button).toBeInTheDocument()
     expect(button).toHaveClass('text-red-500')
   })
@@ -30,22 +30,22 @@ describe('ReportButton', () => {
   it('iconバリアントでボタンを表示する', () => {
     render(<ReportButton {...defaultProps} variant="icon" />)
 
-    const button = screen.getByRole('button', { name: '通報' })
+    const button = screen.getByRole('button', { name: 'このコンテンツを通報' })
     expect(button).toBeInTheDocument()
-    expect(button).toHaveAttribute('title', '通報')
+    expect(button).toHaveAttribute('aria-label', 'このコンテンツを通報')
   })
 
   it('textバリアントでボタンを表示する', () => {
     render(<ReportButton {...defaultProps} variant="text" />)
 
-    expect(screen.getByRole('button', { name: /通報する/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'このコンテンツを通報' })).toBeInTheDocument()
   })
 
   it('ボタンクリックでモーダルを表示する', async () => {
     const user = userEvent.setup()
     render(<ReportButton {...defaultProps} />)
 
-    await user.click(screen.getByRole('button', { name: /通報する/i }))
+    await user.click(screen.getByRole('button', { name: 'このコンテンツを通報' }))
 
     expect(screen.getByTestId('report-modal')).toBeInTheDocument()
     expect(screen.getByText('通報対象: post')).toBeInTheDocument()
@@ -57,7 +57,7 @@ describe('ReportButton', () => {
     render(<ReportButton {...defaultProps} />)
 
     // モーダルを開く
-    await user.click(screen.getByRole('button', { name: /通報する/i }))
+    await user.click(screen.getByRole('button', { name: 'このコンテンツを通報' }))
     expect(screen.getByTestId('report-modal')).toBeInTheDocument()
 
     // モーダルを閉じる
@@ -72,7 +72,7 @@ describe('ReportButton', () => {
     const user = userEvent.setup()
     render(<ReportButton targetType="user" targetId="user-456" />)
 
-    await user.click(screen.getByRole('button', { name: /通報する/i }))
+    await user.click(screen.getByRole('button', { name: 'このコンテンツを通報' }))
 
     expect(screen.getByText('通報対象: user')).toBeInTheDocument()
     expect(screen.getByText('ID: user-456')).toBeInTheDocument()
@@ -82,7 +82,7 @@ describe('ReportButton', () => {
     const user = userEvent.setup()
     render(<ReportButton targetType="comment" targetId="comment-789" />)
 
-    await user.click(screen.getByRole('button', { name: /通報する/i }))
+    await user.click(screen.getByRole('button', { name: 'このコンテンツを通報' }))
 
     expect(screen.getByText('通報対象: comment')).toBeInTheDocument()
   })
@@ -103,7 +103,7 @@ describe('ReportButton', () => {
       </div>
     )
 
-    await user.click(screen.getByRole('button', { name: /通報する/i }))
+    await user.click(screen.getByRole('button', { name: 'このコンテンツを通報' }))
 
     // 親要素のクリックハンドラが呼ばれないことを確認
     expect(parentClickHandler).not.toHaveBeenCalled()

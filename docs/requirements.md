@@ -470,6 +470,13 @@
   - 削除
 - 管理画面: `/admin/blacklist`
 
+#### 3.13.8 メンテナンスモード
+- メンテナンスモードの有効/無効切り替え
+- 予約メンテナンス（開始日時・終了日時の設定）
+- カスタムメンテナンスメッセージ
+- 管理者はメンテナンス中もアクセス可能
+- 管理画面: `/admin/maintenance`
+
 ### 3.14 広告機能（Google AdSense）
 
 #### 3.14.1 実装状況
@@ -570,6 +577,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | admin_users | 管理者 |
 | admin_logs | 管理者ログ |
 | admin_notifications | 管理者通知 |
+| system_settings | システム設定（メンテナンスモード等） |
 
 #### アナリティクス
 | テーブル | 説明 |
@@ -677,7 +685,16 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `createCustomerPortalSession` | ポータルセッション作成 |
 | `getSubscriptionStatus` | サブスクリプション状態取得 |
 
-### 5.8 API Routes
+### 5.8 メンテナンス API
+
+| 関数 | 説明 |
+|------|------|
+| `getMaintenanceSettings` | メンテナンス設定取得 |
+| `updateMaintenanceSettings` | メンテナンス設定更新 |
+| `isMaintenanceMode` | メンテナンスモード判定 |
+| `toggleMaintenanceMode` | メンテナンス有効/無効切替 |
+
+### 5.9 API Routes
 
 | パス | 説明 |
 |------|------|
@@ -689,6 +706,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `/api/cron/check-subscriptions` | サブスクリプション確認 |
 | `/api/webhooks/stripe` | Stripe Webhook |
 | `/api/health` | ヘルスチェック |
+| `/api/maintenance/status` | メンテナンス状態確認 |
 
 ---
 
@@ -768,6 +786,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `/admin/shops` | 盆栽園管理 |
 | `/admin/reports` | 通報管理 |
 | `/admin/blacklist` | ブラックリスト管理 |
+| `/admin/maintenance` | メンテナンスモード管理 |
 | `/admin/logs` | 管理者ログ |
 
 ### 6.8 静的ページ
@@ -781,6 +800,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 | `/tokushoho` | 特定商取引法に基づく表記 |
 | `/help` | ヘルプ |
 | `/contact` | お問い合わせ |
+| `/maintenance` | メンテナンス中ページ |
 
 ---
 
@@ -831,6 +851,27 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="xxxxxxxxxx"
 - エンドポイントごとのカスタマイズ可能な制限設定
 - IPベース + ユーザーベースの制限
 
+### 7.8 セキュリティヘッダー
+- `X-XSS-Protection`: XSS攻撃対策
+- `X-Content-Type-Options`: MIMEタイプスニッフィング防止
+- `X-Frame-Options`: クリックジャッキング防止
+- `Referrer-Policy`: リファラー情報の制御
+- `Permissions-Policy`: ブラウザ機能の制限
+- `Content-Security-Policy`: コンテンツセキュリティポリシー
+- `Strict-Transport-Security`: HTTPS強制（本番環境）
+- `Cross-Origin-Opener-Policy`: クロスオリジン保護
+- `Cross-Origin-Resource-Policy`: リソース共有制御
+
+### 7.9 Origin検証
+- POSTリクエストのOriginヘッダー検証
+- Server Actions保護
+- 許可されたオリジンのホワイトリスト管理
+
+### 7.10 Basic認証（オプション）
+- 環境変数で有効/無効を制御
+- ステージング環境での保護に使用
+- APIルートは除外（Webhook対応）
+
 ---
 
 ## 8. SEO対策
@@ -879,10 +920,10 @@ Sitemap: https://bon-log.com/sitemap.xml
 
 ### 10.1 テスト構成
 
-| 種別 | ツール | 対象 |
-|------|--------|------|
-| ユニットテスト | Jest + React Testing Library | コンポーネント、ユーティリティ |
-| E2Eテスト | Playwright | ユーザーフロー |
+| 種別 | ツール | 対象 | テスト数 |
+|------|--------|------|---------|
+| ユニットテスト | Jest + React Testing Library | コンポーネント、ユーティリティ、Server Actions | 約3,500件 |
+| E2Eテスト | Playwright | ユーザーフロー | - |
 
 ### 10.2 テストコマンド
 
@@ -987,6 +1028,10 @@ STRIPE_PRICE_ID_YEARLY="..."
 NEXT_PUBLIC_ADSENSE_CLIENT_ID="..."
 NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR="..."
 NEXT_PUBLIC_ADSENSE_SLOT_FEED="..."
+
+# Basic認証（ステージング環境用）
+BASIC_AUTH_USER="..."
+BASIC_AUTH_PASSWORD="..."
 ```
 
 ---
@@ -1015,3 +1060,4 @@ NEXT_PUBLIC_ADSENSE_SLOT_FEED="..."
 | 2025-01-21 | 独自ドメイン(bon-log.com)設定、特定商取引法ページ追加 |
 | 2026-01-26 | セキュリティ機能追加（ファイル検証、レート制限、サニタイズ等）、AdSense実装、フォローリクエスト機能、SEO対策、About/Contactページ追加、テスト構成追加 |
 | 2026-01-27 | パスワードポリシー強化（英数字必須）、2段階認証（TOTP）実装、メールアドレス/デバイスブラックリスト機能追加 |
+| 2026-01-29 | メンテナンスモード機能追加、system_settingsテーブル追加、テスト数約3,500件に拡充 |

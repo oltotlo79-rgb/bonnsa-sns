@@ -48,14 +48,14 @@ describe('MessageButton', () => {
     expect(screen.getByRole('button')).toBeDisabled()
   })
 
-  it('ブロック中はtitleが変わる', () => {
+  it('ブロック中はaria-labelが変わる', () => {
     render(<MessageButton userId="user-1" isBlocked={true} />)
-    expect(screen.getByRole('button')).toHaveAttribute('title', 'メッセージを送れません')
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'メッセージを送れません')
   })
 
-  it('通常時はtitleが「メッセージを送る」', () => {
+  it('通常時はaria-labelが「メッセージを送る」', () => {
     render(<MessageButton userId="user-1" isBlocked={false} />)
-    expect(screen.getByRole('button')).toHaveAttribute('title', 'メッセージを送る')
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'メッセージを送る')
   })
 
   it('エラー時はエラーメッセージを表示する', async () => {
