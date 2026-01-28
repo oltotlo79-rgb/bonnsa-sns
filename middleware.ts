@@ -134,7 +134,8 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
 
   // 認証済みユーザーがトップページまたは認証ページにアクセスした場合 → フィードへリダイレクト
-  const authOnlyPaths = ['/login', '/register', '/password-reset']
+  // 注意: /password-reset はログイン中でもアクセス可能（パスワード変更が必要な場合があるため）
+  const authOnlyPaths = ['/login', '/register']
   const isAuthPage = authOnlyPaths.some((path) =>
     nextUrl.pathname.startsWith(path)
   )
