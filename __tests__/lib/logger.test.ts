@@ -117,6 +117,69 @@ describe('Logger Module', () => {
     })
   })
 
+  describe('Production Environment - Sentry Integration (Server-side)', () => {
+    const mockCaptureException = jest.fn()
+    const mockCaptureMessage = jest.fn()
+
+    beforeEach(() => {
+      jest.resetModules()
+      setNodeEnv('production')
+
+      // Sentryモジュールをモック
+      jest.mock('@sentry/nextjs', () => ({
+        captureException: mockCaptureException,
+        captureMessage: mockCaptureMessage,
+      }), { virtual: true })
+    })
+
+    afterEach(() => {
+      mockCaptureException.mockReset()
+      mockCaptureMessage.mockReset()
+      jest.unmock('@sentry/nextjs')
+    })
+
+    it('error()はサーバーサイドでSentry.captureExceptionを呼び出す（Errorオブジェクト）', async () => {
+      const { logger } = await import('@/lib/logger')
+      const testError = new Error('test server error')
+
+      logger.error('Server error:', testError)
+
+      // Sentryが呼び出されることを確認（非同期なので少し待つ）
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockCaptureException).toHaveBeenCalledWith(testError, {
+        extra: { args: ['Server error:'] },
+      })
+    })
+
+    it('error()はサーバーサイドでSentry.captureMessageを呼び出す（文字列のみ）', async () => {
+      const { logger } = await import('@/lib/logger')
+
+      logger.error('Simple error message', 'additional info')
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(mockCaptureMessage).toHaveBeenCalledWith(
+        'Simple error message additional info',
+        {
+          level: 'error',
+          extra: { args: ['Simple error message', 'additional info'] },
+        }
+      )
+    })
+
+    it('error()はSentryが利用できない場合でもエラーをスローしない', async () => {
+      jest.unmock('@sentry/nextjs')
+      jest.mock('@sentry/nextjs', () => {
+        throw new Error('Sentry not available')
+      }, { virtual: true })
+
+      const { logger } = await import('@/lib/logger')
+
+      expect(() => logger.error('test error')).not.toThrow()
+    })
+  })
+
   describe('Test Environment', () => {
     let consoleLogSpy: jest.SpyInstance
 

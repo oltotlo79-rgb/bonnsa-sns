@@ -272,6 +272,57 @@ describe('Shop Actions', () => {
   })
 
   describe('getShops - 追加テスト', () => {
+    it('都道府県でフィルタリングできる', async () => {
+      mockPrisma.bonsaiShop.findMany.mockResolvedValue([])
+
+      const { getShops } = await import('@/lib/actions/shop')
+      await getShops({ prefecture: '東京都' })
+
+      // 住所のstartsWith検索でフィルタリング
+      expect(mockPrisma.bonsaiShop.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [{ address: { startsWith: '東京都' } }],
+          }),
+        })
+      )
+    })
+
+    it('地方でフィルタリングできる（関東）', async () => {
+      mockPrisma.bonsaiShop.findMany.mockResolvedValue([])
+
+      const { getShops } = await import('@/lib/actions/shop')
+      await getShops({ region: 'kanto' })
+
+      // 関東地方の都道府県でOR検索
+      expect(mockPrisma.bonsaiShop.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.arrayContaining([
+              { address: { startsWith: '東京都' } },
+              { address: { startsWith: '神奈川県' } },
+            ]),
+          }),
+        })
+      )
+    })
+
+    it('存在しない地方の場合はフィルタなし', async () => {
+      mockPrisma.bonsaiShop.findMany.mockResolvedValue([])
+
+      const { getShops } = await import('@/lib/actions/shop')
+      await getShops({ region: 'invalid-region' })
+
+      // ORフィルタが設定されないことを確認（isHiddenのみ）
+      expect(mockPrisma.bonsaiShop.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            isHidden: false,
+          },
+        })
+      )
+    })
+
     it('ジャンルでフィルタリングできる', async () => {
       mockPrisma.bonsaiShop.findMany.mockResolvedValue([])
 
