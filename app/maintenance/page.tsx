@@ -4,7 +4,9 @@
  */
 
 import { getMaintenanceSettings } from '@/lib/actions/maintenance'
+import { auth } from '@/lib/auth'
 import Link from 'next/link'
+import { MaintenanceLogoutButton } from './logout-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +46,8 @@ function formatDateTime(dateString: string | null): string {
 }
 
 export default async function MaintenancePage() {
+  const session = await auth()
+  const isLoggedIn = !!session?.user
   const settings = await getMaintenanceSettings()
 
   return (
@@ -74,6 +78,13 @@ export default async function MaintenancePage() {
             {settings.endTime && (
               <p>終了予定: {formatDateTime(settings.endTime)}</p>
             )}
+          </div>
+        )}
+
+        {/* ログアウトボタン */}
+        {isLoggedIn && (
+          <div className="mb-6">
+            <MaintenanceLogoutButton />
           </div>
         )}
 

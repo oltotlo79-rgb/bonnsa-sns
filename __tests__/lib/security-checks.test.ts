@@ -12,6 +12,11 @@ import {
   enforceSecurityInProduction,
 } from '@/lib/security-checks'
 
+// NODE_ENVはreadonlyなのでヘルパーで設定
+function setNodeEnv(value: string) {
+  Object.defineProperty(process.env, 'NODE_ENV', { value, writable: true, configurable: true })
+}
+
 describe('security-checks', () => {
   const originalEnv = process.env
   const consoleWarn = console.warn
@@ -33,7 +38,7 @@ describe('security-checks', () => {
   describe('validateAuthSecret', () => {
     it('適切なシークレットで有効を返す', () => {
       process.env.NEXTAUTH_SECRET = 'a'.repeat(32) + 'b'.repeat(10) + 'c'.repeat(10)
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateAuthSecret()
 
@@ -43,7 +48,7 @@ describe('security-checks', () => {
 
     it('シークレット未設定で警告を返す（開発環境）', () => {
       delete process.env.NEXTAUTH_SECRET
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateAuthSecret()
 
@@ -53,7 +58,7 @@ describe('security-checks', () => {
 
     it('シークレット未設定でエラーを返す（本番環境）', () => {
       delete process.env.NEXTAUTH_SECRET
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       const result = validateAuthSecret()
 
@@ -63,7 +68,7 @@ describe('security-checks', () => {
 
     it('短いシークレットで警告を返す', () => {
       process.env.NEXTAUTH_SECRET = 'short'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateAuthSecret()
 
@@ -72,7 +77,7 @@ describe('security-checks', () => {
 
     it('弱いパターンを検出する', () => {
       process.env.NEXTAUTH_SECRET = 'my-secret-password-for-testing-long-enough'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateAuthSecret()
 
@@ -81,7 +86,7 @@ describe('security-checks', () => {
 
     it('本番環境で短いシークレットはエラー', () => {
       process.env.NEXTAUTH_SECRET = 'short'
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       const result = validateAuthSecret()
 
@@ -91,7 +96,7 @@ describe('security-checks', () => {
 
     it('低エントロピーを警告する', () => {
       process.env.NEXTAUTH_SECRET = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       const result = validateAuthSecret()
 
@@ -102,7 +107,7 @@ describe('security-checks', () => {
   describe('validateRequiredEnvVars', () => {
     it('必須環境変数が設定されていれば有効', () => {
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateRequiredEnvVars()
 
@@ -114,7 +119,7 @@ describe('security-checks', () => {
       delete process.env.DATABASE_URL
       delete process.env.NEXTAUTH_URL
       delete process.env.NEXTAUTH_SECRET
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       const result = validateRequiredEnvVars()
 
@@ -126,7 +131,7 @@ describe('security-checks', () => {
 
     it('開発環境ではDATABASE_URLのみ必須', () => {
       delete process.env.DATABASE_URL
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = validateRequiredEnvVars()
 
@@ -139,7 +144,7 @@ describe('security-checks', () => {
     it('すべてのチェックを実行する', () => {
       process.env.NEXTAUTH_SECRET = 'x'.repeat(50) + 'y'.repeat(10)
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = runSecurityChecks()
 
@@ -151,7 +156,7 @@ describe('security-checks', () => {
     it('両方のチェックが有効なら全体も有効', () => {
       process.env.NEXTAUTH_SECRET = 'x'.repeat(50) + 'y'.repeat(10)
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = runSecurityChecks()
 
@@ -160,7 +165,7 @@ describe('security-checks', () => {
 
     it('どちらかが無効なら全体も無効', () => {
       delete process.env.DATABASE_URL
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       const result = runSecurityChecks()
 
@@ -172,7 +177,7 @@ describe('security-checks', () => {
     it('警告をコンソールに出力する', () => {
       process.env.NEXTAUTH_SECRET = 'short'
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       logSecurityWarnings()
 
@@ -184,7 +189,7 @@ describe('security-checks', () => {
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
       process.env.NEXTAUTH_URL = 'http://localhost:3000'
       process.env.NEXT_PUBLIC_APP_URL = 'http://example.com'
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       logSecurityWarnings()
 
@@ -198,7 +203,7 @@ describe('security-checks', () => {
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
       process.env.NEXTAUTH_URL = 'https://example.com'
       process.env.DEBUG = 'true'
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       logSecurityWarnings()
 
@@ -212,7 +217,7 @@ describe('security-checks', () => {
     it('開発環境では警告のみ', () => {
       process.env.NEXTAUTH_SECRET = 'short'
       process.env.DATABASE_URL = 'postgres://localhost:5432/test'
-      process.env.NODE_ENV = 'development'
+      setNodeEnv('development')
 
       expect(() => enforceSecurityInProduction()).not.toThrow()
     })
@@ -220,7 +225,7 @@ describe('security-checks', () => {
     it('本番環境でセキュリティエラーをログ出力', () => {
       process.env.NEXTAUTH_SECRET = 'short'
       delete process.env.DATABASE_URL
-      process.env.NODE_ENV = 'production'
+      setNodeEnv('production')
 
       enforceSecurityInProduction()
 

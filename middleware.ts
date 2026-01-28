@@ -244,11 +244,12 @@ export default auth(async (req) => {
   const _userId = req.auth?.user?.id // 将来の機能拡張用
 
   // メンテナンスモードのチェック（動的インポートでEdge互換）
-  // 静的ファイルとメンテナンスページ自体はスキップ
+  // 静的ファイル、メンテナンスページ、許可パスはスキップ
   if (
     !nextUrl.pathname.startsWith('/_next') &&
     !nextUrl.pathname.startsWith('/api/') &&
-    nextUrl.pathname !== '/maintenance'
+    nextUrl.pathname !== '/maintenance' &&
+    !isMaintenanceAllowedPath(nextUrl.pathname)
   ) {
     try {
       // データベースから直接メンテナンス設定を取得

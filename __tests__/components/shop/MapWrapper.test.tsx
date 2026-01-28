@@ -31,6 +31,8 @@ const mockShops = [
     address: '東京都渋谷区1-2-3',
     latitude: 35.6762,
     longitude: 139.6503,
+    averageRating: 4.5,
+    reviewCount: 10,
   },
 ]
 
