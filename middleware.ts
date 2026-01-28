@@ -117,7 +117,28 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response
 }
 
-export default auth((req) => {
+/**
+ * メンテナンス中にアクセス可能なパス
+ */
+const MAINTENANCE_ALLOWED_PATHS = [
+  '/',
+  '/login',
+  '/register',
+  '/password-reset',
+  '/maintenance',
+  '/api/auth', // NextAuth APIは許可
+]
+
+/**
+ * パスがメンテナンス中でもアクセス可能かチェック
+ */
+function isMaintenanceAllowedPath(pathname: string): boolean {
+  return MAINTENANCE_ALLOWED_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(path + '/')
+  )
+}
+
+export default auth(async (req) => {
   const { nextUrl } = req
 
   // APIルートはBasic認証をスキップ（Webhook等のため）
@@ -132,6 +153,49 @@ export default auth((req) => {
   }
 
   const isLoggedIn = !!req.auth
+  const userId = req.auth?.user?.id
+
+  // メンテナンスモードのチェック（動的インポートでEdge互換）
+  // 静的ファイルとメンテナンスページ自体はスキップ
+  if (
+    !nextUrl.pathname.startsWith('/_next') &&
+    !nextUrl.pathname.startsWith('/api/') &&
+    nextUrl.pathname !== '/maintenance'
+  ) {
+    try {
+      // データベースから直接メンテナンス設定を取得
+      // Edge Runtimeでは@prisma/client/edgeを使用するか、
+      // 代わりにAPI経由で取得する必要がある
+      // ここではfetch APIを使ってAPI経由でチェック
+      const baseUrl = nextUrl.origin
+      const maintenanceResponse = await fetch(
+        `${baseUrl}/api/maintenance/status`,
+        {
+          headers: {
+            cookie: req.headers.get('cookie') || '',
+          },
+          cache: 'no-store',
+        }
+      )
+
+      if (maintenanceResponse.ok) {
+        const { isMaintenanceMode, isAdmin } = await maintenanceResponse.json()
+
+        // メンテナンス中かつ管理者でない場合
+        if (isMaintenanceMode && !isAdmin) {
+          // 許可されたパス以外はメンテナンスページへリダイレクト
+          if (!isMaintenanceAllowedPath(nextUrl.pathname)) {
+            return addSecurityHeaders(
+              NextResponse.redirect(new URL('/maintenance', nextUrl))
+            )
+          }
+        }
+      }
+    } catch (error) {
+      // メンテナンスチェックに失敗しても続行
+      console.error('Maintenance check failed:', error)
+    }
+  }
 
   // 認証済みユーザーがトップページまたは認証ページにアクセスした場合 → フィードへリダイレクト
   const authOnlyPaths = ['/login', '/register', '/password-reset']

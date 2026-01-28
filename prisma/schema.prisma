@@ -820,3 +820,15 @@ model UserDevice {
   @@index([fingerprint])
   @@map("user_devices")
 }
+
+// システム設定（メンテナンスモード等）
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // 設定キー（例: maintenance_mode）
+  value     Json     // 設定値（JSON形式）
+  updatedBy String?  @map("updated_by") // 最後に更新した管理者ID
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("system_settings")
+}
