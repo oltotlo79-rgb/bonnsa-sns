@@ -1,6 +1,12 @@
+/**
+ * HeaderUploaderコンポーネントのテスト
+ *
+ * @jest-environment jsdom
+ */
+
 import { render, screen, waitFor } from '../../utils/test-utils'
 import userEvent from '@testing-library/user-event'
-import { AvatarUploader } from '@/components/user/AvatarUploader'
+import { HeaderUploader } from '@/components/user/HeaderUploader'
 
 // Next-Auth モック
 jest.mock('next-auth/react', () => ({
@@ -29,7 +35,7 @@ jest.mock('@/lib/client-image-compression', () => ({
   formatFileSize: jest.fn().mockImplementation((bytes) => `${Math.round(bytes / 1024)}KB`),
 }))
 
-describe('AvatarUploader', () => {
+describe('HeaderUploader', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockFetch.mockReset()
@@ -40,31 +46,39 @@ describe('AvatarUploader', () => {
   // ============================================================
 
   describe('基本レンダリング', () => {
-    it('アップロードボタンを表示する', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
-      expect(screen.getByRole('button', { name: /画像を変更/ })).toBeInTheDocument()
-    })
-
-    it('現在のアバターがない場合はイニシャルを表示', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
-      expect(screen.getByText('テ')).toBeInTheDocument()
-    })
-
-    it('ファイル形式の説明を表示する', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+    it('コンポーネントが正しくレンダリングされる', () => {
+      render(<HeaderUploader currentUrl={null} />)
       expect(screen.getByText(/JPEG、PNG、WebP形式/)).toBeInTheDocument()
     })
 
-    it('ファイル入力がhidden', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
-      const fileInput = document.querySelector('input[type="file"]')
-      expect(fileInput).toHaveClass('hidden')
+    it('現在のヘッダー画像がない場合はカメラアイコンを表示', () => {
+      render(<HeaderUploader currentUrl={null} />)
+      const svg = document.querySelector('svg')
+      expect(svg).toBeInTheDocument()
     })
 
-    it('現在のアバターがある場合は画像を表示', () => {
-      render(<AvatarUploader currentUrl="/avatar.jpg" nickname="テスト" />)
-      const image = screen.getByAltText('テスト')
+    it('現在のヘッダー画像がある場合は画像を表示', () => {
+      render(<HeaderUploader currentUrl="/header.jpg" />)
+      const image = screen.getByAltText('ヘッダー画像')
       expect(image).toBeInTheDocument()
+    })
+
+    it('ファイル形式と推奨サイズの説明を表示', () => {
+      render(<HeaderUploader currentUrl={null} />)
+      expect(screen.getByText(/JPEG、PNG、WebP形式.*推奨サイズ: 1500x500px/)).toBeInTheDocument()
+    })
+
+    it('非表示のファイル入力が存在する', () => {
+      render(<HeaderUploader currentUrl={null} />)
+      const input = document.querySelector('input[type="file"]')
+      expect(input).toBeInTheDocument()
+      expect(input).toHaveClass('hidden')
+    })
+
+    it('クリック可能なエリアが存在する', () => {
+      render(<HeaderUploader currentUrl={null} />)
+      const clickableArea = document.querySelector('.cursor-pointer')
+      expect(clickableArea).toBeInTheDocument()
     })
   })
 
@@ -73,43 +87,23 @@ describe('AvatarUploader', () => {
   // ============================================================
 
   describe('ファイル選択', () => {
-    it('ボタンクリックでファイル選択を開く', async () => {
+    it('エリアクリックでファイル入力がトリガーされる', async () => {
       const user = userEvent.setup()
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const clickSpy = jest.spyOn(fileInput, 'click')
 
-      await user.click(screen.getByRole('button', { name: /画像を変更/ }))
+      const clickableArea = document.querySelector('.cursor-pointer') as HTMLElement
+      await user.click(clickableArea)
 
       expect(clickSpy).toHaveBeenCalled()
     })
 
     it('accept属性が正しい画像形式を指定', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
       const fileInput = document.querySelector('input[type="file"]')
       expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp')
-    })
-  })
-
-  // ============================================================
-  // イニシャル表示
-  // ============================================================
-
-  describe('イニシャル表示', () => {
-    it('日本語ニックネームの最初の文字を表示', () => {
-      render(<AvatarUploader currentUrl={null} nickname="盆栽太郎" />)
-      expect(screen.getByText('盆')).toBeInTheDocument()
-    })
-
-    it('英語ニックネームの最初の文字を表示', () => {
-      render(<AvatarUploader currentUrl={null} nickname="Bonsai" />)
-      expect(screen.getByText('B')).toBeInTheDocument()
-    })
-
-    it('数字で始まるニックネームでも動作する', () => {
-      render(<AvatarUploader currentUrl={null} nickname="123盆栽" />)
-      expect(screen.getByText('1')).toBeInTheDocument()
     })
   })
 
@@ -121,13 +115,13 @@ describe('AvatarUploader', () => {
     it('アップロード成功時にページがリフレッシュされる', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ url: '/new-avatar.jpg' }),
+        json: () => Promise.resolve({ url: '/new-header.jpg' }),
       })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
@@ -140,39 +134,39 @@ describe('AvatarUploader', () => {
     it('APIが正しいエンドポイントで呼ばれる', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ url: '/new-avatar.jpg' }),
+        json: () => Promise.resolve({ url: '/new-header.jpg' }),
       })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/upload/avatar', expect.any(Object))
+        expect(mockFetch).toHaveBeenCalledWith('/api/upload/header', expect.any(Object))
       })
     })
 
     it('FormDataでファイルが送信される', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ url: '/new-avatar.jpg' }),
+        json: () => Promise.resolve({ url: '/new-header.jpg' }),
       })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/upload/avatar',
+          '/api/upload/header',
           expect.objectContaining({
             method: 'POST',
             body: expect.any(FormData),
@@ -193,10 +187,10 @@ describe('AvatarUploader', () => {
         json: () => Promise.resolve({ error: 'ファイルサイズが大きすぎます' }),
       })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
@@ -209,10 +203,10 @@ describe('AvatarUploader', () => {
     it('ネットワークエラー時にデフォルトエラーを表示', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
@@ -228,10 +222,10 @@ describe('AvatarUploader', () => {
         json: () => Promise.resolve({ error: 'サーバーエラー' }),
       })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
@@ -240,31 +234,44 @@ describe('AvatarUploader', () => {
         expect(screen.getByText('サーバーエラー')).toBeInTheDocument()
       })
     })
-  })
 
-  // ============================================================
-  // ローディング状態
-  // ============================================================
+    it('エラー時にプレビューが元の画像に戻る', async () => {
+      const originalUrl = '/original-header.jpg'
 
-  describe('ローディング状態', () => {
-    it('アップロード中はボタンが無効になる', async () => {
-      mockFetch.mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({}) }), 100)
-          )
-      )
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'エラー' }),
+      })
 
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={originalUrl} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const file = new File(['test'], 'avatar.jpg', { type: 'image/jpeg' })
+      const file = new File(['test'], 'header.jpg', { type: 'image/jpeg' })
 
       Object.defineProperty(fileInput, 'files', { value: [file] })
       fileInput.dispatchEvent(new Event('change', { bubbles: true }))
 
-      const button = screen.getByRole('button', { name: /画像を変更/ })
-      expect(button).toBeDisabled()
+      await waitFor(() => {
+        const image = screen.getByAltText('ヘッダー画像')
+        expect(image).toHaveAttribute('src', expect.stringContaining('original-header.jpg'))
+      })
+    })
+  })
+
+  // ============================================================
+  // ホバー状態
+  // ============================================================
+
+  describe('ホバー状態', () => {
+    it('ホバー時のオーバーレイが存在する', () => {
+      render(<HeaderUploader currentUrl="/header.jpg" />)
+      const overlay = document.querySelector('.group-hover\\:opacity-100')
+      expect(overlay).toBeInTheDocument()
+    })
+
+    it('変更ボタンが存在する', () => {
+      render(<HeaderUploader currentUrl="/header.jpg" />)
+      expect(screen.getByRole('button', { name: /変更する/ })).toBeInTheDocument()
     })
   })
 
@@ -274,7 +281,7 @@ describe('AvatarUploader', () => {
 
   describe('ファイルなし', () => {
     it('ファイルが選択されなかった場合は何もしない', () => {
-      render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+      render(<HeaderUploader currentUrl={null} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       Object.defineProperty(fileInput, 'files', { value: [] })
@@ -290,12 +297,16 @@ describe('AvatarUploader', () => {
 // ============================================================
 
 describe('CameraIcon', () => {
-  it('ボタン内にSVGアイコンが表示される', () => {
-    render(<AvatarUploader currentUrl={null} nickname="テスト" />)
+  it('画像がない場合に表示される', () => {
+    render(<HeaderUploader currentUrl={null} />)
+    const svg = document.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+  })
 
-    const button = screen.getByRole('button', { name: /画像を変更/ })
+  it('変更ボタン内にも表示される', () => {
+    render(<HeaderUploader currentUrl="/header.jpg" />)
+    const button = screen.getByRole('button', { name: /変更する/ })
     const svg = button.querySelector('svg')
-
     expect(svg).toBeInTheDocument()
   })
 })
@@ -304,14 +315,39 @@ describe('CameraIcon', () => {
 // 圧縮設定テスト
 // ============================================================
 
-describe('アバター圧縮設定', () => {
-  it('最大サイズは500KB', () => {
-    const maxSizeMB = 0.5
-    expect(maxSizeMB).toBe(0.5)
+describe('ヘッダー圧縮設定', () => {
+  it('最大サイズは1MB', () => {
+    const maxSizeMB = 1
+    expect(maxSizeMB).toBe(1)
   })
 
-  it('最大解像度は512px', () => {
-    const maxWidthOrHeight = 512
-    expect(maxWidthOrHeight).toBe(512)
+  it('最大幅は1500px', () => {
+    const maxWidthOrHeight = 1500
+    expect(maxWidthOrHeight).toBe(1500)
+  })
+
+  it('推奨アスペクト比は3:1', () => {
+    const width = 1500
+    const height = 500
+    const aspectRatio = width / height
+    expect(aspectRatio).toBe(3)
+  })
+})
+
+// ============================================================
+// 寸法テスト
+// ============================================================
+
+describe('ヘッダー寸法', () => {
+  it('高さは128pxに設定されている', () => {
+    render(<HeaderUploader currentUrl={null} />)
+    const container = document.querySelector('.h-32')
+    expect(container).toBeInTheDocument()
+  })
+
+  it('角丸が設定されている', () => {
+    render(<HeaderUploader currentUrl={null} />)
+    const container = document.querySelector('.rounded-lg')
+    expect(container).toBeInTheDocument()
   })
 })

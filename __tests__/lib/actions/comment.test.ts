@@ -555,4 +555,260 @@ describe('Comment Actions', () => {
       expect(result.comments).toEqual([])
     })
   })
+
+  describe('getReplies - 追加テスト', () => {
+    it('いいね状態が正しく取得される', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      mockPrisma.comment.findMany.mockResolvedValue([
+        {
+          id: 'reply-1',
+          parentId: 'comment-id',
+          content: '返信1',
+          user: mockUser,
+          _count: { likes: 1, replies: 0 },
+          media: [],
+          createdAt: new Date(),
+        },
+        {
+          id: 'reply-2',
+          parentId: 'comment-id',
+          content: '返信2',
+          user: mockUser,
+          _count: { likes: 2, replies: 0 },
+          media: [],
+          createdAt: new Date(),
+        },
+      ])
+      mockPrisma.like.findMany.mockResolvedValue([
+        { commentId: 'reply-1' },
+      ])
+
+      const { getReplies } = await import('@/lib/actions/comment')
+      const result = await getReplies('comment-id')
+
+      expect(result.replies[0].isLiked).toBe(true)
+      expect(result.replies[1].isLiked).toBe(false)
+    })
+
+    it('エラー発生時は空の配列を返す', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      mockPrisma.comment.findMany.mockRejectedValue(new Error('Database error'))
+
+      const { getReplies } = await import('@/lib/actions/comment')
+      const result = await getReplies('comment-id')
+
+      expect(result.replies).toEqual([])
+    })
+
+    it('未認証でも返信一覧を取得できる', async () => {
+      mockAuth.mockResolvedValue(null)
+      mockPrisma.block.findMany.mockResolvedValue([])
+      mockPrisma.comment.findMany.mockResolvedValue([
+        {
+          id: 'reply-1',
+          parentId: 'comment-id',
+          content: '返信1',
+          user: mockUser,
+          _count: { likes: 1, replies: 0 },
+          media: [],
+          createdAt: new Date(),
+        },
+      ])
+
+      const { getReplies } = await import('@/lib/actions/comment')
+      const result = await getReplies('comment-id')
+
+      expect(result.replies).toHaveLength(1)
+      expect(result.replies[0].isLiked).toBe(false)
+    })
+
+    it('hasMoreが正しく判定される（limitと同数の場合）', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      const replies = [
+        { id: 'reply-0', parentId: 'comment-id', content: '返信0', user: mockUser, _count: { likes: 0, replies: 0 }, media: [], createdAt: new Date() },
+        { id: 'reply-1', parentId: 'comment-id', content: '返信1', user: mockUser, _count: { likes: 0, replies: 0 }, media: [], createdAt: new Date() },
+      ]
+      mockPrisma.comment.findMany.mockResolvedValue(replies)
+      mockPrisma.like.findMany.mockResolvedValue([])
+
+      const { getReplies } = await import('@/lib/actions/comment')
+      const result = await getReplies('comment-id', undefined, 2)
+
+      expect(result.nextCursor).toBe('reply-1')
+    })
+
+    it('hasMoreが正しく判定される（limitより少ない場合）', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      const replies = [
+        { id: 'reply-0', parentId: 'comment-id', content: '返信0', user: mockUser, _count: { likes: 0, replies: 0 }, media: [], createdAt: new Date() },
+      ]
+      mockPrisma.comment.findMany.mockResolvedValue(replies)
+      mockPrisma.like.findMany.mockResolvedValue([])
+
+      const { getReplies } = await import('@/lib/actions/comment')
+      const result = await getReplies('comment-id', undefined, 5)
+
+      expect(result.nextCursor).toBeUndefined()
+    })
+  })
+
+  describe('createComment - 通知の追加テスト', () => {
+    it('自分のコメントへの返信には通知を作成しない', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      mockPrisma.comment.count.mockResolvedValue(0)
+      mockPrisma.comment.create.mockResolvedValue({
+        ...mockComment,
+        id: 'reply-comment-id',
+        parentId: mockComment.id,
+      })
+      mockPrisma.comment.findUnique.mockResolvedValue({
+        ...mockComment,
+        userId: mockUser.id, // 自分のコメント
+      })
+
+      const { createComment } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      formData.append('postId', 'post-id')
+      formData.append('parentId', mockComment.id)
+      formData.append('content', '自分への返信')
+      await createComment(formData)
+
+      // 通知は作成されない
+      expect(mockPrisma.notification.create).not.toHaveBeenCalled()
+    })
+
+    it('自分の投稿へのコメントには通知を作成しない', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      mockPrisma.comment.count.mockResolvedValue(0)
+      mockPrisma.comment.create.mockResolvedValue({
+        ...mockComment,
+        id: 'new-comment-id',
+      })
+      mockPrisma.post.findUnique.mockResolvedValue({
+        ...mockPost,
+        userId: mockUser.id, // 自分の投稿
+      })
+
+      const { createComment } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      formData.append('postId', 'post-id')
+      formData.append('content', '自分の投稿へのコメント')
+      await createComment(formData)
+
+      // 通知は作成されない
+      expect(mockPrisma.notification.create).not.toHaveBeenCalled()
+    })
+
+    it('投稿が見つからない場合は通知を作成しない', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      mockPrisma.comment.count.mockResolvedValue(0)
+      mockPrisma.comment.create.mockResolvedValue({
+        ...mockComment,
+        id: 'new-comment-id',
+      })
+      mockPrisma.post.findUnique.mockResolvedValue(null)
+
+      const { createComment } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      formData.append('postId', 'post-id')
+      formData.append('content', 'テストコメント')
+      await createComment(formData)
+
+      expect(mockPrisma.notification.create).not.toHaveBeenCalled()
+    })
+
+    it('親コメントが見つからない場合は返信通知を作成しない', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      mockPrisma.comment.count.mockResolvedValue(0)
+      mockPrisma.comment.create.mockResolvedValue({
+        ...mockComment,
+        id: 'reply-comment-id',
+        parentId: 'parent-id',
+      })
+      mockPrisma.comment.findUnique.mockResolvedValue(null)
+
+      const { createComment } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      formData.append('postId', 'post-id')
+      formData.append('parentId', 'parent-id')
+      formData.append('content', '返信コメント')
+      await createComment(formData)
+
+      expect(mockPrisma.notification.create).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('uploadCommentMedia - 追加テスト', () => {
+    it('レート制限に達した場合はエラーを返す', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      const { checkUserRateLimit } = await import('@/lib/rate-limit')
+      ;(checkUserRateLimit as jest.Mock).mockResolvedValueOnce({ success: false })
+
+      const { uploadCommentMedia } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      formData.append('file', file)
+      const result = await uploadCommentMedia(formData)
+
+      expect(result).toEqual({ error: 'アップロードが多すぎます。しばらく待ってから再試行してください' })
+    })
+
+    it('日次制限に達した場合はエラーを返す', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+      const { checkDailyLimit } = await import('@/lib/rate-limit')
+      ;(checkDailyLimit as jest.Mock).mockResolvedValueOnce({ allowed: false, limit: 50 })
+
+      const { uploadCommentMedia } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      formData.append('file', file)
+      const result = await uploadCommentMedia(formData)
+
+      expect(result).toEqual({ error: '1日のアップロード上限（50回）に達しました' })
+    })
+
+    it('画像でも動画でもないファイルはエラーを返す', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ isSuspended: false })
+
+      const { uploadCommentMedia } = await import('@/lib/actions/comment')
+      const formData = new FormData()
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      formData.append('file', file)
+      const result = await uploadCommentMedia(formData)
+
+      expect(result).toEqual({ error: '画像または動画ファイルを選択してください' })
+    })
+  })
+
+  describe('getComments - hasMore判定', () => {
+    it('hasMoreが正しく判定される（limitと同数の場合）', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      const comments = [
+        { ...mockComment, id: 'comment-0', _count: { likes: 0, replies: 0 }, media: [] },
+        { ...mockComment, id: 'comment-1', _count: { likes: 0, replies: 0 }, media: [] },
+        { ...mockComment, id: 'comment-2', _count: { likes: 0, replies: 0 }, media: [] },
+      ]
+      mockPrisma.comment.findMany.mockResolvedValue(comments)
+      mockPrisma.like.findMany.mockResolvedValue([])
+
+      const { getComments } = await import('@/lib/actions/comment')
+      const result = await getComments('post-id', undefined, 3)
+
+      expect(result.nextCursor).toBe('comment-2')
+    })
+
+    it('hasMoreが正しく判定される（limitより少ない場合）', async () => {
+      mockPrisma.block.findMany.mockResolvedValue([])
+      const comments = [
+        { ...mockComment, id: 'comment-0', _count: { likes: 0, replies: 0 }, media: [] },
+      ]
+      mockPrisma.comment.findMany.mockResolvedValue(comments)
+      mockPrisma.like.findMany.mockResolvedValue([])
+
+      const { getComments } = await import('@/lib/actions/comment')
+      const result = await getComments('post-id', undefined, 3)
+
+      expect(result.nextCursor).toBeUndefined()
+    })
+  })
 })
