@@ -4,8 +4,8 @@
  * @jest-environment node
  */
 
-// Prismaモック
-const mockPrisma = {
+// Prismaモック（filter-helper固有）
+const fhMockPrisma = {
   block: {
     findMany: jest.fn(),
   },
@@ -15,7 +15,7 @@ const mockPrisma = {
 }
 
 jest.mock('@/lib/db', () => ({
-  prisma: mockPrisma,
+  prisma: fhMockPrisma,
 }))
 
 describe('filter-helper', () => {
@@ -40,8 +40,8 @@ describe('filter-helper', () => {
         })
 
         expect(result).toEqual([])
-        expect(mockPrisma.block.findMany).not.toHaveBeenCalled()
-        expect(mockPrisma.mute.findMany).not.toHaveBeenCalled()
+        expect(fhMockPrisma.block.findMany).not.toHaveBeenCalled()
+        expect(fhMockPrisma.mute.findMany).not.toHaveBeenCalled()
       })
 
       it('オプションを指定しない場合、空配列を返す', async () => {
@@ -63,7 +63,7 @@ describe('filter-helper', () => {
 
     describe('ブロックしたユーザーの取得（blocked: true）', () => {
       it('自分がブロックしたユーザーを取得する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'user-1', blockedId: 'blocked-user-1' },
           { blockerId: 'user-1', blockedId: 'blocked-user-2' },
         ])
@@ -78,7 +78,7 @@ describe('filter-helper', () => {
       })
 
       it('ブロックしていない場合、空配列を返す', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([])
+        fhMockPrisma.block.findMany.mockResolvedValue([])
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -88,13 +88,13 @@ describe('filter-helper', () => {
       })
 
       it('blockerIdがuserIdと一致するクエリを実行する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([])
+        fhMockPrisma.block.findMany.mockResolvedValue([])
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
         await getExcludedUserIds('user-1', { blocked: true })
 
-        expect(mockPrisma.block.findMany).toHaveBeenCalledWith({
+        expect(fhMockPrisma.block.findMany).toHaveBeenCalledWith({
           where: { OR: [{ blockerId: 'user-1' }] },
           select: { blockerId: true, blockedId: true },
         })
@@ -103,7 +103,7 @@ describe('filter-helper', () => {
 
     describe('自分をブロックしたユーザーの取得（blockedBy: true）', () => {
       it('自分をブロックしたユーザーを取得する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'blocking-user-1', blockedId: 'user-1' },
           { blockerId: 'blocking-user-2', blockedId: 'user-1' },
         ])
@@ -118,13 +118,13 @@ describe('filter-helper', () => {
       })
 
       it('blockedIdがuserIdと一致するクエリを実行する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([])
+        fhMockPrisma.block.findMany.mockResolvedValue([])
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
         await getExcludedUserIds('user-1', { blockedBy: true })
 
-        expect(mockPrisma.block.findMany).toHaveBeenCalledWith({
+        expect(fhMockPrisma.block.findMany).toHaveBeenCalledWith({
           where: { OR: [{ blockedId: 'user-1' }] },
           select: { blockerId: true, blockedId: true },
         })
@@ -133,7 +133,7 @@ describe('filter-helper', () => {
 
     describe('双方向ブロック（blocked: true, blockedBy: true）', () => {
       it('両方向のブロックを取得する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'user-1', blockedId: 'blocked-user' },
           { blockerId: 'blocking-user', blockedId: 'user-1' },
         ])
@@ -151,13 +151,13 @@ describe('filter-helper', () => {
       })
 
       it('OR条件で両方向を検索する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([])
+        fhMockPrisma.block.findMany.mockResolvedValue([])
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
         await getExcludedUserIds('user-1', { blocked: true, blockedBy: true })
 
-        expect(mockPrisma.block.findMany).toHaveBeenCalledWith({
+        expect(fhMockPrisma.block.findMany).toHaveBeenCalledWith({
           where: {
             OR: [{ blockerId: 'user-1' }, { blockedId: 'user-1' }],
           },
@@ -166,7 +166,7 @@ describe('filter-helper', () => {
       })
 
       it('同じユーザーが双方向の結果に含まれる場合、重複を除去する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'user-1', blockedId: 'mutual-block-user' },
           { blockerId: 'mutual-block-user', blockedId: 'user-1' },
         ])
@@ -185,7 +185,7 @@ describe('filter-helper', () => {
 
     describe('ミュートしたユーザーの取得（muted: true）', () => {
       it('自分がミュートしたユーザーを取得する', async () => {
-        mockPrisma.mute.findMany.mockResolvedValue([
+        fhMockPrisma.mute.findMany.mockResolvedValue([
           { muterId: 'user-1', mutedId: 'muted-user-1' },
           { muterId: 'user-1', mutedId: 'muted-user-2' },
         ])
@@ -200,13 +200,13 @@ describe('filter-helper', () => {
       })
 
       it('muterIdがuserIdと一致するクエリを実行する', async () => {
-        mockPrisma.mute.findMany.mockResolvedValue([])
+        fhMockPrisma.mute.findMany.mockResolvedValue([])
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
         await getExcludedUserIds('user-1', { muted: true })
 
-        expect(mockPrisma.mute.findMany).toHaveBeenCalledWith({
+        expect(fhMockPrisma.mute.findMany).toHaveBeenCalledWith({
           where: { muterId: 'user-1' },
           select: { mutedId: true },
         })
@@ -215,10 +215,10 @@ describe('filter-helper', () => {
 
     describe('すべてのオプション（blocked, blockedBy, muted）', () => {
       it('ブロックとミュートの両方を取得する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'user-1', blockedId: 'blocked-user' },
         ])
-        mockPrisma.mute.findMany.mockResolvedValue([
+        fhMockPrisma.mute.findMany.mockResolvedValue([
           { muterId: 'user-1', mutedId: 'muted-user' },
         ])
 
@@ -235,10 +235,10 @@ describe('filter-helper', () => {
       })
 
       it('ブロックとミュートで重複するユーザーの重複を除去する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'user-1', blockedId: 'same-user' },
         ])
-        mockPrisma.mute.findMany.mockResolvedValue([
+        fhMockPrisma.mute.findMany.mockResolvedValue([
           { muterId: 'user-1', mutedId: 'same-user' },
         ])
 
@@ -255,7 +255,7 @@ describe('filter-helper', () => {
 
     describe('自分自身の除外', () => {
       it('blockedByの結果から自分自身を除外する', async () => {
-        mockPrisma.block.findMany.mockResolvedValue([
+        fhMockPrisma.block.findMany.mockResolvedValue([
           { blockerId: 'other-user', blockedId: 'user-1' },
         ])
 
@@ -278,8 +278,8 @@ describe('filter-helper', () => {
           setTimeout(() => resolve([]), 10)
         )
 
-        mockPrisma.block.findMany.mockReturnValue(blockPromise)
-        mockPrisma.mute.findMany.mockReturnValue(mutePromise)
+        fhMockPrisma.block.findMany.mockReturnValue(blockPromise)
+        fhMockPrisma.mute.findMany.mockReturnValue(mutePromise)
 
         const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -303,7 +303,7 @@ describe('filter-helper', () => {
 
   describe('getBlockedUserIds', () => {
     it('ブロックしたユーザーIDの配列を返す', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([
+      fhMockPrisma.block.findMany.mockResolvedValue([
         { blockedId: 'blocked-1' },
         { blockedId: 'blocked-2' },
         { blockedId: 'blocked-3' },
@@ -317,7 +317,7 @@ describe('filter-helper', () => {
     })
 
     it('ブロックしていない場合、空配列を返す', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([])
+      fhMockPrisma.block.findMany.mockResolvedValue([])
 
       const { getBlockedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -327,20 +327,20 @@ describe('filter-helper', () => {
     })
 
     it('正しいクエリを実行する', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([])
+      fhMockPrisma.block.findMany.mockResolvedValue([])
 
       const { getBlockedUserIds } = await import('@/lib/actions/filter-helper')
 
       await getBlockedUserIds('user-123')
 
-      expect(mockPrisma.block.findMany).toHaveBeenCalledWith({
+      expect(fhMockPrisma.block.findMany).toHaveBeenCalledWith({
         where: { blockerId: 'user-123' },
         select: { blockedId: true },
       })
     })
 
     it('複数のブロックを正しくマッピングする', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([
+      fhMockPrisma.block.findMany.mockResolvedValue([
         { blockedId: 'a' },
         { blockedId: 'b' },
         { blockedId: 'c' },
@@ -363,7 +363,7 @@ describe('filter-helper', () => {
 
   describe('getMutedUserIds', () => {
     it('ミュートしたユーザーIDの配列を返す', async () => {
-      mockPrisma.mute.findMany.mockResolvedValue([
+      fhMockPrisma.mute.findMany.mockResolvedValue([
         { mutedId: 'muted-1' },
         { mutedId: 'muted-2' },
       ])
@@ -376,7 +376,7 @@ describe('filter-helper', () => {
     })
 
     it('ミュートしていない場合、空配列を返す', async () => {
-      mockPrisma.mute.findMany.mockResolvedValue([])
+      fhMockPrisma.mute.findMany.mockResolvedValue([])
 
       const { getMutedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -386,13 +386,13 @@ describe('filter-helper', () => {
     })
 
     it('正しいクエリを実行する', async () => {
-      mockPrisma.mute.findMany.mockResolvedValue([])
+      fhMockPrisma.mute.findMany.mockResolvedValue([])
 
       const { getMutedUserIds } = await import('@/lib/actions/filter-helper')
 
       await getMutedUserIds('user-456')
 
-      expect(mockPrisma.mute.findMany).toHaveBeenCalledWith({
+      expect(fhMockPrisma.mute.findMany).toHaveBeenCalledWith({
         where: { muterId: 'user-456' },
         select: { mutedId: true },
       })
@@ -402,7 +402,7 @@ describe('filter-helper', () => {
       const mutes = Array.from({ length: 100 }, (_, i) => ({
         mutedId: `muted-${i}`,
       }))
-      mockPrisma.mute.findMany.mockResolvedValue(mutes)
+      fhMockPrisma.mute.findMany.mockResolvedValue(mutes)
 
       const { getMutedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -420,8 +420,8 @@ describe('filter-helper', () => {
 
   describe('FilterOptions型の動作', () => {
     it('すべてのオプションをtrueで指定できる', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([])
-      mockPrisma.mute.findMany.mockResolvedValue([])
+      fhMockPrisma.block.findMany.mockResolvedValue([])
+      fhMockPrisma.mute.findMany.mockResolvedValue([])
 
       const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
@@ -432,19 +432,19 @@ describe('filter-helper', () => {
         muted: true,
       })
 
-      expect(mockPrisma.block.findMany).toHaveBeenCalled()
-      expect(mockPrisma.mute.findMany).toHaveBeenCalled()
+      expect(fhMockPrisma.block.findMany).toHaveBeenCalled()
+      expect(fhMockPrisma.mute.findMany).toHaveBeenCalled()
     })
 
     it('一部のオプションのみ指定できる', async () => {
-      mockPrisma.block.findMany.mockResolvedValue([])
+      fhMockPrisma.block.findMany.mockResolvedValue([])
 
       const { getExcludedUserIds } = await import('@/lib/actions/filter-helper')
 
       await getExcludedUserIds('user-1', { blocked: true })
 
-      expect(mockPrisma.block.findMany).toHaveBeenCalled()
-      expect(mockPrisma.mute.findMany).not.toHaveBeenCalled()
+      expect(fhMockPrisma.block.findMany).toHaveBeenCalled()
+      expect(fhMockPrisma.mute.findMany).not.toHaveBeenCalled()
     })
   })
 })

@@ -54,6 +54,77 @@ function checkBasicAuth(request: NextRequest): NextResponse | null {
   return null
 }
 
+/**
+ * 許可されたオリジンを取得
+ */
+function getAllowedOrigins(): string[] {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const additionalOrigins = process.env.ALLOWED_ORIGINS?.split(',') || []
+
+  try {
+    const appOrigin = new URL(appUrl).origin
+    return [appOrigin, ...additionalOrigins].filter(Boolean)
+  } catch {
+    return ['http://localhost:3000', ...additionalOrigins].filter(Boolean)
+  }
+}
+
+/**
+ * Originヘッダーを検証（Server Actions用）
+ *
+ * POSTリクエストに対してOriginヘッダーを検証し、
+ * クロスオリジンからの不正なリクエストをブロック
+ */
+function validateOriginHeader(request: NextRequest): NextResponse | null {
+  // POSTリクエスト以外はスキップ
+  if (request.method !== 'POST') {
+    return null
+  }
+
+  // APIルートでのOrigin検証（Server Actions含む）
+  const origin = request.headers.get('origin')
+  const referer = request.headers.get('referer')
+
+  // Originヘッダーがある場合は検証
+  if (origin) {
+    const allowedOrigins = getAllowedOrigins()
+
+    if (!allowedOrigins.includes(origin)) {
+      console.warn(`[SECURITY] Blocked request from unauthorized origin: ${origin}`)
+      return new NextResponse(
+        JSON.stringify({ error: 'Unauthorized origin' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    }
+  }
+
+  // Refererヘッダーがある場合も検証（バックアップ）
+  if (!origin && referer) {
+    try {
+      const refererOrigin = new URL(referer).origin
+      const allowedOrigins = getAllowedOrigins()
+
+      if (!allowedOrigins.includes(refererOrigin)) {
+        console.warn(`[SECURITY] Blocked request from unauthorized referer: ${refererOrigin}`)
+        return new NextResponse(
+          JSON.stringify({ error: 'Unauthorized origin' }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      }
+    } catch {
+      // Refererのパースに失敗した場合は続行
+    }
+  }
+
+  return null
+}
+
 // セキュリティヘッダーを追加する関数
 function addSecurityHeaders(response: NextResponse): NextResponse {
   // XSS保護
@@ -73,6 +144,11 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(self), interest-cohort=()'
   )
+
+  // Cross-Origin セキュリティヘッダー（追加）
+  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none')
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
+  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
 
   // Content Security Policy
   // セキュリティ強化版 - Google AdSense互換
@@ -140,6 +216,18 @@ function isMaintenanceAllowedPath(pathname: string): boolean {
 
 export default auth(async (req) => {
   const { nextUrl } = req
+
+  // Server Actions（POSTリクエスト）のOrigin検証
+  // ただし、外部Webhook用のAPIは除外
+  const webhookPaths = ['/api/webhooks/', '/api/cron/']
+  const isWebhook = webhookPaths.some((path) => nextUrl.pathname.startsWith(path))
+
+  if (!isWebhook) {
+    const originError = validateOriginHeader(req)
+    if (originError) {
+      return originError
+    }
+  }
 
   // APIルートはBasic認証をスキップ（Webhook等のため）
   if (nextUrl.pathname.startsWith('/api/')) {

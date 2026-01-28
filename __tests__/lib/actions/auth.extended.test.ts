@@ -4,8 +4,8 @@
  * @jest-environment node
  */
 
-// Prismaモック
-const mockPrisma = {
+// Prismaモック（auth.extended固有）
+const authExtMockPrisma = {
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
@@ -19,16 +19,16 @@ const mockPrisma = {
 }
 
 jest.mock('@/lib/db', () => ({
-  prisma: mockPrisma,
+  prisma: authExtMockPrisma,
 }))
 
-// bcryptjsモック
-const mockBcrypt = {
+// bcryptjsモック（auth.extended固有）
+const authExtMockBcrypt = {
   hash: jest.fn(),
   compare: jest.fn(),
 }
 
-jest.mock('bcryptjs', () => mockBcrypt)
+jest.mock('bcryptjs', () => authExtMockBcrypt)
 
 // headersモック
 jest.mock('next/headers', () => ({
@@ -199,9 +199,9 @@ describe('auth actions extended tests', () => {
 
   describe('registerUser', () => {
     it('新規ユーザーを登録する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null)
-      mockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
-      mockBcrypt.hash.mockResolvedValue('hashedPassword')
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
+      authExtMockBcrypt.hash.mockResolvedValue('hashedPassword')
 
       const { registerUser } = await import('@/lib/actions/auth')
 
@@ -216,7 +216,7 @@ describe('auth actions extended tests', () => {
     })
 
     it('メールアドレスが既に登録されている場合はエラー', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'existing-user' })
+      authExtMockPrisma.user.findUnique.mockResolvedValue({ id: 'existing-user' })
 
       const { registerUser } = await import('@/lib/actions/auth')
 
@@ -279,9 +279,9 @@ describe('auth actions extended tests', () => {
     })
 
     it('パスワードをハッシュ化する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null)
-      mockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
-      mockBcrypt.hash.mockResolvedValue('$2a$10$hashedpassword')
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
+      authExtMockBcrypt.hash.mockResolvedValue('$2a$10$hashedpassword')
 
       const { registerUser } = await import('@/lib/actions/auth')
 
@@ -291,13 +291,13 @@ describe('auth actions extended tests', () => {
         nickname: 'User',
       })
 
-      expect(mockBcrypt.hash).toHaveBeenCalledWith('SecurePass123', 10)
+      expect(authExtMockBcrypt.hash).toHaveBeenCalledWith('SecurePass123', 10)
     })
 
     it('登録成功をセキュリティログに記録する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null)
-      mockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
-      mockBcrypt.hash.mockResolvedValue('hashedPassword')
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.create.mockResolvedValue({ id: 'user-123' })
+      authExtMockBcrypt.hash.mockResolvedValue('hashedPassword')
 
       const { logRegisterSuccess } = await import('@/lib/security-logger')
       const { registerUser } = await import('@/lib/actions/auth')
@@ -318,12 +318,12 @@ describe('auth actions extended tests', () => {
 
   describe('requestPasswordReset', () => {
     it('パスワードリセットメールを送信する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockPrisma.passwordResetToken.create.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.create.mockResolvedValue({})
 
       const { sendPasswordResetEmail } = await import('@/lib/email')
       ;(sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true })
@@ -337,7 +337,7 @@ describe('auth actions extended tests', () => {
     })
 
     it('ユーザーが存在しない場合も成功を返す（列挙攻撃防止）', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
 
       const { requestPasswordReset } = await import('@/lib/actions/auth')
 
@@ -358,12 +358,12 @@ describe('auth actions extended tests', () => {
     })
 
     it('メール送信に失敗した場合はエラー', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockPrisma.passwordResetToken.create.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.create.mockResolvedValue({})
 
       const { sendPasswordResetEmail } = await import('@/lib/email')
       ;(sendPasswordResetEmail as jest.Mock).mockResolvedValue({
@@ -379,12 +379,12 @@ describe('auth actions extended tests', () => {
     })
 
     it('既存のトークンを削除する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockPrisma.passwordResetToken.create.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.create.mockResolvedValue({})
 
       const { sendPasswordResetEmail } = await import('@/lib/email')
       ;(sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true })
@@ -393,13 +393,13 @@ describe('auth actions extended tests', () => {
 
       await requestPasswordReset('test@example.com')
 
-      expect(mockPrisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({
+      expect(authExtMockPrisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       })
     })
 
     it('セキュリティログに記録する', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
 
       const { logPasswordResetRequest } = await import('@/lib/security-logger')
       const { requestPasswordReset } = await import('@/lib/actions/auth')
@@ -416,17 +416,17 @@ describe('auth actions extended tests', () => {
 
   describe('resetPassword', () => {
     it('パスワードをリセットする', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue({
         email: 'test@example.com',
         token: 'hashedToken',
       })
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.user.update.mockResolvedValue({})
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockBcrypt.hash.mockResolvedValue('newHashedPassword')
+      authExtMockPrisma.user.update.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockBcrypt.hash.mockResolvedValue('newHashedPassword')
 
       const { resetPassword } = await import('@/lib/actions/auth')
 
@@ -476,7 +476,7 @@ describe('auth actions extended tests', () => {
     })
 
     it('トークンが無効または期限切れの場合はエラー', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
 
       const { resetPassword } = await import('@/lib/actions/auth')
 
@@ -490,11 +490,11 @@ describe('auth actions extended tests', () => {
     })
 
     it('ユーザーが見つからない場合はエラー', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue({
         email: 'test@example.com',
         token: 'hashedToken',
       })
-      mockPrisma.user.findUnique.mockResolvedValue(null)
+      authExtMockPrisma.user.findUnique.mockResolvedValue(null)
 
       const { resetPassword } = await import('@/lib/actions/auth')
 
@@ -508,17 +508,17 @@ describe('auth actions extended tests', () => {
     })
 
     it('使用済みトークンを削除する', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue({
         email: 'test@example.com',
         token: 'hashedToken',
       })
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.user.update.mockResolvedValue({})
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockBcrypt.hash.mockResolvedValue('newHashedPassword')
+      authExtMockPrisma.user.update.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockBcrypt.hash.mockResolvedValue('newHashedPassword')
 
       const { resetPassword } = await import('@/lib/actions/auth')
 
@@ -528,23 +528,23 @@ describe('auth actions extended tests', () => {
         newPassword: 'NewSecure123',
       })
 
-      expect(mockPrisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({
+      expect(authExtMockPrisma.passwordResetToken.deleteMany).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       })
     })
 
     it('成功をセキュリティログに記録する', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue({
         email: 'test@example.com',
         token: 'hashedToken',
       })
-      mockPrisma.user.findUnique.mockResolvedValue({
+      authExtMockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
       })
-      mockPrisma.user.update.mockResolvedValue({})
-      mockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
-      mockBcrypt.hash.mockResolvedValue('newHashedPassword')
+      authExtMockPrisma.user.update.mockResolvedValue({})
+      authExtMockPrisma.passwordResetToken.deleteMany.mockResolvedValue({})
+      authExtMockBcrypt.hash.mockResolvedValue('newHashedPassword')
 
       const { logPasswordResetSuccess } = await import('@/lib/security-logger')
       const { resetPassword } = await import('@/lib/actions/auth')
@@ -565,7 +565,7 @@ describe('auth actions extended tests', () => {
 
   describe('verifyPasswordResetToken', () => {
     it('有効なトークンの場合はtrueを返す', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue({
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue({
         email: 'test@example.com',
         token: 'hashedToken',
       })
@@ -578,7 +578,7 @@ describe('auth actions extended tests', () => {
     })
 
     it('無効なトークンの場合はfalseを返す', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
 
       const { verifyPasswordResetToken } = await import('@/lib/actions/auth')
 
@@ -588,13 +588,13 @@ describe('auth actions extended tests', () => {
     })
 
     it('有効期限が過ぎたトークンを検索しない', async () => {
-      mockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
+      authExtMockPrisma.passwordResetToken.findFirst.mockResolvedValue(null)
 
       const { verifyPasswordResetToken } = await import('@/lib/actions/auth')
 
       await verifyPasswordResetToken('test@example.com', 'expiredToken')
 
-      expect(mockPrisma.passwordResetToken.findFirst).toHaveBeenCalledWith({
+      expect(authExtMockPrisma.passwordResetToken.findFirst).toHaveBeenCalledWith({
         where: {
           email: 'test@example.com',
           token: expect.any(String), // ハッシュ化されたトークン

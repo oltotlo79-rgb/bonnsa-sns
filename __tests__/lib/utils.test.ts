@@ -199,7 +199,7 @@ describe('cn (className utility)', () => {
 
   describe('実践的なユースケース', () => {
     it('ボタンコンポーネントのスタイリング', () => {
-      const variant = 'primary'
+      const variant: string = 'primary'
       const disabled = false
       const className = 'custom-class'
 

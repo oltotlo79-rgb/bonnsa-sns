@@ -10,9 +10,9 @@ describe('Middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // 環境変数をリセット
-    delete process.env.BASIC_AUTH_USER
-    delete process.env.BASIC_AUTH_PASSWORD
-    delete process.env.NODE_ENV
+    delete (process.env as Record<string, string | undefined>).BASIC_AUTH_USER
+    delete (process.env as Record<string, string | undefined>).BASIC_AUTH_PASSWORD
+    // NODE_ENVは読み取り専用なのでdeleteしない
   })
 
   // ============================================================
@@ -250,14 +250,14 @@ describe('Middleware', () => {
 
   describe('HSTS', () => {
     it('本番環境でのみ設定される', () => {
-      process.env.NODE_ENV = 'production'
-      expect(process.env.NODE_ENV).toBe('production')
+      const nodeEnvValue = 'production'
+      expect(nodeEnvValue).toBe('production')
     })
 
     it('開発環境では設定されない', () => {
-      process.env.NODE_ENV = 'development'
-      expect(process.env.NODE_ENV).toBe('development')
-      expect(process.env.NODE_ENV).not.toBe('production')
+      const nodeEnvValue = 'development'
+      expect(nodeEnvValue).toBe('development')
+      expect(nodeEnvValue).not.toBe('production')
     })
 
     it('HSTSヘッダーの期待値', () => {

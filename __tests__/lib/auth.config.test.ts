@@ -159,7 +159,7 @@ describe('auth.config', () => {
     describe('エッジケース', () => {
       it('authがundefinedの場合は未ログインとして扱う', () => {
         const result = authConfig.callbacks?.authorized?.({
-          auth: undefined,
+          auth: undefined as unknown as null,
           request: createMockRequest('/feed'),
         } as Parameters<NonNullable<typeof authConfig.callbacks.authorized>>[0])
 

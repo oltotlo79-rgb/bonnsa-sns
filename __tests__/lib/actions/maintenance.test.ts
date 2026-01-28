@@ -4,8 +4,8 @@
  * @jest-environment node
  */
 
-// Prisma モック
-const mockPrisma = {
+// Prisma モック（maintenance固有）
+const mtMockPrisma = {
   systemSetting: {
     findUnique: jest.fn(),
     upsert: jest.fn(),
@@ -19,19 +19,19 @@ const mockPrisma = {
 }
 
 jest.mock('@/lib/db', () => ({
-  prisma: mockPrisma,
+  prisma: mtMockPrisma,
 }))
 
-// NextAuth モック
-const mockAuth = jest.fn()
+// NextAuth モック（maintenance固有）
+const mtMockAuth = jest.fn()
 jest.mock('@/lib/auth', () => ({
-  auth: mockAuth,
+  auth: mtMockAuth,
 }))
 
-// isAdmin モック
-const mockIsAdmin = jest.fn()
+// isAdmin モック（maintenance固有）
+const mtMockIsAdmin = jest.fn()
 jest.mock('@/lib/actions/admin', () => ({
-  isAdmin: mockIsAdmin,
+  isAdmin: mtMockIsAdmin,
 }))
 
 // revalidatePath モック
@@ -51,7 +51,7 @@ describe('Maintenance Actions', () => {
 
   describe('getMaintenanceSettings', () => {
     it('設定がない場合はデフォルト値を返す', async () => {
-      mockPrisma.systemSetting.findUnique.mockResolvedValue(null)
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue(null)
 
       const { getMaintenanceSettings } = await import('@/lib/actions/maintenance')
       const settings = await getMaintenanceSettings()
@@ -70,7 +70,7 @@ describe('Maintenance Actions', () => {
         message: 'カスタムメッセージ',
       }
 
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         key: 'maintenance_mode',
         value: savedSettings,
       })
@@ -85,7 +85,7 @@ describe('Maintenance Actions', () => {
     })
 
     it('エラー時はデフォルト値を返す', async () => {
-      mockPrisma.systemSetting.findUnique.mockRejectedValue(new Error('DB error'))
+      mtMockPrisma.systemSetting.findUnique.mockRejectedValue(new Error('DB error'))
 
       const { getMaintenanceSettings } = await import('@/lib/actions/maintenance')
       const settings = await getMaintenanceSettings()
@@ -100,7 +100,7 @@ describe('Maintenance Actions', () => {
 
   describe('isMaintenanceMode', () => {
     it('無効の場合はfalseを返す', async () => {
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: {
           enabled: false,
           startTime: null,
@@ -116,7 +116,7 @@ describe('Maintenance Actions', () => {
     })
 
     it('有効で時間指定なしの場合はtrueを返す', async () => {
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: {
           enabled: true,
           startTime: null,
@@ -134,7 +134,7 @@ describe('Maintenance Actions', () => {
     it('開始時間前の場合はfalseを返す', async () => {
       const futureTime = new Date(Date.now() + 3600000).toISOString() // 1時間後
 
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: {
           enabled: true,
           startTime: futureTime,
@@ -152,7 +152,7 @@ describe('Maintenance Actions', () => {
     it('終了時間後の場合はfalseを返す', async () => {
       const pastTime = new Date(Date.now() - 3600000).toISOString() // 1時間前
 
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: {
           enabled: true,
           startTime: null,
@@ -171,7 +171,7 @@ describe('Maintenance Actions', () => {
       const pastTime = new Date(Date.now() - 3600000).toISOString() // 1時間前
       const futureTime = new Date(Date.now() + 3600000).toISOString() // 1時間後
 
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: {
           enabled: true,
           startTime: pastTime,
@@ -193,7 +193,7 @@ describe('Maintenance Actions', () => {
 
   describe('checkIsAdmin', () => {
     it('管理者の場合はtrueを返す', async () => {
-      mockPrisma.adminUser.findUnique.mockResolvedValue({
+      mtMockPrisma.adminUser.findUnique.mockResolvedValue({
         userId: 'admin-1',
         role: 'admin',
       })
@@ -205,7 +205,7 @@ describe('Maintenance Actions', () => {
     })
 
     it('管理者でない場合はfalseを返す', async () => {
-      mockPrisma.adminUser.findUnique.mockResolvedValue(null)
+      mtMockPrisma.adminUser.findUnique.mockResolvedValue(null)
 
       const { checkIsAdmin } = await import('@/lib/actions/maintenance')
       const result = await checkIsAdmin('user-1')
@@ -214,7 +214,7 @@ describe('Maintenance Actions', () => {
     })
 
     it('エラー時はfalseを返す', async () => {
-      mockPrisma.adminUser.findUnique.mockRejectedValue(new Error('DB error'))
+      mtMockPrisma.adminUser.findUnique.mockRejectedValue(new Error('DB error'))
 
       const { checkIsAdmin } = await import('@/lib/actions/maintenance')
       const result = await checkIsAdmin('user-1')
@@ -229,7 +229,7 @@ describe('Maintenance Actions', () => {
 
   describe('updateMaintenanceSettings', () => {
     it('未認証の場合はエラーを返す', async () => {
-      mockAuth.mockResolvedValue(null)
+      mtMockAuth.mockResolvedValue(null)
 
       const { updateMaintenanceSettings } = await import('@/lib/actions/maintenance')
       const result = await updateMaintenanceSettings({ enabled: true })
@@ -239,8 +239,8 @@ describe('Maintenance Actions', () => {
     })
 
     it('管理者でない場合はエラーを返す', async () => {
-      mockAuth.mockResolvedValue({ user: { id: 'user-1' } })
-      mockIsAdmin.mockResolvedValue(false)
+      mtMockAuth.mockResolvedValue({ user: { id: 'user-1' } })
+      mtMockIsAdmin.mockResolvedValue(false)
 
       const { updateMaintenanceSettings } = await import('@/lib/actions/maintenance')
       const result = await updateMaintenanceSettings({ enabled: true })
@@ -250,11 +250,11 @@ describe('Maintenance Actions', () => {
     })
 
     it('管理者の場合は設定を更新する', async () => {
-      mockAuth.mockResolvedValue({ user: { id: 'admin-1' } })
-      mockIsAdmin.mockResolvedValue(true)
-      mockPrisma.systemSetting.findUnique.mockResolvedValue(null)
-      mockPrisma.systemSetting.upsert.mockResolvedValue({})
-      mockPrisma.adminLog.create.mockResolvedValue({})
+      mtMockAuth.mockResolvedValue({ user: { id: 'admin-1' } })
+      mtMockIsAdmin.mockResolvedValue(true)
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue(null)
+      mtMockPrisma.systemSetting.upsert.mockResolvedValue({})
+      mtMockPrisma.adminLog.create.mockResolvedValue({})
 
       const { updateMaintenanceSettings } = await import('@/lib/actions/maintenance')
       const result = await updateMaintenanceSettings({
@@ -263,8 +263,8 @@ describe('Maintenance Actions', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(mockPrisma.systemSetting.upsert).toHaveBeenCalled()
-      expect(mockPrisma.adminLog.create).toHaveBeenCalled()
+      expect(mtMockPrisma.systemSetting.upsert).toHaveBeenCalled()
+      expect(mtMockPrisma.adminLog.create).toHaveBeenCalled()
     })
   })
 
@@ -274,13 +274,13 @@ describe('Maintenance Actions', () => {
 
   describe('toggleMaintenanceMode', () => {
     it('メンテナンスモードを有効にする', async () => {
-      mockAuth.mockResolvedValue({ user: { id: 'admin-1' } })
-      mockIsAdmin.mockResolvedValue(true)
-      mockPrisma.systemSetting.findUnique.mockResolvedValue({
+      mtMockAuth.mockResolvedValue({ user: { id: 'admin-1' } })
+      mtMockIsAdmin.mockResolvedValue(true)
+      mtMockPrisma.systemSetting.findUnique.mockResolvedValue({
         value: { enabled: false, startTime: null, endTime: null, message: '' },
       })
-      mockPrisma.systemSetting.upsert.mockResolvedValue({})
-      mockPrisma.adminLog.create.mockResolvedValue({})
+      mtMockPrisma.systemSetting.upsert.mockResolvedValue({})
+      mtMockPrisma.adminLog.create.mockResolvedValue({})
 
       const { toggleMaintenanceMode } = await import('@/lib/actions/maintenance')
       const result = await toggleMaintenanceMode(true)
