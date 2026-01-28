@@ -43,6 +43,12 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
+ * トースト通知
+ * 操作結果のフィードバックに使用
+ */
+import { useToast } from '@/hooks/use-toast'
+
+/**
  * shadcn/uiのButtonコンポーネント
  */
 import { Button } from '@/components/ui/button'
@@ -158,6 +164,11 @@ export function DeletePostButton({ postId, variant = 'icon', onDeleted }: Delete
    */
   const queryClient = useQueryClient()
 
+  /**
+   * トースト通知
+   */
+  const { toast } = useToast()
+
   // ------------------------------------------------------------
   // イベントハンドラ
   // ------------------------------------------------------------
@@ -193,9 +204,25 @@ export function DeletePostButton({ postId, variant = 'icon', onDeleted }: Delete
       router.refresh()
 
       /**
+       * 成功トースト通知
+       */
+      toast({
+        description: '投稿を削除しました',
+      })
+
+      /**
        * 削除成功コールバックを実行
        */
       onDeleted?.()
+    } else {
+      /**
+       * エラートースト通知
+       */
+      toast({
+        title: 'エラー',
+        description: '投稿の削除に失敗しました。再度お試しください',
+        variant: 'destructive',
+      })
     }
     setLoading(false)
     setOpen(false)
@@ -212,13 +239,21 @@ export function DeletePostButton({ postId, variant = 'icon', onDeleted }: Delete
         {/* 表示形式に応じてボタンを切り替え */}
         {variant === 'icon' ? (
           /* アイコン形式: PostCardのアクションバー等で使用 */
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-            <TrashIcon className="w-4 h-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+            aria-label="投稿を削除"
+          >
+            <TrashIcon className="w-4 h-4" aria-hidden="true" />
           </Button>
         ) : (
           /* メニュー形式: ドロップダウンメニュー等で使用 */
-          <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950">
-            <TrashIcon className="w-4 h-4" />
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+            aria-label="投稿を削除"
+          >
+            <TrashIcon className="w-4 h-4" aria-hidden="true" />
             <span>削除する</span>
           </button>
         )}

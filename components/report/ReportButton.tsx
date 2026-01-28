@@ -161,9 +161,9 @@ export function ReportButton({ targetType, targetId, variant = 'menu', className
         <button
           onClick={handleClick}
           className={`p-2 hover:bg-muted rounded-lg transition-colors ${className || ''}`}
-          title="通報"
+          aria-label="このコンテンツを通報"
         >
-          <FlagIcon className="w-4 h-4 text-muted-foreground" />
+          <FlagIcon className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
         </button>
       )}
 
@@ -172,8 +172,9 @@ export function ReportButton({ targetType, targetId, variant = 'menu', className
         <button
           onClick={handleClick}
           className={`flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground ${className || ''}`}
+          aria-label="このコンテンツを通報"
         >
-          <FlagIcon className="w-4 h-4" />
+          <FlagIcon className="w-4 h-4" aria-hidden="true" />
           <span>通報する</span>
         </button>
       )}
@@ -184,8 +185,9 @@ export function ReportButton({ targetType, targetId, variant = 'menu', className
         <button
           onClick={handleClick}
           className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950 ${className || ''}`}
+          aria-label="このコンテンツを通報"
         >
-          <FlagIcon className="w-4 h-4" />
+          <FlagIcon className="w-4 h-4" aria-hidden="true" />
           <span>通報する</span>
         </button>
       )}

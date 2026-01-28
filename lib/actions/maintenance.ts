@@ -117,6 +117,8 @@ export async function updateMaintenanceSettings(
       return { success: false, error: '管理者権限が必要です' }
     }
 
+    console.log('Updating maintenance settings for user:', session.user.id)
+
     // 現在の設定を取得
     const currentSettings = await getMaintenanceSettings()
 
@@ -128,36 +130,50 @@ export async function updateMaintenanceSettings(
 
     // 設定を保存（Prisma Json型に変換）
     const jsonValue = JSON.parse(JSON.stringify(newSettings))
-    await prisma.systemSetting.upsert({
-      where: { key: MAINTENANCE_SETTING_KEY },
-      update: {
-        value: jsonValue,
-        updatedBy: session.user.id,
-      },
-      create: {
-        key: MAINTENANCE_SETTING_KEY,
-        value: jsonValue,
-        updatedBy: session.user.id,
-      },
-    })
 
-    // 管理者ログに記録
-    await prisma.adminLog.create({
-      data: {
-        adminId: session.user.id,
-        action: settings.enabled ? 'maintenance_enabled' : 'maintenance_updated',
-        targetType: 'system_setting',
-        targetId: MAINTENANCE_SETTING_KEY,
-        details: jsonValue,
-      },
-    })
+    try {
+      await prisma.systemSetting.upsert({
+        where: { key: MAINTENANCE_SETTING_KEY },
+        update: {
+          value: jsonValue,
+          updatedBy: session.user.id,
+        },
+        create: {
+          key: MAINTENANCE_SETTING_KEY,
+          value: jsonValue,
+          updatedBy: session.user.id,
+        },
+      })
+    } catch (dbError) {
+      console.error('Failed to upsert systemSetting:', dbError)
+      throw new Error(`systemSetting更新エラー: ${dbError instanceof Error ? dbError.message : String(dbError)}`)
+    }
+
+    // 管理者ログに記録（失敗しても設定自体は保存済み）
+    try {
+      await prisma.adminLog.create({
+        data: {
+          adminId: session.user.id,
+          action: settings.enabled ? 'maintenance_enabled' : 'maintenance_updated',
+          targetType: 'system_setting',
+          targetId: MAINTENANCE_SETTING_KEY,
+          details: jsonValue,
+        },
+      })
+    } catch (logError) {
+      // ログ記録の失敗は警告のみ（設定自体は成功している）
+      console.error('Failed to create adminLog (non-fatal):', logError)
+    }
 
     revalidatePath('/admin/maintenance')
 
     return { success: true }
   } catch (error) {
     console.error('Failed to update maintenance settings:', error)
-    return { success: false, error: '設定の更新に失敗しました' }
+    // 本番環境でもエラー詳細を確認できるように
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Error details:', errorMessage)
+    return { success: false, error: `設定の更新に失敗しました: ${errorMessage}` }
   }
 }
 

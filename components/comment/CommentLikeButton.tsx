@@ -55,6 +55,12 @@ import { Heart } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
+ * トースト通知
+ * 操作結果のフィードバックに使用
+ */
+import { useToast } from '@/hooks/use-toast'
+
+/**
  * shadcn/ui Buttonコンポーネント
  * いいねボタンのベースコンポーネント
  */
@@ -141,6 +147,11 @@ export function CommentLikeButton({
    */
   const queryClient = useQueryClient()
 
+  /**
+   * トースト通知
+   */
+  const { toast } = useToast()
+
   // ------------------------------------------------------------
   // 副作用
   // ------------------------------------------------------------
@@ -209,6 +220,11 @@ export function CommentLikeButton({
         // --------------------------------------------
         setLiked(liked)
         setCount(initialCount)
+        toast({
+          title: 'エラー',
+          description: 'いいねに失敗しました。再度お試しください',
+          variant: 'destructive',
+        })
       } else {
         // --------------------------------------------
         // 成功時: React Queryキャッシュを無効化
@@ -236,12 +252,15 @@ export function CommentLikeButton({
       }`}
       onClick={handleToggle}
       disabled={isPending}
+      aria-label={liked ? 'コメントのいいねを取り消す' : 'コメントにいいねする'}
+      aria-pressed={liked}
     >
       {/* ハートアイコン: いいね済みの場合は塗りつぶし＆拡大アニメーション */}
       <Heart
         className={`w-4 h-4 mr-1 transition-all ${
           liked ? 'fill-current scale-110' : ''
         }`}
+        aria-hidden="true"
       />
       {/* いいね数を表示 */}
       <span className="text-xs">{count}</span>

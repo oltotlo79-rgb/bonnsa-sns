@@ -255,15 +255,30 @@ export function Timeline({ initialPosts, currentUserId }: TimelineProps) {
       ))}
 
       {/* 無限スクロール検知 */}
-      <div ref={ref} className="py-4 flex justify-center">
+      <div
+        ref={ref}
+        className="py-4 flex flex-col items-center gap-2"
+        role="status"
+        aria-live="polite"
+      >
         {isFetchingNextPage && (
           <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-            <span className="text-sm">読み込み中...</span>
+            <div
+              className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"
+              aria-hidden="true"
+            />
+            <span className="text-sm">投稿を読み込んでいます...</span>
           </div>
         )}
+        {!isFetchingNextPage && hasNextPage && (
+          <p className="text-xs text-muted-foreground">
+            {allPosts.length}件の投稿を表示中
+          </p>
+        )}
         {!hasNextPage && allPosts.length > 0 && (
-          <p className="text-sm text-muted-foreground">これ以上投稿はありません</p>
+          <p className="text-sm text-muted-foreground">
+            すべての投稿を表示しました（{allPosts.length}件）
+          </p>
         )}
       </div>
     </div>

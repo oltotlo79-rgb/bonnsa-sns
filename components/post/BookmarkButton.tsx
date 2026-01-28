@@ -44,6 +44,12 @@ import { Bookmark } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
+ * トースト通知
+ * 操作結果のフィードバックに使用
+ */
+import { useToast } from '@/hooks/use-toast'
+
+/**
  * shadcn/uiのButtonコンポーネント
  */
 import { Button } from '@/components/ui/button'
@@ -116,6 +122,11 @@ export function BookmarkButton({
    */
   const queryClient = useQueryClient()
 
+  /**
+   * トースト通知
+   */
+  const { toast } = useToast()
+
   // ------------------------------------------------------------
   // Effects
   // ------------------------------------------------------------
@@ -154,11 +165,19 @@ export function BookmarkButton({
          * エラー時: 元の状態にロールバック
          */
         setBookmarked(bookmarked)
+        toast({
+          title: 'エラー',
+          description: 'ブックマークに失敗しました。再度お試しください',
+          variant: 'destructive',
+        })
       } else {
         /**
          * 成功時: タイムラインキャッシュを無効化
          */
         queryClient.invalidateQueries({ queryKey: ['timeline'] })
+        toast({
+          description: newBookmarked ? 'ブックマークに追加しました' : 'ブックマークを解除しました',
+        })
       }
     })
   }
@@ -178,11 +197,14 @@ export function BookmarkButton({
       }`}
       onClick={handleToggle}
       disabled={isPending}
+      aria-label={bookmarked ? 'ブックマークを解除' : 'ブックマークに追加'}
+      aria-pressed={bookmarked}
     >
       <Bookmark
         className={`w-5 h-5 transition-all ${
           bookmarked ? 'fill-current scale-110' : ''
         }`}
+        aria-hidden="true"
       />
     </Button>
   )

@@ -273,9 +273,9 @@ export function ShareButtons({ url, title, text }: ShareButtonsProps) {
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => openShareWindow(shareLinks.x)}
-        title="X(Twitter)でシェア"
+        aria-label="X(Twitter)でシェア"
       >
-        <XIcon className="h-4 w-4" />
+        <XIcon className="h-4 w-4" aria-hidden="true" />
       </Button>
 
       {/* Facebookシェアボタン */}
@@ -284,9 +284,9 @@ export function ShareButtons({ url, title, text }: ShareButtonsProps) {
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => openShareWindow(shareLinks.facebook)}
-        title="Facebookでシェア"
+        aria-label="Facebookでシェア"
       >
-        <FacebookIcon className="h-4 w-4" />
+        <FacebookIcon className="h-4 w-4" aria-hidden="true" />
       </Button>
 
       {/* LINEシェアボタン */}
@@ -295,9 +295,9 @@ export function ShareButtons({ url, title, text }: ShareButtonsProps) {
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => openShareWindow(shareLinks.line)}
-        title="LINEでシェア"
+        aria-label="LINEでシェア"
       >
-        <LineIcon className="h-4 w-4" />
+        <LineIcon className="h-4 w-4" aria-hidden="true" />
       </Button>
 
       {/* URLコピーボタン */}
@@ -306,18 +306,18 @@ export function ShareButtons({ url, title, text }: ShareButtonsProps) {
         size="sm"
         className="h-8 px-2 gap-1"
         onClick={handleCopyLink}
-        title="リンクをコピー"
+        aria-label={copied ? 'リンクをコピーしました' : 'リンクをコピー'}
       >
         {copied ? (
           /* コピー完了時の表示 */
           <>
-            <CheckIcon className="h-4 w-4 text-green-500" />
+            <CheckIcon className="h-4 w-4 text-green-500" aria-hidden="true" />
             <span className="text-xs">コピー済</span>
           </>
         ) : (
           /* 通常時の表示 */
           <>
-            <LinkIcon className="h-4 w-4" />
+            <LinkIcon className="h-4 w-4" aria-hidden="true" />
             <span className="text-xs">リンク</span>
           </>
         )}

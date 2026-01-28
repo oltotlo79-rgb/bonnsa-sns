@@ -60,13 +60,14 @@ npm run test:all        # 全テスト実行
 - **スタイリング**: Tailwind CSS 4 + shadcn/ui
 - **状態管理**: React Query (サーバー状態) + Zustand (クライアント状態)
 - **ORM**: Prisma
-- **データベース**: PostgreSQL (開発: Docker / 本番: Azure Database for PostgreSQL)
+- **データベース**: PostgreSQL (開発: Docker / 本番: Supabase)
 - **認証**: NextAuth.js (Auth.js v5)
-- **ストレージ**: Azure Blob Storage（本番）
-- **コンテナ**: Docker + Docker Compose
-- **デプロイ**: Azure Container Apps
+- **ストレージ**: Cloudflare R2
+- **キャッシュ**: Upstash Redis
+- **メール**: Resend
+- **コンテナ**: Docker + Docker Compose (開発用)
+- **デプロイ**: Vercel
 - **地図**: Leaflet + OpenStreetMap
-- **リアルタイム通知**: WebSocket (Socket.io)
 - **画像処理**: Sharp
 
 ## Next.js App Router ベストプラクティス
@@ -392,9 +393,9 @@ import Image from 'next/image'
   priority  // LCP画像にはpriorityを付与
 />
 
-// 外部画像（Azure Blob Storage）
+// 外部画像（Cloudflare R2）
 <Image
-  src="https://yourstorage.blob.core.windows.net/images/photo.jpg"
+  src="https://your-r2-bucket.r2.dev/images/photo.jpg"
   alt="投稿画像"
   width={600}
   height={400}
@@ -409,7 +410,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.blob.core.windows.net',
+        hostname: '*.r2.dev',
       },
     ],
   },
@@ -1217,20 +1218,44 @@ import { auth } from "@/lib/auth";
 ## 環境変数
 
 ```bash
-# データベース
-DATABASE_URL="postgresql://user:password@localhost:5432/bonsai_sns?schema=public"
+# データベース（Supabase）
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 
 # NextAuth.js
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key-here  # openssl rand -base64 32 で生成
 
-# Azure Blob Storage（本番用）
-AZURE_STORAGE_ACCOUNT_NAME=yourstorageaccount
-AZURE_STORAGE_ACCOUNT_KEY=your-storage-key
-AZURE_STORAGE_CONTAINER_NAME=uploads
-
 # アプリケーション
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Redis（Upstash）
+UPSTASH_REDIS_REST_URL="https://..."
+UPSTASH_REDIS_REST_TOKEN="..."
+
+# ストレージ（Cloudflare R2）
+STORAGE_PROVIDER="r2"
+R2_ACCOUNT_ID="..."
+R2_ACCESS_KEY_ID="..."
+R2_SECRET_ACCESS_KEY="..."
+R2_BUCKET_NAME="..."
+R2_PUBLIC_URL="..."
+
+# メール（Resend）
+EMAIL_PROVIDER="resend"
+RESEND_API_KEY="..."
+
+# 決済（Stripe）
+STRIPE_SECRET_KEY="..."
+STRIPE_WEBHOOK_SECRET="..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="..."
+
+# エラー監視（Sentry）
+SENTRY_DSN="https://..."
+NEXT_PUBLIC_SENTRY_DSN="https://..."
+
+# 2段階認証
+TWO_FACTOR_ENCRYPTION_KEY="..."  # 32バイトのhex文字列
 ```
 
 ## 開発環境セットアップ

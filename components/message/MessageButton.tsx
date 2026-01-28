@@ -169,9 +169,9 @@ export function MessageButton({ userId, isBlocked = false }: MessageButtonProps)
         size="icon"
         onClick={handleClick}
         disabled={isPending || isBlocked}
-        title={isBlocked ? 'メッセージを送れません' : 'メッセージを送る'}
+        aria-label={isBlocked ? 'メッセージを送れません' : 'メッセージを送る'}
       >
-        <MessageSquareIcon className="w-4 h-4" />
+        <MessageSquareIcon className="w-4 h-4" aria-hidden="true" />
       </Button>
 
       {/* エラーメッセージ表示 */}
